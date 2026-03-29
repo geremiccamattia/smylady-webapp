@@ -8,7 +8,7 @@ import { eventsService } from '@/services/events'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -150,6 +150,8 @@ export default function CreateEvent() {
     eventStartTime: '',
     eventEndTime: '',
     locationName: '',
+    lat: 0,
+    lng: 0,
     totalTickets: '',
     partyType: '',
     category: '',
@@ -162,6 +164,44 @@ export default function CreateEvent() {
     minimumAge: '',
     price: '',
   })
+
+  const [locationQuery, setLocationQuery] = useState('')
+  const [locationResults, setLocationResults] = useState<
+    Array<{ place_id: number; display_name: string; lat: string; lon: string }>
+  >([])
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const locationSearchRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!locationQuery.trim()) {
+      setLocationResults([])
+      setShowLocationDropdown(false)
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5`
+        )
+        const data = await res.json()
+        setLocationResults(data)
+        setShowLocationDropdown(data.length > 0)
+      } catch {
+        // silently fail
+      }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [locationQuery])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (locationSearchRef.current && !locationSearchRef.current.contains(e.target as Node)) {
+        setShowLocationDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -241,7 +281,7 @@ export default function CreateEvent() {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.selectStartTime') })
       return false
     }
-    if (!formData.locationName) {
+    if (!formData.locationName || formData.lat === 0 || formData.lng === 0) {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.enterLocation') })
       return false
     }
@@ -352,12 +392,11 @@ export default function CreateEvent() {
         eventFormData.append('invitedUsers', JSON.stringify(invitedUsers))
       }
 
-      // Add location as JSON (placeholder coordinates - would be from location picker)
       eventFormData.append(
         'location',
         JSON.stringify({
           type: 'Point',
-          coordinates: [0, 0],
+          coordinates: [formData.lng, formData.lat],
         })
       )
 
@@ -526,15 +565,43 @@ export default function CreateEvent() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="space-y-2" ref={locationSearchRef}>
                   <Label htmlFor="locationName">{t('events.location')} *</Label>
-                  <Input
-                    id="locationName"
-                    value={formData.locationName}
-                    onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-                    placeholder={t('createEvent.enterLocation')}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="locationName"
+                      value={locationQuery}
+                      onChange={(e) => {
+                        setLocationQuery(e.target.value)
+                        setFormData({ ...formData, locationName: '', lat: 0, lng: 0 })
+                      }}
+                      placeholder={t('createEvent.enterLocation')}
+                      autoComplete="off"
+                    />
+                    {showLocationDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {locationResults.map((result) => (
+                          <button
+                            key={result.place_id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                locationName: result.display_name,
+                                lat: parseFloat(result.lat),
+                                lng: parseFloat(result.lon),
+                              })
+                              setLocationQuery(result.display_name)
+                              setShowLocationDropdown(false)
+                            }}
+                          >
+                            {result.display_name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
