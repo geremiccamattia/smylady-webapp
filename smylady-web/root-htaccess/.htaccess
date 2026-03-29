@@ -1,0 +1,17 @@
+# Root .htaccess - SPA routing for shareyourparty.de
+
+# DirectoryIndex für Blog (index.php) und SPA (index.html)
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Blog-Verzeichnis komplett ausschließen
+  RewriteCond %{REQUEST_URI} ^/blog [NC]
+  RewriteRule ^ - [L]
+
+  # SPA fallback: redirect all requests to index.html (except existing files)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ /index.html [L]
+</IfModule>
