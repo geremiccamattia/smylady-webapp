@@ -184,6 +184,9 @@ export default function EditEvent() {
 
       await eventsService.updateEvent(id!, eventFormData)
 
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ event: 'update_event' })
+
       toast({
         title: t('editEvent.updateSuccess'),
         description: t('editEvent.changesSaved'),

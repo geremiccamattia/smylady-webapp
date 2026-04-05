@@ -395,6 +395,8 @@ export default function Login() {
 
     try {
       await login(emailOrUsername, password)
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ event: 'sign_in', method: 'email' })
       // Invalidate all cached queries so they refetch with auth token
       await queryClient.invalidateQueries()
       toast({
@@ -596,7 +598,11 @@ export default function Login() {
                     </div>
 
                     <GoogleLoginButton
-                      onSuccess={() => navigate(from, { replace: true })}
+                      onSuccess={() => {
+                        window.dataLayer = window.dataLayer || []
+                        window.dataLayer.push({ event: 'sign_in', method: 'google' })
+                        navigate(from, { replace: true })
+                      }}
                       className="w-full"
                     />
                   </div>

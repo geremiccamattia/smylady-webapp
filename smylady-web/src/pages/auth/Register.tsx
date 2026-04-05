@@ -46,6 +46,8 @@ export default function Register() {
 
     try {
       await register(name, email, password, dateOfBirth)
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ event: 'sign_up', method: 'email' })
       toast({
         title: 'Registrierung erfolgreich!',
         description: 'Bitte überprüfe deine E-Mail für den Bestätigungscode.',
@@ -161,7 +163,11 @@ export default function Register() {
 
             <div className="mt-6">
               <GoogleLoginButton
-                onSuccess={() => navigate('/explore')}
+                onSuccess={() => {
+                  window.dataLayer = window.dataLayer || []
+                  window.dataLayer.push({ event: 'sign_up', method: 'google' })
+                  navigate('/explore')
+                }}
                 className="w-full"
               />
             </div>

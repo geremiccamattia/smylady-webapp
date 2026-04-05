@@ -64,6 +64,8 @@ export default function TicketDetail() {
     mutationFn: (data: { ticketId: string; reason?: string }) =>
       ticketsService.cancelTicket(data.ticketId, data.reason),
     onSuccess: () => {
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ event: 'ticket_cancel', ticket_id: ticketId })
       toast({ title: t('tickets.cancelSuccess') })
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
@@ -126,6 +128,8 @@ export default function TicketDetail() {
 
   const handleContactHost = () => {
     if (!ticket) return
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({ event: 'contact_host', ticket_id: ticketId })
     const organizerId = ticket.organizerId || (typeof ticket.event === 'object' ? ((ticket.event as any).userId?._id || (ticket.event as any).userId) : null)
     if (organizerId) {
       const currentUserId = user?._id || user?.id

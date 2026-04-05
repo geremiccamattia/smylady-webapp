@@ -79,17 +79,26 @@ export default function Privacy() {
           <section>
             <h2 className="text-xl font-semibold mb-3">5. Analytics</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Sofern du eingewilligt hast, nutzen wir Firebase / Google Analytics, um das Nutzungsverhalten
-              anonymisiert auszuwerten und die App zu verbessern.
+              Unsere Websites benutzen Google Analytics, einen Webanalysedienst der Google Ireland Limited, einer nach irischem Recht eingetragenen und betriebenen Gesellschaft (Registernummer: 368047) mit Sitz in Gordon House, Barrow Street, Dublin 4, Irland. („Google“). Google verwendet dabei Cookies, die eine Analyse Ihrer Benutzung der Webseite ermöglichen. Die durch das Cookie erzeugten Informationen über Ihre Benutzung dieser Website (einschließlich Ihrer IP-Adresse) werden an einen Server von Google in den USA übertragen und dort gespeichert. Google kann diese Informationen ggf. an Dritte übertragen oder in sonstiger Weise verwerten, sodass eine direkte Personenbeziehbarkeit der so gesammelten Daten nicht mehr auszuschließen ist. Diese Website nutzt die Google-Analytics-Berichte zu demografischen Merkmalen, in denen Daten aus interessenbezogener Werbung von Google sowie Besucherdaten von Drittanbietern (z. B. Alter, Geschlecht und Interessen) verwendet werden. Diese Daten sind nicht auf eine bestimmte Person zurückzuführen und können jederzeit über die Anzeigeneinstellungen deaktiviert werden. Wir weisen Sie daher darauf hin, dass diese Webseite Google Analytics mit der Erweiterung „anonymize“ verwendet und daher Ihre IP-Adresse nur gekürzt weiterverarbeitet wird. Somit wird eine direkte Personenbeziehbarkeit ausgeschlossen. Dieser Anonymisierungscodezusatz stellt eine datenschutzrechtliche Weiterverarbeitung sicher. Sie können zudem der Installation der Cookies widersprechen, indem Sie für Ihren Browser ein sog. Deaktivierungs-Add-On herunterladen. Weiterführende Informationen finden Sie in der Datenschutzerklärung von Google: <a href="www.google.com/intl/de/policies/privacy/" className="text-primary hover:underline">www.google.com/intl/de/policies/privacy/</a>
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               Die Nutzung von Analytics ist freiwillig und kann jederzeit widerrufen werden.
             </p>
           </section>
-
           {/* Section 6 */}
           <section>
-            <h2 className="text-xl font-semibold mb-3">6. Empfänger der Daten</h2>
+            <h2 className="text-xl font-semibold mb-3">6. Googe Remarketing</h2>
+            <p className="text-muted-foreground leading-relaxed">
+             Diese Website verwendet Cookies, mit dem Zweck, die Besucher via Remarketing-Kampagnen mit Online Werbung zu einem späteren Zeitpunkt im Google Werbenetzwerk anzusprechen. Zur Schaltung von Remarketing-Anzeigen verwenden Drittanbieter wie Google Cookies auf der Grundlage eines Besuchs der vorliegenden Website. Sie als User haben die Möglichkeit, die Verwendung von Cookies durch Google zu deaktivieren, indem Sie die Seite zur Deaktivierung von Google unter <a href="https://myadcenter.google.com/home?hl=de&sasb=true&ref=ad-settings" className="text-primary hover:underline">https://adssettings.google.com/authenticated?hl=de</a> aufrufen oder auf der <a href="https://thenai.org/glossary/opt-out-mechanism/" className="text-primary hover:underline">Deaktivierungsseite der Network Advertising Initiative</a> die Nutzung von Cookies deaktivieren können.
+              </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              Die Nutzung von Analytics ist freiwillig und kann jederzeit widerrufen werden.
+            </p>
+          </section>
+
+          {/* Section 7 */}
+          <section>
+            <h2 className="text-xl font-semibold mb-3">7. Empfänger der Daten</h2>
             <p className="text-muted-foreground leading-relaxed mb-2">
               Personenbezogene Daten können an folgende Empfänger übermittelt werden:
             </p>
@@ -103,9 +112,9 @@ export default function Privacy() {
             </p>
           </section>
 
-          {/* Section 7 */}
+          {/* Section 8 */}
           <section>
-            <h2 className="text-xl font-semibold mb-3">7. Speicherdauer</h2>
+            <h2 className="text-xl font-semibold mb-3">8. Speicherdauer</h2>
             <p className="text-muted-foreground leading-relaxed">
               Die Daten werden gespeichert, solange dein Nutzerkonto besteht oder bis du deine Einwilligung widerrufst.
             </p>
@@ -114,9 +123,9 @@ export default function Privacy() {
             </p>
           </section>
 
-          {/* Section 8 */}
+          {/* Section 9 */}
           <section>
-            <h2 className="text-xl font-semibold mb-3">8. Deine Rechte</h2>
+            <h2 className="text-xl font-semibold mb-3">9. Deine Rechte</h2>
             <p className="text-muted-foreground leading-relaxed mb-2">
               Du hast jederzeit das Recht auf:
             </p>
@@ -132,9 +141,9 @@ export default function Privacy() {
             </p>
           </section>
 
-          {/* Section 9 */}
+          {/* Section 10 */}
           <section>
-            <h2 className="text-xl font-semibold mb-3">9. Freiwilligkeit</h2>
+            <h2 className="text-xl font-semibold mb-3">10. Freiwilligkeit</h2>
             <p className="text-muted-foreground leading-relaxed">
               Die Nutzung der App ist freiwillig.
             </p>

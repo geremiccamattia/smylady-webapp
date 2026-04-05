@@ -176,6 +176,12 @@ export default function Explore() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({
+      event: 'explore_search',
+      has_category: !!selectedCategory,
+      has_music_type: !!selectedMusicType,
+    })
     refetch()
   }
 

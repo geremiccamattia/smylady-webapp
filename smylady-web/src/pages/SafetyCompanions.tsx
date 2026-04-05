@@ -139,6 +139,8 @@ export default function SafetyCompanions() {
     mutationFn: (data: { companionId: string; eventId: string }) =>
       safetyCompanionService.add(data),
     onSuccess: () => {
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ event: 'added_safety_companion', event_id: selectedEvent?.id })
       queryClient.invalidateQueries({ queryKey: ['myCompanions'] })
       toast({ title: t('safety.requestSent') })
       closeModal()

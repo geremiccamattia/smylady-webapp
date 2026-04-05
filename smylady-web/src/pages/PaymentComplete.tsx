@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, Ticket, Compass } from 'lucide-react'
@@ -9,6 +10,11 @@ export default function PaymentComplete() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const ticketId = searchParams.get('ticketId')
+
+  useEffect(() => {
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({ event: 'ticket_purchased', ticket_id: ticketId })
+  }, [])
 
   return (
     <div className="container max-w-md mx-auto py-12 px-4 text-center">

@@ -407,6 +407,9 @@ export default function CreateEvent() {
 
       await eventsService.createEvent(eventFormData)
 
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ event: 'create_event' })
+
       // No toast shown here - user will receive push notification about event approval status
       navigate('/my-events')
     } catch (error: unknown) {

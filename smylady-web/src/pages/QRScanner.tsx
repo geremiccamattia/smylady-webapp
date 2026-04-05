@@ -119,6 +119,8 @@ export default function QRScanner() {
         setStatistics(prev => ({ ...prev, duplicateCount: prev.duplicateCount + 1 }))
       } else {
         // Valid ticket - successfully scanned
+        window.dataLayer = window.dataLayer || []
+        window.dataLayer.push({ event: 'ticket_scan', event_id: eventId, ticket_id: ticketId })
         setScanResult({
           status: 'valid',
           message: t('qrScanner.validTicket', { defaultValue: 'Ticket gültig' }),

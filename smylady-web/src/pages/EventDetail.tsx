@@ -117,6 +117,11 @@ export default function EventDetail() {
 
   // Redirect to external URL if this is a Ticketmaster/external event
   useEffect(() => {
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({ event: 'event_detail_view', event_id: id })
+  }, [id])
+
+  useEffect(() => {
     if (isExternalEvent && externalUrl) {
       window.open(externalUrl, '_blank', 'noopener,noreferrer')
       // Navigate back to explore page after opening external link

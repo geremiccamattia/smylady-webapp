@@ -3,13 +3,43 @@ import { Link } from 'react-router-dom'
 import { X, Settings, Cookie } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+declare global {
+  interface Window {
+    dataLayer: Record<string, unknown>[]
+  }
+}
+
 interface CookieSettings {
   necessary: boolean
   analytics: boolean
   marketing: boolean
 }
 
-const COOKIE_CONSENT_KEY = 'syp_cookie_consent'
+
+function generateUID(): string {
+  const s = () => Math.random().toString(36).substring(2, 10)
+  return `${s()}-${s()}-${s()}-${s()}`
+}
+
+function writeConsentCookie(settings: CookieSettings): void {
+  const expires = new Date()
+  expires.setDate(expires.getDate() + 365)
+  const payload = {
+    consents: {
+      essential: ['session-auth'],
+      statistics: settings.analytics ? ['google-analytics', 'google-tag-manager'] : [],
+      marketing: settings.marketing ? ['google-ads'] : [],
+    },
+    domainPath: `${window.location.hostname}/`,
+    expires: expires.toUTCString(),
+    uid: generateUID(),
+  }
+  document.cookie = `syp_consent=${encodeURIComponent(JSON.stringify(payload))}; max-age=${365 * 86400}; path=/; SameSite=Lax`
+}
+
+function readConsentCookie(): boolean {
+  return document.cookie.split('; ').some(row => row.startsWith('syp_consent='))
+}
 
 export default function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false)
@@ -22,19 +52,38 @@ export default function CookieConsent() {
 
   useEffect(() => {
     // Check if user has already given consent
-    const savedConsent = localStorage.getItem(COOKIE_CONSENT_KEY)
+    const savedConsent = readConsentCookie()
     if (!savedConsent) {
       // Show banner after a short delay for better UX
       const timer = setTimeout(() => setIsVisible(true), 1000)
       return () => clearTimeout(timer)
     }
+    const raw = document.cookie.split('; ').find(row => row.startsWith('syp_consent='))
+    if (raw) {
+      try {
+        const payload = JSON.parse(decodeURIComponent(raw.split('=').slice(1).join('=')))
+        const statistics: string[] = payload?.consents?.statistics ?? []
+        const marketing: string[] = payload?.consents?.marketing ?? []
+        window.dataLayer = window.dataLayer || []
+        window.dataLayer.push({
+          event: 'cookie_consent_update',
+          analytics_granted: statistics.includes('google-analytics'),
+          marketing_granted: marketing.includes('google-ads'),
+        })
+      } catch {
+        // malformed cookie — ignore
+      }
+    }
   }, [])
 
   const saveConsent = (consentSettings: CookieSettings) => {
-    localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify({
-      ...consentSettings,
-      timestamp: new Date().toISOString()
-    }))
+    writeConsentCookie(consentSettings)
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({
+      event: 'cookie_consent_update',
+      analytics_granted: consentSettings.analytics,
+      marketing_granted: consentSettings.marketing,
+    })
     setIsVisible(false)
   }
 
@@ -71,7 +120,7 @@ export default function CookieConsent() {
             <h2 className="font-semibold">Datenschutz-Einstellungen</h2>
           </div>
           <button
-            onClick={() => setIsVisible(false)}
+            onClick={handleRejectOptional}
             className="text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
