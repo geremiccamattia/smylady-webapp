@@ -51,6 +51,24 @@ export default function EditEvent() {
     enabled: !!id,
   })
 
+  const parseStringField = (value: unknown): string => {
+    const unwrap = (v: unknown): string[] => {
+      if (!v) return []
+      if (Array.isArray(v)) return v.flatMap(unwrap)
+      if (typeof v === 'string') {
+        const trimmed = v.trim()
+        if (trimmed.startsWith('[') || trimmed.startsWith('"')) {
+          try {
+            return unwrap(JSON.parse(trimmed))
+          } catch {}
+        }
+        return trimmed ? [trimmed] : []
+      }
+      return [String(v)]
+    }
+    return unwrap(value).join(', ')
+  }
+
   // Populate form when event loads
   useEffect(() => {
     if (event) {
@@ -65,18 +83,22 @@ export default function EditEvent() {
         price: event.price?.toString() || '0',
         totalTickets: event.totalTickets?.toString() || '',
         eventDate,
-        eventStartTime: event.eventStartTime || '',
-        eventEndTime: event.eventEndTime || '',
+        eventStartTime: event.eventStartTime
+          ? `${String(new Date(event.eventStartTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventStartTime).getMinutes()).padStart(2, '0')}`
+          : '',
+        eventEndTime: event.eventEndTime
+          ? `${String(new Date(event.eventEndTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventEndTime).getMinutes()).padStart(2, '0')}`
+          : '',
         locationName: event.locationName || '',
         minimumAge: event.minimumAge?.toString() || '0',
-        offerings: Array.isArray(event.offerings) ? event.offerings.join(', ') : (event.offerings || ''),
-        restrictions: Array.isArray(event.restrictions) ? event.restrictions.join(', ') : (event.restrictions || ''),
+        offerings: parseStringField(event.offerings),
+        restrictions: parseStringField(event.restrictions),
         visibility: event.visibility || 'public',
       })
       
       // Set existing images
-      if (event.images && event.images.length > 0) {
-        setExistingImages(event.images)
+      if (event.locationImages && event.locationImages.length > 0) {
+        setExistingImages(event.locationImages.map((img: { url: string }) => img.url))
       } else if (event.thumbnailUrl) {
         setExistingImages([event.thumbnailUrl])
       }
@@ -163,11 +185,44 @@ export default function EditEvent() {
 
     try {
       const eventFormData = new FormData()
-      
-      // Add text fields
-      Object.entries(formData).forEach(([key, value]) => {
+
+      // Add text fields (excluding fields that need special handling)
+      const { offerings, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, ...restFormData } = formData
+      Object.entries(restFormData).forEach(([key, value]) => {
         eventFormData.append(key, value)
       })
+
+      // Append eventDate as ISO string
+      if (eventDate) {
+        eventFormData.append('eventDate', new Date(eventDate).toISOString())
+      }
+
+      // Append eventStartTime as ISO datetime
+      if (eventDate && eventStartTime) {
+        const startDateTime = new Date(`${eventDate}T${eventStartTime}:00`)
+        eventFormData.append('eventStartTime', startDateTime.toISOString())
+      }
+
+      // Append eventEndTime as ISO datetime, with +4h fallback if empty
+      if (eventDate && eventEndTime) {
+        const endDateTime = new Date(`${eventDate}T${eventEndTime}:00`)
+        eventFormData.append('eventEndTime', endDateTime.toISOString())
+      } else if (eventDate && eventStartTime) {
+        const fallbackEnd = new Date(`${eventDate}T${eventStartTime}:00`)
+        fallbackEnd.setHours(fallbackEnd.getHours() + 4)
+        eventFormData.append('eventEndTime', fallbackEnd.toISOString())
+      }
+
+      // Append offerings and restrictions as JSON arrays
+      const offeringsArray = offerings ? offerings.split(',').map(s => s.trim()).filter(Boolean) : []
+      const restrictionsArray = restrictions ? restrictions.split(',').map(s => s.trim()).filter(Boolean) : []
+      eventFormData.append('offerings', JSON.stringify(offeringsArray))
+      eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
+
+      // Append numeric fields as parsed numbers
+      eventFormData.append('price', String(parseFloat(price) || 0))
+      eventFormData.append('totalTickets', String(parseInt(totalTickets) || 0))
+      eventFormData.append('minimumAge', String(parseInt(minimumAge) || 0))
 
       // Add existing images to keep
       eventFormData.append('existingImages', JSON.stringify(existingImages))
@@ -331,7 +386,6 @@ export default function EditEvent() {
                   type="time"
                   value={formData.eventEndTime}
                   onChange={(e) => setFormData({ ...formData, eventEndTime: e.target.value })}
-                  required
                 />
               </div>
             </div>

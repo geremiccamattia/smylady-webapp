@@ -534,12 +534,20 @@ export default function EventDetail() {
           {/* Additional Info */}
           {(() => {
             // Backend returns offerings and restrictions as comma-separated strings, not arrays
-            const offeringsArray = typeof event.offerings === 'string' && event.offerings.trim()
-              ? event.offerings.split(',').map(s => s.trim()).filter(Boolean)
-              : Array.isArray(event.offerings) ? event.offerings : []
-            const restrictionsArray = typeof event.restrictions === 'string' && event.restrictions.trim()
-              ? event.restrictions.split(',').map(s => s.trim()).filter(Boolean)
-              : Array.isArray(event.restrictions) ? event.restrictions : []
+            const unwrapField = (value: unknown): string[] => {
+              if (!value) return []
+              if (Array.isArray(value)) return value.flatMap(unwrapField)
+              if (typeof value === 'string') {
+                const trimmed = value.trim()
+                if (trimmed.startsWith('[') || trimmed.startsWith('"')) {
+                  try { return unwrapField(JSON.parse(trimmed)) } catch {}
+                }
+                return trimmed ? trimmed.split(',').map(s => s.trim()).filter(Boolean) : []
+              }
+              return [String(value)]
+            }
+            const offeringsArray = unwrapField(event.offerings)
+            const restrictionsArray = unwrapField(event.restrictions)
 
             if (offeringsArray.length === 0 && restrictionsArray.length === 0) return null
 
@@ -882,7 +890,7 @@ export default function EventDetail() {
                   <div>
                     <p className="text-sm text-muted-foreground">{t('events.available')}</p>
                     <p className="font-semibold">
-                      {isSoldOut ? t('events.soldOut') : `${availableTickets} ${t('events.ticketsAvailable')}`}
+                      {isSoldOut ? t('events.soldOut') : `${availableTickets} Tickets`}
                     </p>
                   </div>
                 </div>
@@ -975,7 +983,7 @@ export default function EventDetail() {
                     loading={isPurchasing}
                   >
                     <Ticket className="h-5 w-5" />
-                    {Number(event.price) > 0 ? t('tickets.buyTicket') : t('tickets.reserveFree')}
+                    {Number(event.price) > 0 ? t('tickets.buyTicket') : 'Kostenlos reservieren'}
                   </Button>
                 )}
               </>
