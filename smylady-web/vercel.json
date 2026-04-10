@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/blog/:path*", "destination": "https://89.31.143.90/blog/:path*" },
     { "source": "/(.*)", "destination": "/index.htm" }
   ]
 }
