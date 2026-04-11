@@ -122,9 +122,9 @@ export default function EditEvent() {
       })
       
       // Set ticket tiers if present
-      if (event.ticketTiers && event.ticketTiers.length > 0) {
+      if (event.ticketTiers && event.ticketTiers?.length > 0) {
         setUseTiers(true)
-        setTicketTiers(event.ticketTiers.map((t: any) => ({
+        setTicketTiers(event.ticketTiers?.map((t: any) => ({
           name: t.name || '',
           description: t.description || '',
           price: t.price?.toString() || '',
