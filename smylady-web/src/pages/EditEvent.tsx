@@ -26,6 +26,31 @@ export default function EditEvent() {
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   
+  const [useTiers, setUseTiers] = useState(false)
+  const [ticketTiers, setTicketTiers] = useState([
+    { name: '', description: '', price: '', quantity: '' },
+  ])
+
+  const addTier = () => {
+    setTicketTiers(prev => [...prev, { name: '', description: '', price: '', quantity: '' }])
+  }
+
+  const removeTier = (index: number) => {
+    if (ticketTiers.length <= 1) return
+    setTicketTiers(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateTier = (index: number, field: string, value: string) => {
+    setTicketTiers(prev => prev.map((tier, i) => i === index ? { ...tier, [field]: value } : tier))
+  }
+
+  const handleUseTiersChange = (checked: boolean) => {
+    setUseTiers(checked)
+    if (checked) {
+      setTicketTiers([{ name: '', description: '', price: '', quantity: '' }])
+    }
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -96,6 +121,17 @@ export default function EditEvent() {
         visibility: event.visibility || 'public',
       })
       
+      // Set ticket tiers if present
+      if (event.ticketTiers && event.ticketTiers.length > 0) {
+        setUseTiers(true)
+        setTicketTiers(event.ticketTiers.map((t: any) => ({
+          name: t.name || '',
+          description: t.description || '',
+          price: t.price?.toString() || '',
+          quantity: t.quantity?.toString() || '',
+        })))
+      }
+
       // Set existing images
       if (event.locationImages && event.locationImages.length > 0) {
         setExistingImages(event.locationImages.map((img: { url: string }) => img.url))
@@ -220,9 +256,26 @@ export default function EditEvent() {
       eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
 
       // Append numeric fields as parsed numbers
-      eventFormData.append('price', String(parseFloat(price) || 0))
-      eventFormData.append('totalTickets', String(parseInt(totalTickets) || 0))
       eventFormData.append('minimumAge', String(parseInt(minimumAge) || 0))
+
+      if (useTiers && ticketTiers.length > 0) {
+        const validTiers = ticketTiers.filter(t => t.name && t.price !== '')
+        if (validTiers.length === 0) {
+          toast({ variant: 'destructive', title: 'Fehler', description: 'Bitte mindestens einen Tickettyp mit Name und Preis anlegen.' })
+          setIsLoading(false)
+          return
+        }
+        const tiersPayload = validTiers.map(t => ({
+          name: t.name,
+          description: t.description,
+          price: parseFloat(t.price) || 0,
+          ...(t.quantity ? { quantity: parseInt(t.quantity) } : {}),
+        }))
+        eventFormData.append('ticketTiers', JSON.stringify(tiersPayload))
+      } else {
+        eventFormData.append('price', String(parseFloat(price) || 0))
+        eventFormData.append('totalTickets', String(parseInt(totalTickets) || 0))
+      }
 
       // Add existing images to keep
       eventFormData.append('existingImages', JSON.stringify(existingImages))
@@ -423,33 +476,128 @@ export default function EditEvent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">{t('editEvent.priceLabel')} *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder={t('editEvent.pricePlaceholder')}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="totalTickets">{t('editEvent.ticketCount')} *</Label>
-                <Input
-                  id="totalTickets"
-                  type="number"
-                  min="1"
-                  value={formData.totalTickets}
-                  onChange={(e) => setFormData({ ...formData, totalTickets: e.target.value })}
-                  placeholder={t('editEvent.maxParticipants')}
-                  required
-                />
-              </div>
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="checkbox"
+                id="useTiers"
+                checked={useTiers}
+                onChange={(e) => handleUseTiersChange(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="useTiers">Mehrere Tickettypen</Label>
             </div>
+
+            {!useTiers && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">{t('editEvent.priceLabel')} *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    placeholder={t('editEvent.pricePlaceholder')}
+                    required={!useTiers}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="totalTickets">{t('editEvent.ticketCount')} *</Label>
+                  <Input
+                    id="totalTickets"
+                    type="number"
+                    min="1"
+                    value={formData.totalTickets}
+                    onChange={(e) => setFormData({ ...formData, totalTickets: e.target.value })}
+                    placeholder={t('editEvent.maxParticipants')}
+                    required={!useTiers}
+                  />
+                </div>
+              </div>
+            )}
+
+            {useTiers && (
+              <div className="space-y-4">
+                {ticketTiers.map((tier, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">Tickettyp {index + 1}</span>
+                      {ticketTiers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeTier(index)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                          Entfernen
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Name *</Label>
+                      <Input
+                        value={tier.name}
+                        onChange={(e) => updateTier(index, 'name', e.target.value)}
+                        placeholder="z.B. Standard, VIP, Early Bird"
+                        required={useTiers}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Beschreibung</Label>
+                      <Input
+                        value={tier.description}
+                        onChange={(e) => updateTier(index, 'description', e.target.value)}
+                        placeholder="Kurze Beschreibung dieses Tickettyps"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Preis (€) *</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={tier.price}
+                          onChange={(e) => updateTier(index, 'price', e.target.value)}
+                          placeholder="0.00"
+                          required={useTiers}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Menge</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={tier.quantity}
+                          onChange={(e) => updateTier(index, 'quantity', e.target.value)}
+                          placeholder="Optional"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {(() => {
+                  const tiersWithQuantity = ticketTiers.filter(t => t.quantity !== '')
+                  const allHaveQuantity = ticketTiers.length > 0 && tiersWithQuantity.length === ticketTiers.length
+                  if (!allHaveQuantity) return null
+                  const total = tiersWithQuantity.reduce((sum, t) => sum + (parseInt(t.quantity) || 0), 0)
+                  return (
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg text-sm">
+                      <span className="text-muted-foreground">Gesamtanzahl Tickets (automatisch berechnet)</span>
+                      <span className="font-semibold">{total}</span>
+                    </div>
+                  )
+                })()}
+                <button
+                  type="button"
+                  onClick={addTier}
+                  className="w-full py-2 border-2 border-dashed border-muted-foreground/25 hover:border-primary rounded-lg text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  + Tickettyp hinzufügen
+                </button>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="minimumAge">{t('editEvent.minimumAge')}</Label>
               <select

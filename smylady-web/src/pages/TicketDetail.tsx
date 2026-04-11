@@ -165,6 +165,9 @@ export default function TicketDetail() {
   }
 
   const event = typeof ticket.event === 'object' ? ticket.event : null
+  const selectedTier = event?.ticketTiers && ticket.tierId
+    ? event.ticketTiers.find((t: any) => t._id === ticket.tierId || t._id?.toString() === ticket.tierId)
+    : null
   const isValid = ticket.status === 'valid' || ticket.status === 'active'
   const isUsed = ticket.status === 'used' || ticket.isScanned
   const isCancelled = ticket.status === 'cancelled' || ticket.status === 'refunded'
@@ -393,9 +396,20 @@ export default function TicketDetail() {
               <span className="text-muted-foreground">Anzahl</span>
               <span>{ticket.quantity || 1}x</span>
             </div>
+            {selectedTier && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tickettyp</span>
+                <span className="font-medium">{selectedTier.name}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Preis</span>
-              <span>{formatPrice(ticket.totalAmount || ticket.price || 0)}</span>
+              <span>
+                {selectedTier
+                  ? formatPrice(selectedTier.price)
+                  : formatPrice(ticket.totalAmount || ticket.price || 0)
+                }
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Gekauft am</span>

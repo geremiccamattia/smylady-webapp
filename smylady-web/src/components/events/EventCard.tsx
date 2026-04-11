@@ -88,7 +88,21 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   }
 
   const numericPrice = typeof event.price === 'string' ? parseFloat(event.price) || 0 : (event.price || 0)
-  const availableTickets = event.availableTickets ?? ((event.totalTickets || 0) - (event.soldTickets || 0))
+  const availableTickets = (() => {
+    const tiers = (event as any).ticketTiers
+    if (tiers && tiers.length > 0) {
+      // Sum remaining capacity across all tiers that have a quantity set
+      const tiersWithQuantity = tiers.filter((t: any) => t.quantity != null)
+      if (tiersWithQuantity.length > 0) {
+        return tiersWithQuantity.reduce(
+          (sum: number, t: any) => sum + Math.max(0, t.quantity - (t.soldCount || 0)),
+          0
+        )
+      }
+      // If no tiers have quantity set, fall back to event-level
+    }
+    return event.availableTickets ?? ((event.totalTickets || 0) - (event.soldTickets || 0))
+  })()
   // Use the backend's soldOut flag as the primary source of truth.
   // Only fall back to availableTickets check when totalTickets is explicitly set (> 0)
   const isSoldOut = !isExternalEvent && (
@@ -108,6 +122,12 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   const getPriceDisplay = () => {
     if (isExternalEvent) {
       return t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
+    }
+    // If event has ticket tiers, show "Ab X" with the lowest tier price
+    const tiers = (event as any).ticketTiers
+    if (tiers && tiers.length > 0) {
+      const minPrice = Math.min(...tiers.map((t: any) => t.price))
+      return `Ab ${formatPrice(minPrice)}`
     }
     return numericPrice > 0 ? formatPrice(numericPrice) : t('event.free', { defaultValue: 'Kostenlos' })
   }
