@@ -131,8 +131,8 @@ export default function EventDetail() {
   }, [isExternalEvent, externalUrl, navigate])
 
   useEffect(() => {
-    if (event?.ticketTiers && event.ticketTiers.length > 0) {
-      const firstAvailable = event.ticketTiers.find((tier: any) =>
+    if (event?.ticketTiers && event?.ticketTiers?.length > 0) {
+      const firstAvailable = event?.ticketTiers?.find((tier: any) =>
         tier.quantity == null || tier.soldCount < tier.quantity
       )
       if (firstAvailable) {
@@ -222,7 +222,7 @@ export default function EventDetail() {
     if (!id || !event) return
 
     // If event has tiers, require a selection
-    if (event.ticketTiers && event.ticketTiers.length > 0 && !selectedTierId) {
+    if (event.ticketTiers && event.ticketTiers?.length > 0 && !selectedTierId) {
       toast({
         variant: 'destructive',
         title: t('common.error'),
@@ -953,12 +953,12 @@ export default function EventDetail() {
             ) : (
               <>
                 {/* Price / Ticket Tiers */}
-                {event.ticketTiers && event.ticketTiers.length > 0 ? (
+                {event.ticketTiers && event.ticketTiers?.length > 0 ? (
                   <div className="space-y-2 mb-4">
                     <p className="text-sm font-medium text-muted-foreground mb-2">
                       {t('events.selectTicketType', { defaultValue: 'Tickettyp wählen' })}
                     </p>
-                    {event.ticketTiers.map((tier: any) => {
+                    {event.ticketTiers?.map((tier: any) => {
                       const isTierSoldOut = tier.quantity != null && tier.soldCount >= tier.quantity
                       const isSelected = selectedTierId === tier._id
                       return (
@@ -1058,7 +1058,7 @@ export default function EventDetail() {
                     loading={isPurchasing}
                     disabled={
                       isPurchasing ||
-                      (event.ticketTiers?.length > 0 && !selectedTierId)
+                      ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
                     }
                   >
                     <Ticket className="h-5 w-5" />

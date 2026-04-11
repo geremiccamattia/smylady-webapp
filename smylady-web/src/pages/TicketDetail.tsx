@@ -166,7 +166,7 @@ export default function TicketDetail() {
 
   const event = typeof ticket.event === 'object' ? ticket.event : null
   const selectedTier = event?.ticketTiers && ticket.tierId
-    ? event.ticketTiers.find((t: any) => t._id === ticket.tierId || t._id?.toString() === ticket.tierId)
+    ? event.ticketTiers?.find((t: any) => t._id === ticket.tierId || t._id?.toString() === ticket.tierId)
     : null
   const isValid = ticket.status === 'valid' || ticket.status === 'active'
   const isUsed = ticket.status === 'used' || ticket.isScanned
