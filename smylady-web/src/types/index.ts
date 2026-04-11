@@ -86,6 +86,14 @@ export interface Event {
   userId?: User | string
   visibility: 'public' | 'private' | 'friends' | 'subscribers' | 'selected'
   minimumAge?: number
+  ticketTiers?: {
+    _id: string
+    name: string
+    description?: string
+    price: number
+    quantity?: number
+    soldCount: number
+  }[]
   status: 'draft' | 'published' | 'cancelled' | 'completed' | 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'
   isFavorite?: boolean
   createdAt: string
@@ -141,6 +149,7 @@ export interface Ticket {
   scannedBy?: string
   stripePaymentId?: string
   paymentIntentId?: string
+  tierId?: string
   createdAt: string
   updatedAt?: string
 }
