@@ -6,7 +6,8 @@ import { stripeService } from '@/services/stripe'
  */
 export const useCreatePaymentIntent = () => {
   return useMutation({
-    mutationFn: (eventId: string) => stripeService.createPaymentIntent(eventId),
+    mutationFn: ({ eventId, tierId }: { eventId: string; tierId?: string }) =>
+      stripeService.createPaymentIntent(eventId, tierId),
   })
 }
 
@@ -39,7 +40,8 @@ export const useBuyFreeEvent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (eventId: string) => stripeService.buyFreeEvent(eventId),
+    mutationFn: ({ eventId, tierId }: { eventId: string; tierId?: string }) =>
+      stripeService.buyFreeEvent(eventId, tierId),
     onSuccess: () => {
       // Invalidate all ticket-related queries to reflect new purchase
       queryClient.invalidateQueries({

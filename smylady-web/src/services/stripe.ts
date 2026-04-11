@@ -35,8 +35,11 @@ export const stripeService = {
   /**
    * Create a payment intent for ticket purchase
    */
-  async createPaymentIntent(eventId: string): Promise<PaymentIntent> {
-    const response = await apiClient.post('/stripe/create-payment-intent', { eventId })
+  async createPaymentIntent(eventId: string, tierId?: string): Promise<PaymentIntent> {
+    const response = await apiClient.post('/stripe/create-payment-intent', {
+      eventId,
+      ...(tierId ? { tierId } : {}),
+    })
 
     // Handle error responses from backend (e.g., 403 Forbidden for private events)
     if (response.data?.status >= 400) {
@@ -56,8 +59,11 @@ export const stripeService = {
   /**
    * Purchase a free event ticket
    */
-  async buyFreeEvent(eventId: string) {
-    const response = await apiClient.post('/stripe/purchase-free-ticket', { eventId })
+  async buyFreeEvent(eventId: string, tierId?: string) {
+    const response = await apiClient.post('/stripe/purchase-free-ticket', {
+      eventId,
+      ...(tierId ? { tierId } : {}),
+    })
 
     // Handle error responses from backend (e.g., 403 Forbidden for private events)
     if (response.data?.status >= 400) {

@@ -4,6 +4,7 @@ import { Elements } from '@stripe/react-stripe-js'
 
 // Load Stripe with the publishable key from environment variables
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY
+console.log('Stripe key:', stripePublishableKey ? 'loaded' : 'missing')
 
 let stripePromise: Promise<Stripe | null> | null = null
 

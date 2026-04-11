@@ -75,6 +75,7 @@ export default function EventDetail() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: event, isLoading, error } = useQuery({
@@ -128,6 +129,17 @@ export default function EventDetail() {
       navigate('/explore', { replace: true })
     }
   }, [isExternalEvent, externalUrl, navigate])
+
+  useEffect(() => {
+    if (event?.ticketTiers && event.ticketTiers.length > 0) {
+      const firstAvailable = event.ticketTiers.find((tier: any) =>
+        tier.quantity == null || tier.soldCount < tier.quantity
+      )
+      if (firstAvailable) {
+        setSelectedTierId(firstAvailable._id)
+      }
+    }
+  }, [event])
 
   // Fetch user's ticket for this event (for uploading memories)
   // MUST be called before any conditional returns to follow React hook rules
@@ -209,20 +221,29 @@ export default function EventDetail() {
 
     if (!id || !event) return
 
+    // If event has tiers, require a selection
+    if (event.ticketTiers && event.ticketTiers.length > 0 && !selectedTierId) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: t('events.selectTicketType', { defaultValue: 'Bitte wähle einen Tickettyp aus.' }),
+      })
+      return
+    }
+
     setIsPurchasing(true)
 
-    // Check if event is free (handle string prices from backend)
-    const numericPrice = typeof event.price === 'string' ? parseFloat(event.price) : event.price
+    // Determine price: use selected tier price if tiers exist, else event price
+    const selectedTier = event.ticketTiers?.find((t: any) => t._id === selectedTierId)
+    const numericPrice = selectedTier
+      ? selectedTier.price
+      : (typeof event.price === 'string' ? parseFloat(event.price) : event.price)
     const isFree = !numericPrice || numericPrice <= 0
 
     if (isFree) {
-      // Purchase free ticket directly
-      buyFreeEvent(id, {
+      buyFreeEvent({ eventId: id, tierId: selectedTierId || undefined }, {
         onSuccess: (ticket) => {
-          toast({
-            title: t('common.success'),
-            description: t('tickets.freeCreated'),
-          })
+          toast({ title: t('common.success'), description: t('tickets.freeCreated') })
           navigate(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
         },
         onError: (error: any) => {
@@ -232,22 +253,17 @@ export default function EventDetail() {
             description: error.response?.data?.message || error.message || t('tickets.purchaseFailed'),
           })
         },
-        onSettled: () => {
-          setIsPurchasing(false)
-        },
+        onSettled: () => setIsPurchasing(false),
       })
     } else {
-      // Create payment intent and open payment modal
-      createPaymentIntent(id, {
+      createPaymentIntent({ eventId: id, tierId: selectedTierId || undefined }, {
         onSuccess: (data) => {
-          // Extract paymentIntentId from clientSecret if not provided
-          // clientSecret format: pi_xxx_secret_yyy
           const paymentIntentId = data.paymentIntentId || data.clientSecret?.split('_secret_')[0] || ''
           openPayment({
             clientSecret: data.clientSecret,
             paymentIntentId,
             eventName: event.name || 'Event',
-            amount: data.amount || Number(event.price) || 0,
+            amount: data.amount || numericPrice || 0,
           })
           setIsPurchasing(false)
         },
@@ -441,7 +457,15 @@ export default function EventDetail() {
         )}>
           {isExternalEvent
             ? t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
-            : (Number(event.price) > 0 ? formatPrice(event.price) : t('events.free'))}
+            : (() => {
+                const tiers = (event as any).ticketTiers
+                if (tiers && tiers.length > 0) {
+                  const minPrice = Math.min(...tiers.map((t: any) => t.price))
+                  return `Ab ${formatPrice(minPrice)}`
+                }
+                return Number(event.price) > 0 ? formatPrice(event.price) : t('events.free')
+              })()
+          }
         </div>
       </div>
 
@@ -928,13 +952,64 @@ export default function EventDetail() {
               </div>
             ) : (
               <>
-                {/* Price */}
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-muted-foreground">{t('events.price')}</span>
-                  <span className="text-xl font-bold">
-                    {Number(event.price) > 0 ? formatPrice(event.price) : t('events.free')}
-                  </span>
-                </div>
+                {/* Price / Ticket Tiers */}
+                {event.ticketTiers && event.ticketTiers.length > 0 ? (
+                  <div className="space-y-2 mb-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      {t('events.selectTicketType', { defaultValue: 'Tickettyp wählen' })}
+                    </p>
+                    {event.ticketTiers.map((tier: any) => {
+                      const isTierSoldOut = tier.quantity != null && tier.soldCount >= tier.quantity
+                      const isSelected = selectedTierId === tier._id
+                      return (
+                        <div
+                          key={tier._id}
+                          onClick={() => !isTierSoldOut && setSelectedTierId(tier._id)}
+                          className={`p-3 rounded-lg border-2 transition-colors ${
+                            isTierSoldOut
+                              ? 'opacity-50 cursor-not-allowed border-muted'
+                              : isSelected
+                              ? 'border-primary cursor-pointer bg-primary/5'
+                              : 'border-muted cursor-pointer hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                                isSelected && !isTierSoldOut
+                                  ? 'border-primary bg-primary'
+                                  : 'border-muted-foreground'
+                              }`} />
+                              <span className={`font-medium text-sm ${isTierSoldOut ? 'line-through' : ''}`}>
+                                {tier.name}
+                              </span>
+                            </div>
+                            <span className="font-bold text-sm">
+                              {tier.price === 0 ? t('events.free') : formatPrice(tier.price)}
+                            </span>
+                          </div>
+                          {tier.description && (
+                            <p className="text-xs text-muted-foreground mt-1 ml-6 truncate">
+                              {tier.description}
+                            </p>
+                          )}
+                          {isTierSoldOut && (
+                            <p className="text-xs text-red-500 mt-1 ml-6">
+                              {t('events.soldOut')}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-muted-foreground">{t('events.price')}</span>
+                    <span className="text-xl font-bold">
+                      {Number(event.price) > 0 ? formatPrice(event.price) : t('events.free')}
+                    </span>
+                  </div>
+                )}
 
                 {/* Purchase Button */}
                 {isOwner ? (
@@ -981,6 +1056,10 @@ export default function EventDetail() {
                     className="w-full gap-2"
                     onClick={handlePurchaseTicket}
                     loading={isPurchasing}
+                    disabled={
+                      isPurchasing ||
+                      (event.ticketTiers?.length > 0 && !selectedTierId)
+                    }
                   >
                     <Ticket className="h-5 w-5" />
                     {Number(event.price) > 0 ? t('tickets.buyTicket') : 'Kostenlos reservieren'}
