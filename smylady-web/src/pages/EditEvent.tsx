@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
+import { ToastAction } from '@/components/ui/toast'
+import { useGetConnectedAccount } from '@/hooks/useStripe'
 import { eventsService } from '@/services/events'
 import { EVENT_CATEGORIES, MUSIC_TYPES, AGE_RESTRICTIONS } from '@/lib/constants'
 import { resolveImageUrl } from '@/lib/utils'
@@ -18,6 +20,7 @@ export default function EditEvent() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { toast } = useToast()
+  const { data: connectedAccount, isError: stripeNotConnected } = useGetConnectedAccount()
   const [isLoading, setIsLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -215,8 +218,31 @@ export default function EditEvent() {
     setExistingImages(existingImages.filter((_, i) => i !== index))
   }
 
+  const hasPaidTickets = () => {
+    if (useTiers) {
+      return ticketTiers.some(t => parseFloat(t.price) > 0)
+    }
+    return parseFloat(formData.price) > 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const stripeReady = connectedAccount && connectedAccount.accountStatus === 'active'
+    if (hasPaidTickets() && !stripeReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Stripe nicht verbunden',
+        description: 'Um bezahlte Events zu speichern, musst du zuerst Stripe in deinen Einstellungen verbinden.',
+        action: (
+          <ToastAction altText="Zu den Einstellungen" onClick={() => navigate('/settings')}>
+            Einstellungen
+          </ToastAction>
+        ),
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {

@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
+import { ToastAction } from '@/components/ui/toast'
+import { useGetConnectedAccount } from '@/hooks/useStripe'
 import { eventsService } from '@/services/events'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
@@ -111,6 +113,7 @@ export default function CreateEvent() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { toast } = useToast()
+  const { data: connectedAccount, isError: stripeNotConnected } = useGetConnectedAccount()
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
@@ -333,6 +336,13 @@ export default function CreateEvent() {
     return true
   }
 
+  const hasPaidTickets = () => {
+    if (useTiers) {
+      return ticketTiers.some(t => parseFloat(t.price) > 0)
+    }
+    return parseFloat(formData.price) > 0
+  }
+
   const validateStep2 = () => {
     if (!formData.name) {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.enterEventName') })
@@ -340,6 +350,20 @@ export default function CreateEvent() {
     }
     if (!formData.description) {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.enterDescription') })
+      return false
+    }
+    const stripeReady = connectedAccount && connectedAccount.accountStatus === 'active'
+    if (hasPaidTickets() && !stripeReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Stripe nicht verbunden',
+        description: 'Um bezahlte Events zu erstellen, musst du zuerst Stripe in deinen Einstellungen verbinden.',
+        action: (
+          <ToastAction altText="Zu den Einstellungen" onClick={() => navigate('/settings')}>
+            Einstellungen
+          </ToastAction>
+        ),
+      })
       return false
     }
     return true
@@ -367,6 +391,21 @@ export default function CreateEvent() {
         variant: 'destructive',
         title: t('common.error'),
         description: t('createEvent.addImage'),
+      })
+      return
+    }
+
+    const stripeReady = connectedAccount && connectedAccount.accountStatus === 'active'
+    if (hasPaidTickets() && !stripeReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Stripe nicht verbunden',
+        description: 'Um bezahlte Events zu erstellen, musst du zuerst Stripe in deinen Einstellungen verbinden.',
+        action: (
+          <ToastAction altText="Zu den Einstellungen" onClick={() => navigate('/settings')}>
+            Einstellungen
+          </ToastAction>
+        ),
       })
       return
     }
