@@ -113,7 +113,7 @@ export default function CreateEvent() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { toast } = useToast()
-  const { data: connectedAccount, isError: stripeNotConnected } = useGetConnectedAccount()
+  const { data: connectedAccount } = useGetConnectedAccount()
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])

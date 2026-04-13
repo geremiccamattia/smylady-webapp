@@ -20,7 +20,7 @@ export default function EditEvent() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { toast } = useToast()
-  const { data: connectedAccount, isError: stripeNotConnected } = useGetConnectedAccount()
+  const { data: connectedAccount } = useGetConnectedAccount()
   const [isLoading, setIsLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
