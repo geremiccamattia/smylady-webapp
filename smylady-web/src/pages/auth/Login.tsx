@@ -43,8 +43,8 @@ const blogArticles = [
     id: 1,
     title: 'Gartenparty im Sommer planen',
     excerpt: 'Die besten Tipps für unvergessliche Outdoor-Partys',
-    image: 'https://shareyourparty.de/blog/wp-content/uploads/2026/02/freunde-feiern-gartenparty.webp',
-    link: 'https://shareyourparty.de/blog/gartenparty-planen/',
+    image: 'https://blog.shareyourparty.de/wp-content/uploads/2026/02/freunde-feiern-gartenparty.webp',
+    link: 'https://blog.shareyourparty.de/gartenparty-planen/',
     category: 'Tipps',
     readTime: '5 min'
   },
@@ -52,8 +52,8 @@ const blogArticles = [
     id: 2,
     title: 'Spontan ausgehen – so findest du Events',
     excerpt: 'Last-Minute Partys in deiner Nähe entdecken',
-    image: 'https://shareyourparty.de/blog/wp-content/uploads/2026/02/Frau-freut-sich-spontan-1.jpg',
-    link: 'https://shareyourparty.de/blog/spontan-ausgehen/',
+    image: 'https://blog.shareyourparty.de/wp-content/uploads/2026/02/Frau-freut-sich-spontan-1.jpg',
+    link: 'https://blog.shareyourparty.de/spontan-ausgehen/',
     category: 'Guide',
     readTime: '4 min'
   },
@@ -61,8 +61,8 @@ const blogArticles = [
     id: 3,
     title: 'Events auf Social Media bewerben',
     excerpt: 'Marketing für Instagram, TikTok & Co.',
-    image: 'https://shareyourparty.de/blog/wp-content/uploads/2026/01/girl-with-laptop.webp',
-    link: 'https://shareyourparty.de/blog/social-media-event-marketing/',
+    image: 'https://blog.shareyourparty.de/wp-content/uploads/2026/01/girl-with-laptop.webp',
+    link: 'https://blog.shareyourparty.de/social-media-event-marketing/',
     category: 'Marketing',
     readTime: '7 min'
   },
@@ -70,8 +70,8 @@ const blogArticles = [
     id: 4,
     title: 'Private Partys & Underground Events',
     excerpt: 'Exklusive Locations in Wien entdecken',
-    image: 'https://shareyourparty.de/blog/wp-content/uploads/2025/11/pexels-cottonbro-5791668-scaled.webp',
-    link: 'https://shareyourparty.de/blog/private-partys-finden/',
+    image: 'https://blog.shareyourparty.de/wp-content/uploads/2025/11/pexels-cottonbro-5791668-scaled.webp',
+    link: 'https://blog.shareyourparty.de/private-partys-finden/',
     category: 'Wien',
     readTime: '6 min'
   },
@@ -79,8 +79,8 @@ const blogArticles = [
     id: 5,
     title: 'Sicher auf Partys',
     excerpt: 'Safety-Tipps für einen sicheren Abend',
-    image: 'https://shareyourparty.de/blog/wp-content/uploads/2026/01/happy-best-friends-celebrating-birthday-party-1.jpg',
-    link: 'https://shareyourparty.de/blog/sicher-auf-partys/',
+    image: 'https://blog.shareyourparty.de/wp-content/uploads/2026/01/happy-best-friends-celebrating-birthday-party-1.jpg',
+    link: 'https://blog.shareyourparty.de/sicher-auf-partys/',
     category: 'Safety',
     readTime: '4 min'
   },
@@ -88,8 +88,8 @@ const blogArticles = [
     id: 6,
     title: 'Günstig ausgehen',
     excerpt: 'Nightlife ohne Budget zu sprengen',
-    image: 'https://shareyourparty.de/blog/wp-content/uploads/2025/12/sparschwein.jpg',
-    link: 'https://shareyourparty.de/blog/guenstig-ausgehen/',
+    image: 'https://blog.shareyourparty.de/wp-content/uploads/2025/12/sparschwein.jpg',
+    link: 'https://blog.shareyourparty.de/guenstig-ausgehen/',
     category: 'Budget',
     readTime: '5 min'
   }
@@ -1059,7 +1059,7 @@ export default function Login() {
 
             {/* "Alle Artikel" CTA Bubble */}
             <a
-              href="https://shareyourparty.de/blog/"
+              href="https://blog.shareyourparty.de/"
               target="_blank"
               rel="noopener noreferrer"
               className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-500/5 via-pink-500/5 to-purple-500/10 border-2 border-dashed border-purple-500/20 hover:border-purple-500/50 hover:from-purple-500/15 hover:to-pink-500/15 transition-all duration-500 flex items-center justify-center bento-item"
@@ -1180,7 +1180,7 @@ export default function Login() {
 
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
               <Link to="/explore" className="hover:text-foreground transition-colors">{t('footer.events')}</Link>
-              <a href="https://shareyourparty.de/blog/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t('footer.blog')}</a>
+              <a href="https://blog.shareyourparty.de/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t('footer.blog')}</a>
               <Link to="/privacy" className="hover:text-foreground transition-colors">{t('footer.privacy')}</Link>
               <Link to="/imprint" className="hover:text-foreground transition-colors">{t('footer.imprint')}</Link>
               <Link to="/terms" className="hover:text-foreground transition-colors">{t('footer.terms')}</Link>

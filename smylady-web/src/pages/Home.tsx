@@ -37,7 +37,7 @@ const blogArticles = [
     excerpt: 'Endlich wird es wieder wärmer und die Tage werden länger – die perfekte Zeit für Gartenpartys.',
     date: '22. Feb 2026',
     image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=300&fit=crop',
-    link: 'https://shareyourparty.de/blog/gartenparty-planen/',
+    link: 'https://blog.shareyourparty.de/gartenparty-planen/',
     category: 'Tipps'
   },
   {
@@ -45,7 +45,7 @@ const blogArticles = [
     excerpt: 'Guide für das Finden von Events ohne große Planung – schnell und unkompliziert.',
     date: '13. Feb 2026',
     image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=300&fit=crop',
-    link: 'https://shareyourparty.de/blog/spontan-ausgehen/',
+    link: 'https://blog.shareyourparty.de/spontan-ausgehen/',
     category: 'Guide'
   },
   {
@@ -53,7 +53,7 @@ const blogArticles = [
     excerpt: 'Sicher auf Partys zu sein geht auch – Safety-Tipps für sorgenfreies Feiern.',
     date: '17. Jan 2026',
     image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    link: 'https://shareyourparty.de/blog/sicher-auf-partys/',
+    link: 'https://blog.shareyourparty.de/sicher-auf-partys/',
     category: 'Sicherheit'
   },
   {
@@ -61,7 +61,7 @@ const blogArticles = [
     excerpt: 'Entdecke private und Underground Events in deiner Stadt – exklusiv und einzigartig.',
     date: '19. Nov 2025',
     image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop',
-    link: 'https://shareyourparty.de/blog/private-partys-finden/',
+    link: 'https://blog.shareyourparty.de/private-partys-finden/',
     category: 'Entdecken'
   }
 ]
