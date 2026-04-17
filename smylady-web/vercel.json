@@ -1,6 +1,1 @@
-{
-  "rewrites": [
-    { "source": "/blog/:path*", "destination": "http://w01c4c6e.kasserver.com/blog/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
+
