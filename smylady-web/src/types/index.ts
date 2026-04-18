@@ -94,6 +94,7 @@ export interface Event {
     quantity?: number
     soldCount: number
   }[]
+  allowGuestMemories?: boolean
   status: 'draft' | 'published' | 'cancelled' | 'completed' | 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'
   isFavorite?: boolean
   createdAt: string
