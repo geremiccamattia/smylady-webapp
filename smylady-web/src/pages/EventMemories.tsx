@@ -56,6 +56,12 @@ export default function EventMemories() {
 
   const eventHasStarted = event ? new Date(event.eventDate) <= new Date() : false
 
+  const creatorData = event?.creator || event?.userId
+  const creatorId = creatorData
+    ? (typeof creatorData === 'string' ? creatorData : (creatorData as any)._id || (creatorData as any).id)
+    : null
+  const isOwner = !!(currentUserId && creatorId && currentUserId === creatorId)
+
   // Fetch event memories - handle 403 gracefully (user needs ticket to view)
   const { data: memories = [], isLoading: memoriesLoading } = useQuery({
     queryKey: ['eventMemories', eventId],
@@ -266,7 +272,8 @@ export default function EventMemories() {
     tagMutation.mutate({ memoryId, userId, x, y })
   }
 
-  const canUpload = !!userTicket?.ticketId && eventHasStarted
+  const canUpload = !!userTicket?.ticketId && eventHasStarted &&
+    (isOwner || event?.allowGuestMemories !== false)
 
   if (eventLoading || memoriesLoading) {
     return (
@@ -391,6 +398,14 @@ export default function EventMemories() {
           <Link to={`/event/${eventId}`} className="text-primary hover:underline">
             {t('tickets.buyNow')}
           </Link>
+        </div>
+      )}
+
+      {/* Guest upload disabled hint */}
+      {userTicket?.ticketId && !isOwner && event?.allowGuestMemories === false && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 mb-6">
+          <span>ℹ️</span>
+          <span>Der Veranstalter hat den Foto-Upload für Gäste deaktiviert.</span>
         </div>
       )}
 

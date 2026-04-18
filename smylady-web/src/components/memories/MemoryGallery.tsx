@@ -22,6 +22,8 @@ interface MemoryGalleryProps {
   eventStartDate: string
   canUpload?: boolean
   initialMemoryId?: string
+  isOrganizer?: boolean
+  allowGuestMemories?: boolean
 }
 
 type SortOption = 'newest' | 'popular'
@@ -31,7 +33,9 @@ export default function MemoryGallery({
   eventId,
   eventStartDate,
   canUpload = true,
-  initialMemoryId
+  initialMemoryId,
+  isOrganizer,
+  allowGuestMemories
 }: MemoryGalleryProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -241,7 +245,7 @@ export default function MemoryGallery({
               </button>
             </div>
           )}
-          {canUpload && eventHasStarted && (
+          {(isOrganizer || (canUpload && allowGuestMemories !== false)) && eventHasStarted && (
             <Button onClick={() => setShowUpload(true)} size="sm" className="gap-2">
               <Upload className="w-4 h-4" />
               <span className="hidden sm:inline">{t('memories.uploadPhoto')}</span>
@@ -257,12 +261,19 @@ export default function MemoryGallery({
         </div>
       )}
 
+      {allowGuestMemories === false && !isOrganizer && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+          <span>ℹ️</span>
+          <span>Der Veranstalter hat den Foto-Upload für Gäste deaktiviert.</span>
+        </div>
+      )}
+
       {/* Empty state */}
       {memories.length === 0 && (
         <div className="text-center py-12 bg-muted/30 rounded-lg">
           <Image className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">{t('memories.noMemories')}</p>
-          {canUpload && eventHasStarted && (
+          {(isOrganizer || (canUpload && allowGuestMemories !== false)) && eventHasStarted && (
             <p className="text-sm text-muted-foreground mt-1">
               {t('memories.shareYourBest')}
             </p>

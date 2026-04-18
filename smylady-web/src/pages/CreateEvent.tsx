@@ -193,6 +193,8 @@ export default function CreateEvent() {
     price: '',
   })
 
+  const [allowGuestMemories, setAllowGuestMemories] = useState(true)
+
   const [locationQuery, setLocationQuery] = useState('')
   const [locationResults, setLocationResults] = useState<
     Array<{ place_id: number; display_name: string; lat: string; lon: string }>
@@ -474,6 +476,7 @@ export default function CreateEvent() {
       if (visibility === 'selected' && invitedUsers.length > 0) {
         eventFormData.append('invitedUsers', JSON.stringify(invitedUsers))
       }
+      eventFormData.append('allowGuestMemories', String(allowGuestMemories))
 
       eventFormData.append(
         'location',
@@ -789,6 +792,20 @@ export default function CreateEvent() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <Label>Gäste dürfen Fotos hochladen</Label>
+                  <button
+                    type="button"
+                    onClick={() => setAllowGuestMemories(!allowGuestMemories)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      allowGuestMemories ? 'bg-green-500' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      allowGuestMemories ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
                 </div>
               </CardContent>
             </Card>

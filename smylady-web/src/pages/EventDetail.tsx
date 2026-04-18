@@ -665,7 +665,9 @@ export default function EventDetail() {
                   ticketId={userTicket.ticketId}
                   eventId={id!}
                   eventStartDate={event.eventDate}
-                  canUpload={true}
+                  canUpload={isOwner || event?.allowGuestMemories !== false}
+                  isOrganizer={isOwner}
+                  allowGuestMemories={event?.allowGuestMemories !== false}
                 />
               ) : (
                 <div className="space-y-4">
