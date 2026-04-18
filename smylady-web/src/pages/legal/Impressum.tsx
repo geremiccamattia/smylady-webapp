@@ -28,7 +28,7 @@ export default function Impressum() {
               <p>Sherin Strobl & Mattia Geremicca</p>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                <span>Lichtenauergasse 7/1/9, 1020 Wien</span>
+                <span>Polgarstraße 13E/ 13, 1220 Wien</span>
               </div>
             </div>
           </section>
