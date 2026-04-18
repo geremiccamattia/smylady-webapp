@@ -54,6 +54,8 @@ export default function EditEvent() {
     }
   }
 
+  const [allowGuestMemories, setAllowGuestMemories] = useState(true)
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -123,6 +125,7 @@ export default function EditEvent() {
         restrictions: parseStringField(event.restrictions),
         visibility: event.visibility || 'public',
       })
+      setAllowGuestMemories(event.allowGuestMemories !== false)
       
       // Set ticket tiers if present
       if (event.ticketTiers && event.ticketTiers?.length > 0) {
@@ -280,6 +283,7 @@ export default function EditEvent() {
       const restrictionsArray = restrictions ? restrictions.split(',').map(s => s.trim()).filter(Boolean) : []
       eventFormData.append('offerings', JSON.stringify(offeringsArray))
       eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
+      eventFormData.append('allowGuestMemories', String(allowGuestMemories))
 
       // Append numeric fields as parsed numbers
       eventFormData.append('minimumAge', String(parseInt(minimumAge) || 0))
@@ -680,6 +684,20 @@ export default function EditEvent() {
                 onChange={(e) => setFormData({ ...formData, restrictions: e.target.value })}
                 placeholder={t('editEvent.restrictionsPlaceholder')}
               />
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <Label>Gäste dürfen Fotos hochladen</Label>
+              <button
+                type="button"
+                onClick={() => setAllowGuestMemories(!allowGuestMemories)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  allowGuestMemories ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  allowGuestMemories ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
             </div>
           </CardContent>
         </Card>
