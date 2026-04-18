@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast'
 import { Eye, EyeOff } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
+import { apiClient } from '@/services/api'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -17,6 +18,9 @@ export default function Register() {
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [step, setStep] = useState<'register' | 'verify'>('register')
+  const [registeredEmail, setRegisteredEmail] = useState('')
+  const [otp, setOtp] = useState('')
   const { register } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -48,15 +52,38 @@ export default function Register() {
       await register(name, email, password, dateOfBirth)
       window.dataLayer = window.dataLayer || []
       window.dataLayer.push({ event: 'sign_up', method: 'email' })
+      setRegisteredEmail(email)
+      setStep('verify')
       toast({
         title: 'Registrierung erfolgreich!',
         description: 'Bitte überprüfe deine E-Mail für den Bestätigungscode.',
       })
-      navigate('/login')
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Registrierung fehlgeschlagen',
+        description: error.response?.data?.message || 'Bitte versuche es erneut.',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      await apiClient.post('/auth/verify-otp', {
+        email: registeredEmail,
+        otp,
+        type: 'sign-up',
+      })
+      toast({ title: 'E-Mail bestätigt!', description: 'Du kannst dich jetzt anmelden.' })
+      navigate('/login')
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Ungültiger Code',
         description: error.response?.data?.message || 'Bitte versuche es erneut.',
       })
     } finally {
@@ -79,6 +106,28 @@ export default function Register() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {step === 'verify' ? (
+            <form onSubmit={handleVerify} className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Wir haben einen Bestätigungscode an {registeredEmail} gesendet.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="otp">Bestätigungscode</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  required
+                  maxLength={6}
+                />
+              </div>
+              <Button type="submit" variant="gradient" className="w-full" loading={isLoading}>
+                Bestätigen
+              </Button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
@@ -147,6 +196,7 @@ export default function Register() {
               Registrieren
             </Button>
           </form>
+          )}
 
           {/* Social Login */}
           <div className="mt-6">
