@@ -24,6 +24,7 @@ interface MemoryGalleryProps {
   initialMemoryId?: string
   isOrganizer?: boolean
   allowGuestMemories?: boolean
+  isPublicEvent?: boolean
 }
 
 type SortOption = 'newest' | 'popular'
@@ -35,7 +36,8 @@ export default function MemoryGallery({
   canUpload = true,
   initialMemoryId,
   isOrganizer,
-  allowGuestMemories
+  allowGuestMemories,
+  isPublicEvent = false
 }: MemoryGalleryProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -396,6 +398,7 @@ export default function MemoryGallery({
             setReportingMemory(selectedMemory)
           } : undefined}
           onMemoryUpdate={handleMemoryUpdate}
+          isPublicEvent={isPublicEvent}
         />
       )}
 
@@ -421,6 +424,7 @@ export default function MemoryGallery({
             setShowUpload(false)
             queryClient.invalidateQueries({ queryKey: ['memories', ticketId] })
           }}
+          isPublicEvent={isPublicEvent}
         />
       )}
     </div>

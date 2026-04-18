@@ -13,11 +13,14 @@ import {
   Smile,
   Star,
   Tag,
-  Users
+  Users,
+  Share2,
+  Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo } from '@/services/memories'
+import { apiClient } from '@/services/api'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -63,6 +66,7 @@ interface MemoryViewerProps {
   onAddTag?: (userId: string, x: number, y: number) => void
   onReport?: () => void
   onMemoryUpdate?: (updatedMemory: Memory) => void
+  isPublicEvent?: boolean
 }
 
 export default function MemoryViewer({
@@ -82,6 +86,7 @@ export default function MemoryViewer({
   onAddTag,
   onReport,
   onMemoryUpdate,
+  isPublicEvent = false,
 }: MemoryViewerProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -285,6 +290,36 @@ export default function MemoryViewer({
 
 
 
+
+  const [isSharing, setIsSharing] = useState(false)
+
+  const handleShareToWall = async () => {
+    if (!memoryUrl) return
+    setIsSharing(true)
+    try {
+      const response = await apiClient.post('/posts', {
+        text: memory.caption || '',
+        media: [{ url: resolveImageUrl(memoryUrl), type: memoryType === 'video' ? 'video' : 'image' }],
+        visibility: 'public',
+      })
+      const postId = response.data.data?._id
+      toast({
+        title: 'Auf der Wall geteilt!',
+        description: postId
+          ? 'Die Erinnerung wurde gepostet. Zum Löschen den Post auf der Wall entfernen.'
+          : 'Die Erinnerung wurde erfolgreich gepostet.',
+        action: postId ? (
+          <a href="/feed" className="underline text-sm font-medium">
+            Zur Wall
+          </a>
+        ) : undefined,
+      })
+    } catch {
+      toast({ title: t('common.error'), description: 'Teilen fehlgeschlagen.', variant: 'destructive' })
+    } finally {
+      setIsSharing(false)
+    }
+  }
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault()
@@ -647,6 +682,21 @@ export default function MemoryViewer({
                 title={isHighlighted ? t('memories.removeFromHighlights') : t('memories.addToHighlights')}
               >
                 <Star className={cn('w-5 h-5', isHighlighted && 'fill-yellow-400 text-yellow-400')} />
+              </Button>
+            )}
+            {isPublicEvent && memory.privacy === 'public' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleShareToWall}
+                disabled={isSharing}
+                title="Auf der Wall teilen"
+              >
+                {isSharing ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Share2 className="w-5 h-5" />
+                )}
               </Button>
             )}
             {onReport && (
