@@ -668,6 +668,7 @@ export default function EventDetail() {
                   canUpload={isOwner || event?.allowGuestMemories !== false}
                   isOrganizer={isOwner}
                   allowGuestMemories={event?.allowGuestMemories !== false}
+                  isPublicEvent={event?.visibility === 'public'}
                 />
               ) : (
                 <div className="space-y-4">

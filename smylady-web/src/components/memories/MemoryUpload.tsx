@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { X, Upload, Image, Video, Loader2, Globe, Lock, Users } from 'lucide-react'
+import { X, Upload, Image, Video, Loader2, Globe, Lock, Users, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { memoriesService } from '@/services/memories'
+import { apiClient } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 import MentionInput from '@/components/mentionInput/MentionInput'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -15,21 +16,23 @@ interface MemoryUploadProps {
   eventId: string
   onClose: () => void
   onSuccess: () => void
+  isPublicEvent?: boolean
 }
 
 type PrivacyOption = 'public' | 'private' | 'custom'
 
-export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess }: MemoryUploadProps) {
+export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, isPublicEvent = false }: MemoryUploadProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
   const [caption, setCaption] = useState('')
   const [, setCaptionMentions] = useState<string[]>([])
   const [privacy, setPrivacy] = useState<PrivacyOption>('public')
   const [showViewerPicker, setShowViewerPicker] = useState(false)
   const [selectedViewers, setSelectedViewers] = useState<string[]>([])
+  const [shareToWall, setShareToWall] = useState(false)
 
   // Fetch event participants for custom privacy
   const { data: participants = [] } = useQuery({
@@ -40,15 +43,31 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess }: 
 
   // Upload mutation
   const uploadMutation = useMutation({
-    mutationFn: () => {
-      if (!selectedFile) throw new Error('No file selected')
-      return memoriesService.uploadMemory(
-        ticketId,
-        selectedFile,
-        caption,
-        privacy,
-        privacy === 'custom' ? selectedViewers : undefined
-      )
+    mutationFn: async () => {
+      if (!selectedFiles.length) throw new Error('No files selected')
+      const uploadedMemories = []
+      for (const file of selectedFiles) {
+        const memory = await memoriesService.uploadMemory(
+          ticketId,
+          file,
+          caption,
+          privacy,
+          privacy === 'custom' ? selectedViewers : undefined
+        )
+        uploadedMemories.push(memory)
+      }
+      if (shareToWall && privacy === 'public') {
+        for (const memory of uploadedMemories) {
+          const memoryUrl = memory.url || memory.fileUrl
+          if (memoryUrl) {
+            await apiClient.post('/posts', {
+              text: caption || '',
+              media: [{ url: memoryUrl, type: memory.type === 'video' ? 'video' : 'image' }],
+              visibility: 'public',
+            })
+          }
+        }
+      }
     },
     onSuccess: () => {
       toast({ title: t('common.success'), description: t('memories.uploadSuccess') })
@@ -64,46 +83,30 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess }: 
   })
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
 
-    // Validate file type
-    const isImage = file.type.startsWith('image/')
-    const isVideo = file.type.startsWith('video/')
+    const validFiles = files.filter(file => {
+      const isImage = file.type.startsWith('image/')
+      const isVideo = file.type.startsWith('video/')
+      const isValidSize = file.size <= 50 * 1024 * 1024
+      return (isImage || isVideo) && isValidSize
+    })
 
-    if (!isImage && !isVideo) {
-      toast({
-        title: t('memories.invalidFileType'),
-        description: t('memories.pleaseSelectImageOrVideo'),
-        variant: 'destructive',
-      })
-      return
-    }
+    setSelectedFiles(prev => [...prev, ...validFiles])
 
-    // Validate file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024
-    if (file.size > maxSize) {
-      toast({
-        title: t('memories.fileTooLarge'),
-        description: t('memories.maxFileSize'),
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setSelectedFile(file)
-
-    // Create preview
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
+    validFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPreviews(prev => [...prev, reader.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedFile) return
+    if (!selectedFiles.length) return
     uploadMutation.mutate()
   }
 
@@ -123,8 +126,6 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess }: 
         : [...prev, userId]
     )
   }
-
-  const isVideo = selectedFile?.type.startsWith('video/')
 
   const privacyOptions = [
     {
@@ -165,11 +166,40 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess }: 
               ref={fileInputRef}
               type="file"
               accept="image/*,video/*"
+              multiple
               onChange={handleFileSelect}
               className="hidden"
             />
 
-            {!preview ? (
+            {previews.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {previews.map((preview, index) => (
+                  <div key={index} className="relative aspect-square">
+                    {selectedFiles[index]?.type.startsWith('video/') ? (
+                      <video src={preview} className="w-full h-full object-cover rounded-lg" />
+                    ) : (
+                      <img src={preview} alt="" className="w-full h-full object-cover rounded-lg" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+                        setPreviews(prev => prev.filter((_, i) => i !== index))
+                      }}
+                      className="absolute top-1 right-1 bg-black/50 rounded-full p-0.5 text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-square border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-primary"
+                >
+                  <span className="text-2xl text-muted-foreground">+</span>
+                </div>
+              </div>
+            ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
@@ -180,32 +210,6 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess }: 
                 </div>
                 <p className="text-muted-foreground">{t('memories.clickToSelect')}</p>
                 <p className="text-xs text-muted-foreground mt-2">{t('memories.maxSize')}</p>
-              </div>
-            ) : (
-              <div className="relative">
-                {isVideo ? (
-                  <video
-                    src={preview}
-                    controls
-                    className="w-full rounded-lg"
-                  />
-                ) : (
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    className="w-full rounded-lg"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedFile(null)
-                    setPreview(null)
-                  }}
-                  className="absolute top-2 right-2 bg-black/50 rounded-full p-1 text-white hover:bg-black/70"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
             )}
           </div>
@@ -345,11 +349,28 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess }: 
             </div>
           )}
 
+          {/* Share to wall */}
+          {isPublicEvent && privacy === 'public' && (
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <input
+                type="checkbox"
+                id="shareToWall"
+                checked={shareToWall}
+                onChange={(e) => setShareToWall(e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              <label htmlFor="shareToWall" className="flex items-center gap-2 text-sm cursor-pointer">
+                <Share2 className="w-4 h-4" />
+                Auch auf der Wall teilen
+              </label>
+            </div>
+          )}
+
           {/* Submit */}
           <Button
             type="submit"
             className="w-full gap-2"
-            disabled={!selectedFile || uploadMutation.isPending || (privacy === 'custom' && selectedViewers.length === 0)}
+            disabled={!selectedFiles.length || uploadMutation.isPending || (privacy === 'custom' && selectedViewers.length === 0)}
           >
             {uploadMutation.isPending ? (
               <>

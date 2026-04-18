@@ -539,6 +539,7 @@ export default function EventMemories() {
           onAddTag={(userId, x, y) => handleAddTag(getMemoryId(selectedMemory), userId, x, y)}
           onReport={!isOwnMemory(selectedMemory) ? () => setReportingMemory(selectedMemory) : undefined}
           onMemoryUpdate={handleMemoryUpdate}
+          isPublicEvent={event?.visibility === 'public'}
         />
       )}
 
@@ -632,6 +633,7 @@ export default function EventMemories() {
             setShowUpload(false)
             queryClient.invalidateQueries({ queryKey: ['eventMemories', eventId] })
           }}
+          isPublicEvent={event?.visibility === 'public'}
         />
       )}
     </div>
