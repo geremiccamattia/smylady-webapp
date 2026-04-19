@@ -1418,7 +1418,7 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
         {/* Event Reference */}
         {post.eventId && (
           <Link
-            to={`/event/${generateEventSlug(post.eventId.name, post.eventId._id)}`}
+            to={`/event/${generateEventSlug(post.eventId.name, post.eventId._id || '')}`}
             className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80"
           >
             <div className="flex items-center gap-3">

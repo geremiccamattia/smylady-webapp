@@ -52,8 +52,6 @@ import {
   ExternalLink,
   CheckCircle,
   ShieldCheck,
-  LogIn,
-  UserPlus,
   Trash2,
 } from 'lucide-react'
 
