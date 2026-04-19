@@ -1,5 +1,13 @@
+import axios from 'axios'
 import { apiClient } from './api'
 import { User } from '@/types'
+import { CONFIG } from '@/lib/constants'
+
+const publicClient = axios.create({
+  baseURL: CONFIG.API_URL,
+  timeout: 30000,
+  headers: { 'Content-Type': 'application/json' },
+})
 
 // Extended User Profile type with additional fields from mobile app
 export interface UserProfile extends User {
@@ -49,7 +57,7 @@ export const userService = {
   // Get user by ID (public profile) - uses /users/:id/profile endpoint (same as mobile app)
   async getUserById(id: string): Promise<UserProfile | null> {
     try {
-      const response = await apiClient.get(`/users/${id}/profile`)
+      const response = await publicClient.get(`/users/${id}/profile`)
       return response.data.data || null
     } catch (error) {
       console.error('Error getting user profile:', error)

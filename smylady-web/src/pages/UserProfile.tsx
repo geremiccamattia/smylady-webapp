@@ -137,7 +137,9 @@ export default function UserProfile() {
   // Fetch user posts
   const { data: postsData, isLoading: postsLoading } = useQuery({
     queryKey: ['userPosts', userId],
-    queryFn: () => postsService.getUserPosts(userId!, 1, 20),
+    queryFn: () => isAuthenticated
+      ? postsService.getUserPosts(userId!, 1, 20)
+      : postsService.getPublicUserPosts(userId!, 1, 20),
     enabled: !!userId && activeTab === 'wall',
   })
 
