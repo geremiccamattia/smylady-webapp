@@ -1,4 +1,12 @@
+import axios from 'axios'
 import { apiClient } from './api'
+import { CONFIG } from '@/lib/constants'
+
+const publicClient = axios.create({
+  baseURL: CONFIG.API_URL,
+  timeout: 30000,
+  headers: { 'Content-Type': 'application/json' },
+})
 
 export interface Post {
   _id: string
@@ -214,6 +222,28 @@ export const postsService = {
       }
     } catch (error) {
       console.error('Error getting user posts:', error)
+      return emptyResponse
+    }
+  },
+
+  getPublicUserPosts: async (userId: string, page = 1, limit = 20): Promise<PostsResponse> => {
+    const emptyResponse: PostsResponse = {
+      posts: [],
+      pagination: { page, limit, total: 0, totalPages: 0 }
+    }
+    try {
+      const response = await publicClient.get(`/posts/user/${userId}`, {
+        params: { page, limit },
+      })
+      if (!response?.data?.data) return emptyResponse
+      const { data } = response.data
+      const safePosts = Array.isArray(data.posts) ? data.posts : []
+      return {
+        posts: safePosts.filter((p: Post) => p && p._id),
+        pagination: data.pagination || emptyResponse.pagination,
+      }
+    } catch (error) {
+      console.error('Error getting public user posts:', error)
       return emptyResponse
     }
   },
