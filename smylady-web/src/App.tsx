@@ -1,21 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { AuthModalProvider } from '@/contexts/AuthModalContext'
 import { SocketProvider } from '@/contexts/SocketContext'
 import Layout from '@/components/layout/Layout'
 import CookieConsent from '@/components/CookieConsent'
+import AuthModal from '@/components/auth/AuthModal'
 
-// Redirect "/" based on auth state: logged in → /explore, not logged in → /login
 function HomeRedirect() {
-  const { isAuthenticated, isLoading } = useAuth()
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-  return <Navigate to={isAuthenticated ? '/explore' : '/login'} replace />
+  return <Navigate to="/explore" replace />
 }
 
 // Pages
@@ -81,6 +74,7 @@ import Contact from '@/pages/legal/Contact'
 function App() {
   return (
     <AuthProvider>
+      <AuthModalProvider>
       <SocketProvider>
       <Routes>
         {/* Public routes */}
@@ -105,6 +99,8 @@ function App() {
           <Route path="user/:userId/reviews" element={<OrganizerReviews />} />
           <Route path="user/:userId/list" element={<UserList />} />
           <Route path="search-users" element={<SearchUsers />} />
+          <Route path="feed" element={<Feed />} />
+          <Route path="post/:postId" element={<PostDetail />} />
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
@@ -119,8 +115,6 @@ function App() {
             <Route path="notifications" element={<Notifications />} />
             <Route path="safety-companions" element={<SafetyCompanions />} />
             <Route path="blocked-users" element={<BlockedUsers />} />
-            <Route path="feed" element={<Feed />} />
-            <Route path="post/:postId" element={<PostDetail />} />
             <Route path="chat" element={<Chat />} />
             <Route path="chat/:conversationId" element={<Conversation />} />
             <Route path="scan/:eventId" element={<QRScanner />} />
@@ -145,7 +139,9 @@ function App() {
       </Routes>
       <Toaster />
       <CookieConsent />
+      <AuthModal />
       </SocketProvider>
+      </AuthModalProvider>
     </AuthProvider>
   )
 }

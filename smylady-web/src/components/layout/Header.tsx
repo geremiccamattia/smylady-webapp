@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Search, Bell, MessageCircle, Menu, Plus, Newspaper, Users } from 'lucide-react'
@@ -15,6 +15,7 @@ export default function Header() {
   const { t } = useTranslation()
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 
@@ -115,9 +116,19 @@ export default function Header() {
               <Link to="/explore">
                 <Button variant="ghost" size="sm">{t('nav.explore')}</Button>
               </Link>
-              <Link to="/login">
-                <Button variant="outline" size="sm">{t('auth.login')}</Button>
+              <Link to="/feed">
+                <Button variant="ghost" size="sm">
+                  <Newspaper className="h-4 w-4 mr-2" />
+                  {t('nav.feed', { defaultValue: 'Feed' })}
+                </Button>
               </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/login', { state: { from: location } })}
+              >
+                {t('auth.login')}
+              </Button>
               <Link to="/register">
                 <Button variant="gradient" size="sm">{t('auth.register')}</Button>
               </Link>
@@ -190,9 +201,19 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setShowMobileMenu(false)}>
-                  <Button variant="outline" className="w-full">Anmelden</Button>
+                <Link to="/feed" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start">Feed</Button>
                 </Link>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setShowMobileMenu(false)
+                    navigate('/login', { state: { from: location } })
+                  }}
+                >
+                  Anmelden
+                </Button>
                 <Link to="/register" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="gradient" className="w-full">Registrieren</Button>
                 </Link>

@@ -29,10 +29,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - logout
       localStorage.removeItem(STORAGE_KEYS.TOKEN)
       localStorage.removeItem(STORAGE_KEYS.USER)
-      window.location.href = '/login'
+      const publicPaths = ['/explore', '/login', '/register', '/event/', '/user/', '/feed', '/post/']
+      const isPublicPath = publicPaths.some(path =>
+        window.location.pathname.startsWith(path)
+      )
+      if (!isPublicPath) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

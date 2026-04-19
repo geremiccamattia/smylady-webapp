@@ -439,6 +439,28 @@ export const postsService = {
     await apiClient.delete(`/posts/${postId}/comments/${commentIndex}/replies/${replyIndex}`)
   },
 
+  getPublicFeed: async (page = 1, limit = 20): Promise<PostsResponse> => {
+    const emptyResponse: PostsResponse = {
+      posts: [],
+      pagination: { page, limit, total: 0, totalPages: 0 }
+    }
+    try {
+      const response = await apiClient.get('/posts/public', {
+        params: { page, limit },
+      })
+      if (!response?.data?.data) return emptyResponse
+      const { data } = response.data
+      const safePosts = Array.isArray(data.posts) ? data.posts : []
+      return {
+        posts: safePosts.filter((p: Post) => p && p._id),
+        pagination: data.pagination || emptyResponse.pagination,
+      }
+    } catch (error) {
+      console.error('Error getting public feed:', error)
+      return emptyResponse
+    }
+  },
+
   // Get friends feed (posts from followed users) - like mobile app
   getFriendsFeed: async (page = 1, limit = 20): Promise<PostsResponse> => {
     const emptyResponse: PostsResponse = {

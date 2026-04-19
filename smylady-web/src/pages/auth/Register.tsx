@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,8 @@ export default function Register() {
   const [otp, setOtp] = useState('')
   const { register } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as any)?.from?.pathname || '/explore'
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,7 +81,7 @@ export default function Register() {
         type: 'sign-up',
       })
       toast({ title: 'E-Mail bestätigt!', description: 'Du kannst dich jetzt anmelden.' })
-      navigate('/login')
+      navigate(from, { replace: true })
     } catch (error: any) {
       toast({
         variant: 'destructive',

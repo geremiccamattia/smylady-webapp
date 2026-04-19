@@ -6,6 +6,7 @@ import { eventsService } from '@/services/events'
 import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, isMemoryHighlighted } from '@/services/memories'
 import { ticketsService } from '@/services/tickets'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -36,6 +37,7 @@ export default function EventMemories() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user, isAuthenticated } = useAuth()
+  const { requireAuth } = useRequireAuth()
   const queryClient = useQueryClient()
   const currentUserId = user?.id || user?._id
 
@@ -383,7 +385,7 @@ export default function EventMemories() {
 
           {/* Upload Button */}
           {canUpload && (
-            <Button onClick={() => setShowUpload(true)} className="gap-2">
+            <Button onClick={() => requireAuth(() => setShowUpload(true))} className="gap-2">
               <Upload className="w-4 h-4" />
               {t('memories.uploadPhoto')}
             </Button>

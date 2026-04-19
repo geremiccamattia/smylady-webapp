@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ticketsService } from '@/services/tickets'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatPrice, cn, resolveImageUrl, getInitials } from '@/lib/utils'
+import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug } from '@/lib/utils'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import {
@@ -499,7 +499,7 @@ export default function TicketDetail() {
 
           {/* Event Link */}
           {event && (event._id || event.id) && (
-            <Link to={`/event/${event._id || event.id}`}>
+            <Link to={`/event/${generateEventSlug(event.name, event._id || event.id)}`}>
               <Button variant="secondary" className="w-full">
                 Event-Details anzeigen
               </Button>

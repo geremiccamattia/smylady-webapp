@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ticketsService } from '@/services/tickets'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { formatDate, formatPrice, formatEventTime, resolveImageUrl } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, resolveImageUrl, generateEventSlug } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { Ticket, Calendar, MapPin, QrCode, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
@@ -133,7 +133,7 @@ export default function MyTickets() {
                           </Link>
                         )}
                         {event && (
-                          <Link to={`/event/${event.id || event._id}`}>
+                          <Link to={`/event/${generateEventSlug(event.name, event.id || event._id)}`}>
                             <Button variant="ghost" size="icon">
                               <ArrowRight className="h-5 w-5" />
                             </Button>
