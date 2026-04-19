@@ -2797,7 +2797,7 @@ function ProfileMemoryViewer({
             {memory.eventTitle && (
               <button
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => memory.eventId && navigate(`/event/${generateEventSlug(memory.eventTitle, memory.eventId)}`)}
+                onClick={() => memory.eventId && navigate(`/event/${generateEventSlug(memory.eventTitle || '', memory.eventId || '')}`)}
               >
                 <Calendar className="h-3.5 w-3.5" />
                 {memory.eventTitle}

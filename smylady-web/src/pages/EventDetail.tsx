@@ -6,7 +6,6 @@ import { favoritesService } from '@/services/favorites'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
@@ -110,6 +109,7 @@ export default function EventDetail() {
   const currentUserId = user ? (user._id || user.id) : null
   const isOwner = !!(currentUserId && creatorId && currentUserId === creatorId)
   const eventHasStarted = event ? new Date(event.eventDate) <= new Date() : false
+  const eventId = event?._id || event?.id || id
 
   // Check if this is an external/Ticketmaster event
   const isExternalEvent = event?.isTicketmaster || event?.isExternalEvent || event?.source === 'ticketmaster'
@@ -206,7 +206,7 @@ export default function EventDetail() {
       // First try to get organizer ticket if user is owner
       if (isOwner) {
         try {
-          const result = await memoriesService.getOrganizerTicket(id!)
+          const result = await memoriesService.getOrganizerTicket(eventId!)
           if (result?.ticketId) return result
         } catch {
           // Organizer ticket failed, fall through to regular ticket check
@@ -217,7 +217,7 @@ export default function EventDetail() {
         const tickets = await ticketsService.getUserTickets()
         const ticket = tickets?.find((t: any) => {
           const ticketEventId = typeof t.event === 'object' ? (t.event._id || t.event.id) : t.event
-          return ticketEventId === id
+          return ticketEventId === eventId
         })
         if (ticket) return { ticketId: ticket._id || ticket.id }
       } catch {
@@ -227,7 +227,7 @@ export default function EventDetail() {
       // (handles cases where creator field format differs)
       if (!isOwner && currentUserId) {
         try {
-          const result = await memoriesService.getOrganizerTicket(id!)
+          const result = await memoriesService.getOrganizerTicket(eventId!)
           if (result?.ticketId) return result
         } catch {
           // Not an organizer, ignore 403
@@ -244,7 +244,7 @@ export default function EventDetail() {
     queryKey: ['eventMemories', id],
     queryFn: async () => {
       try {
-        return await memoriesService.getEventMemories(id!)
+        return await memoriesService.getEventMemories(eventId!)
       } catch (error: any) {
         // 403 = user doesn't have ticket, return empty array
         if (error?.response?.status === 403) {
@@ -263,7 +263,7 @@ export default function EventDetail() {
       const tickets = await ticketsService.getMyTickets()
       const ticket = tickets?.find((t: any) => {
         const ticketEventId = typeof t.event === 'object' ? (t.event._id || t.event.id) : t.event
-        return ticketEventId === id
+        return ticketEventId === eventId
       })
       return ticket || null
     },
@@ -293,7 +293,7 @@ export default function EventDetail() {
     const isFree = !numericPrice || numericPrice <= 0
 
     if (isFree) {
-      buyFreeEvent({ eventId: id, tierId: selectedTierId || undefined }, {
+      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined }, {
         onSuccess: (ticket) => {
           toast({ title: t('common.success'), description: t('tickets.freeCreated') })
           navigate(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
@@ -308,7 +308,7 @@ export default function EventDetail() {
         onSettled: () => setIsPurchasing(false),
       })
     } else {
-      createPaymentIntent({ eventId: id, tierId: selectedTierId || undefined }, {
+      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined }, {
         onSuccess: (data) => {
           const paymentIntentId = data.paymentIntentId || data.clientSecret?.split('_secret_')[0] || ''
           openPayment({
@@ -334,11 +334,11 @@ export default function EventDetail() {
   const handleFavoriteClick = () => requireAuth(async () => {
     try {
       if (isFavorite) {
-        await favoritesService.removeFavorite(id!)
+        await favoritesService.removeFavorite(eventId!)
         setIsFavorite(false)
         toast({ title: t('favorites.removed') })
       } else {
-        await favoritesService.addFavorite(id!)
+        await favoritesService.addFavorite(eventId!)
         setIsFavorite(true)
         toast({ title: t('favorites.added') })
       }
@@ -373,7 +373,7 @@ export default function EventDetail() {
     if (!id) return
     setIsDeleting(true)
     try {
-      await eventsService.deleteEvent(id)
+      await eventsService.deleteEvent(eventId!)
       toast({
         title: t('common.success'),
         description: t('events.deleteSuccess', { defaultValue: 'Event wurde gelöscht' }),
@@ -706,7 +706,7 @@ export default function EventDetail() {
               {userTicket?.ticketId ? (
                 <MemoryGallery
                   ticketId={userTicket.ticketId}
-                  eventId={id!}
+                  eventId={eventId!}
                   eventStartDate={event.eventDate}
                   canUpload={isOwner || event?.allowGuestMemories !== false}
                   isOrganizer={isOwner}
@@ -800,7 +800,7 @@ export default function EventDetail() {
           {/* Reviews Section - Only for internal events */}
           {!isExternalEvent && (
             <EventReviews
-              eventId={id!}
+              eventId={eventId!}
               eventEnded={new Date(event.eventDate) < new Date()}
             />
           )}
@@ -839,7 +839,7 @@ export default function EventDetail() {
                           value={JSON.stringify({
                             ticketId: purchasedTicket._id || purchasedTicket.id,
                             userId: purchasedTicket.userId || (typeof purchasedTicket.user === 'string' ? purchasedTicket.user : (purchasedTicket.user as any)?._id),
-                            eventId: id,
+                            eventId: eventId,
                             verificationCode: purchasedTicket.verificationCode || '',
                           })}
                           size={180}
@@ -1064,13 +1064,13 @@ export default function EventDetail() {
                       <Link to={`/edit-event/${id}`}>{t('events.editEvent')}</Link>
                     </Button>
                     <Button variant="gradient" className="w-full gap-2" asChild>
-                      <Link to={`/scan/${id}`}>
+                      <Link to={`/scan/${eventId}`}>
                         <ScanLine className="h-4 w-4" />
                         {t('tickets.scanTickets')}
                       </Link>
                     </Button>
                     <Button variant="outline" className="w-full gap-2" asChild>
-                      <Link to={`/scan/${id}/statistics?name=${encodeURIComponent(event?.name || '')}`}>
+                      <Link to={`/scan/${eventId}/statistics?name=${encodeURIComponent(event?.name || '')}`}>
                         <Users className="h-4 w-4" />
                         {t('tickets.scanStatistics')}
                       </Link>
