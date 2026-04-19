@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/contexts/AuthContext'
 import { eventsService } from '@/services/events'
 import { ticketmasterService } from '@/services/ticketmaster'
 import {
@@ -46,6 +47,7 @@ const FALLBACK_LOCATION: LocationResult = {
 
 export default function Explore() {
   const { t } = useTranslation()
+  const { isAuthenticated } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '')
@@ -108,6 +110,7 @@ export default function Explore() {
     queryKey: [
       'events',
       'explore',
+      isAuthenticated,
       searchQuery,
       selectedCategory,
       selectedMusicType,
@@ -116,17 +119,29 @@ export default function Explore() {
       radius,
     ],
     queryFn: () =>
-      eventsService.getEvents(
-        {
-          search: searchQuery,
-          category: selectedCategory,
-          musicType: selectedMusicType,
-          latitude: selectedLocation?.lat?.toString() || '',
-          longitude: selectedLocation?.lng?.toString() || '',
-          radius: radius,
-        },
-        true
-      ),
+      isAuthenticated
+        ? eventsService.getEvents(
+            {
+              search: searchQuery,
+              category: selectedCategory,
+              musicType: selectedMusicType,
+              latitude: selectedLocation?.lat?.toString() || '',
+              longitude: selectedLocation?.lng?.toString() || '',
+              radius: radius,
+            },
+            true
+          )
+        : eventsService.getPublicEvents(
+            {
+              search: searchQuery,
+              category: selectedCategory,
+              musicType: selectedMusicType,
+              latitude: selectedLocation?.lat?.toString() || '',
+              longitude: selectedLocation?.lng?.toString() || '',
+              radius: radius,
+            },
+            true
+          ),
     enabled: locationLoaded,
   })
 
@@ -173,6 +188,13 @@ export default function Explore() {
     if (selectedMusicType) params.set('musicType', selectedMusicType)
     setSearchParams(params)
   }, [searchQuery, selectedCategory, selectedMusicType, setSearchParams])
+
+  useEffect(() => {
+    document.title = 'Events entdecken | Share Your Party'
+    return () => {
+      document.title = 'Share Your Party'
+    }
+  }, [])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

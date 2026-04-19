@@ -3,7 +3,7 @@ import { Heart, MapPin, Calendar, Clock, Users, ExternalLink } from 'lucide-reac
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Event } from '@/types'
-import { formatDate, formatPrice, cn, resolveImageUrl } from '@/lib/utils'
+import { formatDate, formatPrice, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
 import { useState, useCallback } from 'react'
 import { favoritesService } from '@/services/favorites'
 import { useAuth } from '@/contexts/AuthContext'
@@ -269,7 +269,7 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   }
 
   return (
-    <Link to={`/event/${eventId}`}>
+    <Link to={`/event/${generateEventSlug(event.name, eventId!)}`}>
       {cardContent}
     </Link>
   )

@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -20,6 +20,7 @@ import { ticketsService } from '@/services/tickets'
 import { chatService } from '@/services/chat'
 import { memoriesService, getMemoryUrl, getMemoryType, getMemoryId, getUploadedByInfo } from '@/services/memories'
 import { useTranslation } from 'react-i18next'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { format } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import QRCode from 'react-qr-code'
@@ -62,6 +63,7 @@ export default function EventDetail() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { isAuthenticated, user } = useAuth()
+  const { requireAuth } = useRequireAuth()
   const [isFavorite, setIsFavorite] = useState(false)
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [imageViewerOpen, setImageViewerOpen] = useState(false)
@@ -72,7 +74,6 @@ export default function EventDetail() {
   const { mutate: createPaymentIntent } = useCreatePaymentIntent()
   const { mutate: buyFreeEvent } = useBuyFreeEvent()
 
-  const [showAuthModal, setShowAuthModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
@@ -138,6 +139,64 @@ export default function EventDetail() {
       if (firstAvailable) {
         setSelectedTierId(firstAvailable._id)
       }
+    }
+  }, [event])
+
+  useEffect(() => {
+    if (!event) return
+
+    const eventName = event.name || 'Event'
+    const description = event.description
+      ? event.description.slice(0, 160)
+      : 'Entdecke Events auf Share Your Party'
+    const imageUrl = event.locationImages?.[0]?.url || event.thumbnailUrl || ''
+    const slugUrl = `https://shareyourparty.de/event/${generateEventSlug(event.name, event._id || event.id || '')}`
+
+    // Title
+    document.title = `${eventName} | Share Your Party`
+
+    // Meta Description
+    let metaDesc = document.querySelector('meta[name="description"]')
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta')
+      metaDesc.setAttribute('name', 'description')
+      document.head.appendChild(metaDesc)
+    }
+    metaDesc.setAttribute('content', description)
+
+    // Canonical Tag
+    let canonical = document.querySelector('link[rel="canonical"]')
+    if (!canonical) {
+      canonical = document.createElement('link')
+      canonical.setAttribute('rel', 'canonical')
+      document.head.appendChild(canonical)
+    }
+    canonical.setAttribute('href', slugUrl)
+
+    // Open Graph Tags
+    const ogTags: Record<string, string> = {
+      'og:title': `${eventName} | Share Your Party`,
+      'og:description': description,
+      'og:image': imageUrl,
+      'og:url': slugUrl,
+      'og:type': 'event',
+    }
+
+    Object.entries(ogTags).forEach(([property, content]) => {
+      let tag = document.querySelector(`meta[property="${property}"]`)
+      if (!tag) {
+        tag = document.createElement('meta')
+        tag.setAttribute('property', property)
+        document.head.appendChild(tag)
+      }
+      tag.setAttribute('content', content)
+    })
+
+    return () => {
+      document.title = 'Share Your Party'
+      document.querySelector('meta[name="description"]')
+        ?.setAttribute('content', 'Entdecke Events in deiner Nähe')
+      document.querySelector('link[rel="canonical"]')?.remove()
     }
   }, [event])
 
@@ -213,12 +272,7 @@ export default function EventDetail() {
     enabled: !!id && !!user && !isOwner,
   })
 
-  const handlePurchaseTicket = async () => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true)
-      return
-    }
-
+  const handlePurchaseTicket = () => requireAuth(async () => {
     if (!id || !event) return
 
     // If event has tiers, require a selection
@@ -277,14 +331,9 @@ export default function EventDetail() {
         },
       })
     }
-  }
+  })
 
-  const handleFavoriteClick = async () => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true)
-      return
-    }
-
+  const handleFavoriteClick = () => requireAuth(async () => {
     try {
       if (isFavorite) {
         await favoritesService.removeFavorite(id!)
@@ -302,7 +351,7 @@ export default function EventDetail() {
         description: t('common.actionFailed'),
       })
     }
-  }
+  })
 
   const handleShare = async () => {
     const url = `https://app.shareyourparty.de/redirect/event/${id}`
@@ -517,11 +566,7 @@ export default function EventDetail() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={async () => {
-                    if (!isAuthenticated) {
-                      setShowAuthModal(true)
-                      return
-                    }
+                  onClick={() => requireAuth(async () => {
                     try {
                       const chatRoom = await chatService.getOrCreateRoom(creatorId!)
                       const roomId = chatRoom._id || (chatRoom as any).id || (chatRoom as any).roomId
@@ -535,7 +580,7 @@ export default function EventDetail() {
                         description: t('chat.openFailed'),
                       })
                     }
-                  }}
+                  })}
                 >
                   <MessageCircle className="h-4 w-4 mr-1" />
                   {t('common.chat')}
@@ -1104,59 +1149,6 @@ export default function EventDetail() {
         eventName={paymentData.eventName}
         amount={paymentData.amount}
       />
-
-      {/* Auth Gate Modal - shown when unauthenticated user tries to book */}
-      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center mb-4">
-              <Ticket className="h-8 w-8 text-white" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-center">
-              {t('auth.loginRequired', { defaultValue: 'Anmeldung erforderlich' })}
-            </DialogTitle>
-            <DialogDescription className="text-center text-base mt-2">
-              {t('auth.loginToBookDescription', {
-                defaultValue: 'Um ein Ticket zu buchen, musst du eingeloggt sein. Registriere dich kostenlos oder melde dich an.'
-              })}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3 mt-4">
-            <Button
-              variant="gradient"
-              size="lg"
-              className="w-full gap-2 rounded-full"
-              onClick={() => {
-                setShowAuthModal(false)
-                navigate('/register', { state: { from: { pathname: `/event/${id}` } } })
-              }}
-            >
-              <UserPlus className="h-5 w-5" />
-              {t('auth.registerFree', { defaultValue: 'Kostenlos registrieren' })}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full gap-2 rounded-full"
-              onClick={() => {
-                setShowAuthModal(false)
-                navigate('/login', { state: { from: { pathname: `/event/${id}` } } })
-              }}
-            >
-              <LogIn className="h-5 w-5" />
-              {t('auth.login', { defaultValue: 'Anmelden' })}
-            </Button>
-          </div>
-
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            {t('auth.authModalHint', {
-              defaultValue: 'Nach der Anmeldung wirst du automatisch zu diesem Event zurückgeleitet.'
-            })}
-          </p>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Event Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

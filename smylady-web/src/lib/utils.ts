@@ -146,6 +146,21 @@ export function debounce<T extends (...args: unknown[]) => void>(
   }
 }
 
+export function generateEventSlug(name: string, id: string): string {
+  const umlautMap: Record<string, string> = {
+    ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss',
+  }
+  const slug = name
+    .toLowerCase()
+    .replace(/[äöüß]/g, c => umlautMap[c] || c)
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+  const shortId = id.slice(-8)
+  return `${slug}-${shortId}`
+}
+
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()

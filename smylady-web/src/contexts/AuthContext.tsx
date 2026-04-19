@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService.logout()
     setToken(null)
     setUser(null)
-    window.location.href = '/login'
+    window.location.href = '/explore'
   }
 
   const updateUser = (updatedUser: User) => {

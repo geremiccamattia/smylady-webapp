@@ -22,7 +22,7 @@ import { StoriesBar } from '@/components/stories/StoriesBar'
 import { postsService } from '@/services/posts'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
-import { getInitials, resolveImageUrl } from '@/lib/utils'
+import { getInitials, resolveImageUrl, generateEventSlug } from '@/lib/utils'
 
 interface FriendsEvent {
   event: {
@@ -305,7 +305,7 @@ export default function FriendsFeed() {
                   <Card
                     key={event._id}
                     className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => navigate(`/event/${event._id}`)}
+                    onClick={() => navigate(`/event/${generateEventSlug(event.name, event._id)}`)}
                   >
                     <CardContent className="p-4 flex gap-4">
                       {/* Event Image */}

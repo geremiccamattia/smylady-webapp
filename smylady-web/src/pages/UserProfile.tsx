@@ -5,6 +5,7 @@ import { userService } from '@/services/user'
 import { postsService, Post, Comment, LikedByUser } from '@/services/posts'
 import { memoriesService } from '@/services/memories'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -14,7 +15,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 
 import { useToast } from '@/hooks/use-toast'
-import { getInitials, cn, resolveImageUrl, safeFormatDate, formatRelativeTime } from '@/lib/utils'
+import { getInitials, cn, resolveImageUrl, safeFormatDate, formatRelativeTime, generateEventSlug } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import {
@@ -110,6 +111,7 @@ export default function UserProfile() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { user: currentUser, isAuthenticated } = useAuth()
+  const { requireAuth } = useRequireAuth()
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabType>('wall')
@@ -347,11 +349,10 @@ export default function UserProfile() {
   })
 
   // Handler that toggles follow state
-  const handleFollowToggle = () => {
+  const handleFollowToggle = () => requireAuth(() => {
     if (followMutation.isPending) return
-    // Pass the desired new state (opposite of current)
     followMutation.mutate(!isFollowing)
-  }
+  })
 
   // Block mutation
   const blockMutation = useMutation({
@@ -1417,7 +1418,7 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
         {/* Event Reference */}
         {post.eventId && (
           <Link
-            to={`/event/${post.eventId._id}`}
+            to={`/event/${generateEventSlug(post.eventId.name, post.eventId._id)}`}
             className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80"
           >
             <div className="flex items-center gap-3">
@@ -2796,7 +2797,7 @@ function ProfileMemoryViewer({
             {memory.eventTitle && (
               <button
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => memory.eventId && navigate(`/event/${memory.eventId}`)}
+                onClick={() => memory.eventId && navigate(`/event/${generateEventSlug(memory.eventTitle, memory.eventId)}`)}
               >
                 <Calendar className="h-3.5 w-3.5" />
                 {memory.eventTitle}

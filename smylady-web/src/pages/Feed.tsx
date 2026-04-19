@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { postsService, Post, Comment, LikedByUser } from '@/services/posts'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
-import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
+import { getInitials, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import { Link, useNavigate } from 'react-router-dom'
@@ -56,8 +57,16 @@ import {
 
 export default function Feed() {
   const { user, isAuthenticated } = useAuth()
+  const { requireAuth } = useRequireAuth()
   const { t } = useTranslation()
   const [showCreatePost, setShowCreatePost] = useState(false)
+
+  useEffect(() => {
+    document.title = 'Feed | Share Your Party'
+    return () => {
+      document.title = 'Share Your Party'
+    }
+  }, [])
 
   // Fetch feed posts
   const {
@@ -67,8 +76,11 @@ export default function Feed() {
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ['feed'],
-    queryFn: ({ pageParam = 1 }) => postsService.getFeed(pageParam),
+    queryKey: ['feed', isAuthenticated],
+    queryFn: ({ pageParam = 1 }) =>
+      isAuthenticated
+        ? postsService.getFeed(pageParam)
+        : postsService.getPublicFeed(pageParam),
     getNextPageParam: (lastPage) => {
       if (lastPage.pagination.page < lastPage.pagination.totalPages) {
         return lastPage.pagination.page + 1
@@ -79,20 +91,6 @@ export default function Feed() {
   })
 
   const posts = postsData?.pages.flatMap(page => page.posts) || []
-
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-2xl mx-auto text-center py-16">
-        <h2 className="text-2xl font-bold mb-4">{t('nav.feed')}</h2>
-        <p className="text-muted-foreground mb-8">
-          {t('auth.loginToSee')}
-        </p>
-        <Link to="/login">
-          <Button>{t('auth.login')}</Button>
-        </Link>
-      </div>
-    )
-  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -112,12 +110,12 @@ export default function Feed() {
               <AvatarFallback>{getInitials(user?.name || user?.username || '')}</AvatarFallback>
             </Avatar>
             <button
-              onClick={() => setShowCreatePost(true)}
+              onClick={() => requireAuth(() => setShowCreatePost(true))}
               className="flex-1 text-left px-4 py-2 bg-muted rounded-full text-muted-foreground hover:bg-muted/80 transition-colors"
             >
               {t('posts.whatsNew')}
             </button>
-            <Button size="icon" variant="ghost" onClick={() => setShowCreatePost(true)}>
+            <Button size="icon" variant="ghost" onClick={() => requireAuth(() => setShowCreatePost(true))}>
               <ImageIcon className="h-5 w-5" />
             </Button>
           </div>
@@ -192,6 +190,7 @@ export default function Feed() {
 // Post Card Component
 function PostCard({ post }: { post: Post }) {
   const { user } = useAuth()
+  const { requireAuth } = useRequireAuth()
   const { toast } = useToast()
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
@@ -295,13 +294,10 @@ function PostCard({ post }: { post: Post }) {
   const handlePostLike = () => {
     const userReaction = getUserReaction(post.reactions || [], currentUserId)
     if (userReaction) {
-      // User already has a reaction, remove it by toggling same emoji
       postReactionMutation.mutate(userReaction)
     } else if (post.hasLiked) {
-      // User has a legacy like (not in reactions array), toggle it off via 👍
       postReactionMutation.mutate(DEFAULT_LIKE_EMOJI)
     } else {
-      // Add default 👍 like
       postReactionMutation.mutate(DEFAULT_LIKE_EMOJI)
     }
   }
@@ -822,7 +818,7 @@ function PostCard({ post }: { post: Post }) {
         {/* Event Reference */}
         {post.eventId && typeof post.eventId === 'object' && post.eventId._id && (
           <Link
-            to={`/event/${post.eventId._id}`}
+            to={`/event/${generateEventSlug(post.eventId.name, post.eventId._id)}`}
             className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -911,7 +907,7 @@ function PostCard({ post }: { post: Post }) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handlePostLike}
+              onClick={() => requireAuth(handlePostLike)}
               disabled={postReactionMutation.isPending}
               className={cn(
                 (getUserReaction(post.reactions || [], currentUserId) || post.hasLiked) && 'text-primary'
@@ -930,7 +926,7 @@ function PostCard({ post }: { post: Post }) {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={openPostEmojiPicker}
+              onClick={() => requireAuth(openPostEmojiPicker)}
               title={t('posts.emojiReaction')}
             >
               <Smile className="h-4 w-4" />
@@ -939,7 +935,7 @@ function PostCard({ post }: { post: Post }) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setShowComments(!showComments)}
+            onClick={() => requireAuth(() => setShowComments(!showComments))}
           >
             <MessageCircle className="h-4 w-4 mr-1" />
             {post.commentCount || 0}
@@ -961,7 +957,7 @@ function PostCard({ post }: { post: Post }) {
               />
               <Button
                 size="sm"
-                onClick={handleSubmitComment}
+                onClick={() => requireAuth(handleSubmitComment)}
                 disabled={!commentText.trim() || commentMutation.isPending}
               >
                 <Send className="h-4 w-4" />
