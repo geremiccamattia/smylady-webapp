@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, generateEventSlug, injectJsonLd, removeJsonLd } from '@/lib/utils'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -190,11 +190,78 @@ export default function EventDetail() {
       tag.setAttribute('content', content)
     })
 
+    // --- JSON-LD Event Schema ---
+    const slug = generateEventSlug(event.name, event._id || event.id || '')
+    const eventUrl = `https://shareyourparty.de/event/${slug}`
+
+    const offers = event.ticketTiers && event.ticketTiers.length > 0
+      ? event.ticketTiers.map((tier: any) => {
+          const isSoldOut = tier.quantity != null && tier.soldCount >= tier.quantity
+          return {
+            '@type': 'Offer',
+            name: tier.name,
+            price: tier.price ?? 0,
+            priceCurrency: 'EUR',
+            availability: isSoldOut
+              ? 'https://schema.org/SoldOut'
+              : 'https://schema.org/InStock',
+            url: eventUrl,
+          }
+        })
+      : event.price != null
+      ? [{
+          '@type': 'Offer',
+          price: Number(event.price) || 0,
+          priceCurrency: 'EUR',
+          availability: 'https://schema.org/InStock',
+          url: eventUrl,
+        }]
+      : undefined
+
+    const creatorObj = event.creator || event.userId
+    const organizerName = creatorObj && typeof creatorObj !== 'string'
+      ? (creatorObj.username || creatorObj.name)
+      : null
+    const organizerId = creatorObj
+      ? (typeof creatorObj === 'string' ? creatorObj : (creatorObj._id || creatorObj.id))
+      : null
+
+    injectJsonLd('schema-event', {
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: event.name,
+      description: event.description?.slice(0, 300) || undefined,
+      startDate: event.eventStartTime || event.eventDate,
+      endDate: (event as any).endDate || undefined,
+      eventStatus: 'https://schema.org/EventScheduled',
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+      url: eventUrl,
+      image: resolveImageUrl(event.locationImages?.[0]?.url || event.thumbnailUrl) || undefined,
+      location: {
+        '@type': 'Place',
+        name: event.locationName || event.location || undefined,
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: event.venue?.city || undefined,
+          addressCountry: 'AT',
+        },
+      },
+      organizer: organizerName
+        ? {
+            '@type': 'Person',
+            name: organizerName,
+            url: organizerId ? `https://shareyourparty.de/user/${organizerId}` : undefined,
+          }
+        : undefined,
+      offers: offers || undefined,
+    })
+
     return () => {
       document.title = 'Share Your Party'
       document.querySelector('meta[name="description"]')
         ?.setAttribute('content', 'Entdecke Events in deiner Nähe')
       document.querySelector('link[rel="canonical"]')?.remove()
+      removeJsonLd('schema-event')
     }
   }, [event])
 
