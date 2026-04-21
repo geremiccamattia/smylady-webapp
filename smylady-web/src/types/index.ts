@@ -127,6 +127,8 @@ export interface EventFilters {
   longitude?: string
   radius?: number | string
   search?: string
+  city?: string
+  upcoming?: boolean
 }
 
 // Ticket Types

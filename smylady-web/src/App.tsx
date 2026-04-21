@@ -34,6 +34,7 @@ import Notifications from '@/pages/Notifications'
 import SafetyCompanions from '@/pages/SafetyCompanions'
 import BlockedUsers from '@/pages/BlockedUsers'
 import Feed from '@/pages/Feed'
+import WienEvents from '@/pages/WienEvents'
 import QRScanner from '@/pages/QRScanner'
 import NotFound from '@/pages/NotFound'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
@@ -135,6 +136,7 @@ function App() {
           <Route path="user/:userId/list" element={<UserList />} />
           <Route path="search-users" element={<SearchUsers />} />
           <Route path="feed" element={<Feed />} />
+          <Route path="events/wien" element={<WienEvents />} />
           <Route path="post/:postId" element={<PostDetail />} />
 
           {/* Protected routes */}
