@@ -188,3 +188,16 @@ export function formatRelativeTime(dateString: string): string {
   // Fallback to date format
   return formatDate(date)
 }
+
+export function injectJsonLd(id: string, data: object): void {
+  document.getElementById(id)?.remove()
+  const script = document.createElement('script')
+  script.id = id
+  script.type = 'application/ld+json'
+  script.text = JSON.stringify(data)
+  document.head.appendChild(script)
+}
+
+export function removeJsonLd(id: string): void {
+  document.getElementById(id)?.remove()
+}

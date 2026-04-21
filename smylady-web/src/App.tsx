@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -6,6 +7,7 @@ import { SocketProvider } from '@/contexts/SocketContext'
 import Layout from '@/components/layout/Layout'
 import CookieConsent from '@/components/CookieConsent'
 import AuthModal from '@/components/auth/AuthModal'
+import { injectJsonLd, removeJsonLd } from '@/lib/utils'
 
 function HomeRedirect() {
   return <Navigate to="/explore" replace />
@@ -72,6 +74,39 @@ import Terms from '@/pages/legal/Terms'
 import Contact from '@/pages/legal/Contact'
 
 function App() {
+  useEffect(() => {
+    injectJsonLd('schema-website', {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Share Your Party',
+      url: 'https://shareyourparty.de',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: 'https://shareyourparty.de/search?q={search_term_string}',
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    })
+
+    injectJsonLd('schema-organization', {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Share Your Party',
+      url: 'https://shareyourparty.de',
+      logo: 'https://shareyourparty.de/logo.png',
+      sameAs: [
+        'https://www.instagram.com/shareyourparty.eu',
+      ],
+    })
+
+    return () => {
+      removeJsonLd('schema-website')
+      removeJsonLd('schema-organization')
+    }
+  }, [])
+
   return (
     <AuthProvider>
       <AuthModalProvider>
