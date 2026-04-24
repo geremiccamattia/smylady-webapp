@@ -32,6 +32,7 @@ import {
   Heart,
   Upload,
   Sparkles,
+  ArrowLeft,
 } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import axios from 'axios'
@@ -524,8 +525,16 @@ export default function Login() {
 
             {/* Right Side - Login Form */}
             <div className="order-1 lg:order-2">
-              <Card className="w-full max-w-md mx-auto shadow-2xl border-0 bg-card/95 backdrop-blur-md animate-glow-pulse">
+              <Card className="relative w-full max-w-md mx-auto shadow-2xl border-0 bg-card/95 backdrop-blur-md animate-glow-pulse">
                 <CardHeader className="text-center pb-4">
+                  {/* Back Button */}
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="absolute top-4 left-4 p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label="Zurück"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
                   {/* Mobile Logo - GROSS */}
                   <img
                     src="/logo.png"

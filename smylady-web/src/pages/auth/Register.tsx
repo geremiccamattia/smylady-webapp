@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { apiClient } from '@/services/api'
 
@@ -95,9 +95,16 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
-      <Card className="w-full max-w-md">
+      <Card className="relative w-full max-w-md">
         <CardHeader className="text-center">
-          <img 
+          <button
+            onClick={() => navigate(-1)}
+            className="absolute top-4 left-4 p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Zurück"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <img
             src="/logo.png" 
             alt="Share Your Party" 
             className="mx-auto w-16 h-16 rounded-full object-cover mb-4"
