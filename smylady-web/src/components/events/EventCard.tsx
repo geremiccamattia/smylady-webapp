@@ -9,6 +9,7 @@ import { favoritesService } from '@/services/favorites'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { useTranslation } from 'react-i18next'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 
 interface EventCardProps {
   event: Event
@@ -19,6 +20,7 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
   const { toast } = useToast()
+  const { showAuthModal } = useAuthModal()
   const [isFavorite, setIsFavorite] = useState(event.isFavorite || false)
   const [isLoading, setIsLoading] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -50,11 +52,7 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
     e.stopPropagation()
 
     if (!isAuthenticated) {
-      toast({
-        variant: 'destructive',
-        title: 'Nicht angemeldet',
-        description: 'Bitte melde dich an um Events zu favorisieren.',
-      })
+      showAuthModal()
       return
     }
 
