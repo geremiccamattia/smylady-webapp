@@ -113,6 +113,12 @@ export interface Event {
     address?: string
     city?: string
   }
+  boostStatus?: 'none' | 'active' | 'expired'
+  boostBudget?: number
+  boostDailyBudget?: number
+  boostStartDate?: string
+  boostEndDate?: string
+  boostRadius?: number
 }
 
 export interface EventFilters {

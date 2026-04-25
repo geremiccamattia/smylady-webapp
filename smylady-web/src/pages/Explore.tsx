@@ -32,6 +32,7 @@ import {
   Ticket,
   MapPin,
   Navigation,
+  Zap,
 } from 'lucide-react'
 import { EVENT_CATEGORIES, MUSIC_TYPES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -180,6 +181,13 @@ export default function Explore() {
       ? ticketmasterEvents.map((e: Event) => ({ ...e, isTicketmaster: true }))
       : []),
   ]
+
+  const boostedEvents = allEvents.filter(
+    (e) => e.boostStatus === 'active' && e.boostEndDate && new Date(e.boostEndDate) > new Date()
+  )
+  const organicEvents = allEvents.filter(
+    (e) => e.boostStatus !== 'active' || !e.boostEndDate || new Date(e.boostEndDate) <= new Date()
+  )
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -427,10 +435,29 @@ export default function Explore() {
               </span>
             )}
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {allEvents.map((event) => (
-              <EventCard key={event.id || event._id} event={event} />
-            ))}
+          <div className="space-y-6">
+            {/* Gesponserte Events */}
+            {boostedEvents.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium text-amber-500">Gesponserte Events</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {boostedEvents.map((event) => (
+                    <EventCard key={event.id || event._id} event={event} />
+                  ))}
+                </div>
+                <div className="border-t my-4" />
+              </div>
+            )}
+
+            {/* Organische Events */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {organicEvents.map((event) => (
+                <EventCard key={event.id || event._id} event={event} />
+              ))}
+            </div>
           </div>
         </>
       ) : (
