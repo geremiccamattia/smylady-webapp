@@ -76,7 +76,6 @@ export default function EventDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
-  const [showCancellationPolicy, setShowCancellationPolicy] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -376,8 +375,7 @@ export default function EventDetail() {
     purchasedTicket &&
     (purchasedTicket.status === 'valid' || purchasedTicket.status === 'active') &&
     !purchasedTicket.isScanned &&
-    purchasedTicket.status !== 'cancelled' &&
-    purchasedTicket.status !== 'refunded' &&
+    !['cancelled', 'refunded'].includes(purchasedTicket.status as string) &&
     !isPastEvent &&
     (!eventStartTime || eventStartTime > new Date())
 
@@ -1024,7 +1022,7 @@ export default function EventDetail() {
                   </Link>
 
                   {/* Cancel Ticket Button */}
-                  {purchasedTicket.status !== 'cancelled' && purchasedTicket.status !== 'refunded' && (
+                  {!['cancelled', 'refunded'].includes(purchasedTicket.status as string) && (
                     <div className="space-y-1">
                       <Button
                         variant="destructive"
