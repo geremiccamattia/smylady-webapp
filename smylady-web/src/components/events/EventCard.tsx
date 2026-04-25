@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Heart, MapPin, Calendar, Clock, Users, ExternalLink } from 'lucide-react'
+import { Heart, MapPin, Calendar, Clock, Users, ExternalLink, Zap } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Event } from '@/types'
@@ -155,6 +155,13 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
           <div className="absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white rounded-md text-xs font-semibold flex items-center gap-1">
             <ExternalLink className="h-3 w-3" />
             Ticketmaster
+          </div>
+        )}
+        {/* Boost Badge */}
+        {event.boostStatus === 'active' && (
+          <div className="absolute top-2 left-2 px-2 py-1 bg-amber-500 text-white rounded-md text-xs font-semibold flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            Gesponsert
           </div>
         )}
         {/* Favorite Button */}
