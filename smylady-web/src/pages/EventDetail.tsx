@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { eventsService } from '@/services/events'
 import { favoritesService } from '@/services/favorites'
@@ -52,6 +52,8 @@ import {
   CheckCircle,
   ShieldCheck,
   Trash2,
+  Loader2,
+  XCircle,
 } from 'lucide-react'
 
 export default function EventDetail() {
@@ -73,6 +75,8 @@ export default function EventDetail() {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [showCancellationPolicy, setShowCancellationPolicy] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -329,13 +333,53 @@ export default function EventDetail() {
     queryFn: async () => {
       const tickets = await ticketsService.getMyTickets()
       const ticket = tickets?.find((t: any) => {
-        const ticketEventId = typeof t.event === 'object' ? (t.event._id || t.event.id) : t.event
-        return ticketEventId === eventId
+        const ticketEventId = typeof t.event === 'object'
+          ? (t.event._id || t.event.id)
+          : (t.eventId || t.event)
+        return ticketEventId === eventId ||
+               ticketEventId === event?._id ||
+               ticketEventId === event?.id
       })
       return ticket || null
     },
-    enabled: !!id && !!user && !isOwner,
+    enabled: !!id && !!user && !isOwner && !!event,
   })
+
+  const { data: refundPreview, isLoading: isRefundPreviewLoading } = useQuery({
+    queryKey: ['refundPreview', purchasedTicket?._id || purchasedTicket?.id],
+    queryFn: () => ticketsService.getRefundPreview(
+      (purchasedTicket?._id || purchasedTicket?.id)!
+    ),
+    enabled: !!purchasedTicket && showCancelConfirm,
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: (ticketId: string) => ticketsService.cancelTicket(ticketId),
+    onSuccess: () => {
+      toast({ title: t('tickets.cancelSuccess') })
+      queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent', id] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      setShowCancelConfirm(false)
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: error.response?.data?.message || t('tickets.cancelError'),
+      })
+    },
+  })
+
+  const isPastEvent = event ? new Date(event.eventDate) < new Date() : false
+  const eventStartTime = event?.eventStartTime ? new Date(event.eventStartTime) : null
+  const canCancelTicket =
+    purchasedTicket &&
+    (purchasedTicket.status === 'valid' || purchasedTicket.status === 'active') &&
+    !purchasedTicket.isScanned &&
+    purchasedTicket.status !== 'cancelled' &&
+    purchasedTicket.status !== 'refunded' &&
+    !isPastEvent &&
+    (!eventStartTime || eventStartTime > new Date())
 
   const handlePurchaseTicket = () => requireAuth(async () => {
     if (!id || !event) return
@@ -978,6 +1022,30 @@ export default function EventDetail() {
                       {t('safety.addSafetyCompanionButton')}
                     </Button>
                   </Link>
+
+                  {/* Cancel Ticket Button */}
+                  {purchasedTicket.status !== 'cancelled' && purchasedTicket.status !== 'refunded' && (
+                    <div className="space-y-1">
+                      <Button
+                        variant="destructive"
+                        className="w-full gap-2"
+                        onClick={() => setShowCancelConfirm(true)}
+                        disabled={!canCancelTicket}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        {t('tickets.cancelTicket')}
+                      </Button>
+                      {!canCancelTicket && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          {purchasedTicket.isScanned
+                            ? t('tickets.cancelDisabledScanned')
+                            : isPastEvent
+                            ? t('tickets.cancelDisabledPastEvent')
+                            : t('tickets.cancelDisabledInvalid')}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1204,6 +1272,76 @@ export default function EventDetail() {
         onClose={() => setImageViewerOpen(false)}
         alt={event.name}
       />
+
+      {/* Cancel Confirmation Dialog */}
+      {showCancelConfirm && purchasedTicket && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowCancelConfirm(false)}
+        >
+          <Card className="max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <CardContent className="p-6 space-y-4">
+              <h3 className="text-lg font-bold">{t('tickets.cancelTitle')}</h3>
+
+              {isRefundPreviewLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">{t('tickets.calculatingRefund')}</span>
+                </div>
+              ) : refundPreview ? (
+                <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm">
+                    Möchtest du dein Ticket für <strong>{event?.name}</strong> wirklich stornieren?
+                  </p>
+                  <div className="space-y-1 mt-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Erstattungsbetrag:</span>
+                      <span className="font-bold text-green-600">{formatPrice(refundPreview.refundAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Bezahlt:</span>
+                      <span>{formatPrice(refundPreview.originalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Gebühren:</span>
+                      <span>{formatPrice(refundPreview.fee)}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Die Erstattung erfolgt innerhalb von 5-10 Werktagen.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Möchtest du dein Ticket für <strong>{event?.name}</strong> wirklich stornieren?
+                  Die Erstattung erfolgt innerhalb von 5-10 Werktagen.
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowCancelConfirm(false)}
+                >
+                  {t('common.no')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => cancelMutation.mutate(
+                    purchasedTicket._id || purchasedTicket.id || ''
+                  )}
+                  disabled={cancelMutation.isPending}
+                >
+                  {cancelMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {t('tickets.confirmCancel')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Stripe Payment Modal */}
       <PaymentWrapper
