@@ -119,6 +119,7 @@ export interface Event {
   boostStartDate?: string
   boostEndDate?: string
   boostRadius?: number
+  boostImpressions?: number
 }
 
 export interface EventFilters {

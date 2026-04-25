@@ -17,6 +17,7 @@ interface BoostModalProps {
   eventId: string
   eventName: string
   boostStatus?: string
+  boostBudget?: number
   boostDailyBudget?: number
   boostEndDate?: string
   boostRadius?: number
@@ -26,7 +27,6 @@ interface BoostModalProps {
 }
 
 function BoostPaymentForm({
-  clientSecret,
   eventId,
   budget,
   days,
@@ -34,7 +34,6 @@ function BoostPaymentForm({
   onSuccess,
   onBack,
 }: {
-  clientSecret: string
   eventId: string
   budget: number
   days: number
@@ -244,7 +243,6 @@ export default function BoostModal({
         ) : clientSecret ? (
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <BoostPaymentForm
-              clientSecret={clientSecret}
               eventId={eventId}
               budget={budgetNum}
               days={daysNum}
