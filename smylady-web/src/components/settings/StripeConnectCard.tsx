@@ -90,7 +90,12 @@ export function StripeConnectCard() {
     createAccountLink(undefined, {
       onSuccess: (data) => {
         if (data.url) {
-          window.location.href = data.url
+          const url = new URL(data.url)
+          if (url.protocol === "https:") {
+            window.location.href = url.toString()
+          } else {
+            console.error("Redirect zu unsicherer URL blockiert:", data.url)
+          }
         } else {
           toast({
             variant: 'destructive',
