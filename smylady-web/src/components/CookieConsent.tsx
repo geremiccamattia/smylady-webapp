@@ -70,6 +70,17 @@ export default function CookieConsent() {
           analytics_granted: statistics.includes('google-analytics'),
           marketing_granted: marketing.includes('google-ads'),
         })
+        if (marketing.includes('google-ads')) {
+          const existing = document.getElementById('adsense-script')
+          if (!existing) {
+            const script = document.createElement('script')
+            script.id = 'adsense-script'
+            script.async = true
+            script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3116707857823621'
+            script.crossOrigin = 'anonymous'
+            document.head.appendChild(script)
+          }
+        }
       } catch {
         // malformed cookie — ignore
       }
@@ -84,6 +95,17 @@ export default function CookieConsent() {
       analytics_granted: consentSettings.analytics,
       marketing_granted: consentSettings.marketing,
     })
+    if (consentSettings.marketing) {
+      const existing = document.getElementById('adsense-script')
+      if (!existing) {
+        const script = document.createElement('script')
+        script.id = 'adsense-script'
+        script.async = true
+        script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3116707857823621'
+        script.crossOrigin = 'anonymous'
+        document.head.appendChild(script)
+      }
+    }
     setIsVisible(false)
   }
 
