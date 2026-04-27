@@ -15,6 +15,7 @@ import { ImageViewer } from '@/components/ImageViewer'
 import { PaymentWrapper, usePaymentModal } from '@/components/payment'
 import { useCreatePaymentIntent, useBuyFreeEvent } from '@/hooks/useStripe'
 import { MemoryGallery } from '@/components/memories'
+import BoostModal from '@/components/events/BoostModal'
 import { ticketsService } from '@/services/tickets'
 import { chatService } from '@/services/chat'
 import { memoriesService, getMemoryUrl, getMemoryType, getMemoryId, getUploadedByInfo } from '@/services/memories'
@@ -54,6 +55,7 @@ import {
   Trash2,
   Loader2,
   XCircle,
+  Zap,
 } from 'lucide-react'
 
 export default function EventDetail() {
@@ -76,6 +78,7 @@ export default function EventDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [showBoostModal, setShowBoostModal] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -1208,6 +1211,16 @@ export default function EventDetail() {
                         {t('tickets.scanStatistics')}
                       </Link>
                     </Button>
+                    {new Date(event.eventStartTime || event.eventDate) > new Date() && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 text-amber-500 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                        onClick={() => setShowBoostModal(true)}
+                      >
+                        <Zap className="h-4 w-4" />
+                        {(event as any).boostStatus === 'active' ? 'Boost aktiv' : 'Event boosten'}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
@@ -1272,6 +1285,21 @@ export default function EventDetail() {
       />
 
       {/* Cancel Confirmation Dialog */}
+      {showBoostModal && event && (
+        <BoostModal
+          eventId={eventId!}
+          eventName={event.name}
+          boostStatus={(event as any).boostStatus}
+          boostBudget={(event as any).boostBudget}
+          boostDailyBudget={(event as any).boostDailyBudget}
+          boostEndDate={(event as any).boostEndDate}
+          boostRadius={(event as any).boostRadius}
+          boostImpressions={(event as any).boostImpressions}
+          open={showBoostModal}
+          onClose={() => setShowBoostModal(false)}
+        />
+      )}
+
       {showCancelConfirm && purchasedTicket && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
