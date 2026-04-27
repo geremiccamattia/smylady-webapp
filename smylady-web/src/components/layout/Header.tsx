@@ -188,6 +188,23 @@ export default function Header() {
                 <Link to={`/user/${user?._id || user?.id}`} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start">Profil</Button>
                 </Link>
+                <div className="border-t my-2" />
+                <Link to="/contact" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Kontakt</Button>
+                </Link>
+                <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
+                </a>
+                <Link to="/privacy" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Datenschutz</Button>
+                </Link>
+                <Link to="/terms" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">AGB</Button>
+                </Link>
+                <Link to="/imprint" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Impressum</Button>
+                </Link>
+                <div className="border-t my-2" />
                 <Button
                   variant="destructive"
                   className="w-full"
@@ -204,6 +221,23 @@ export default function Header() {
                 <Link to="/feed" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start">Feed</Button>
                 </Link>
+                <div className="border-t my-2" />
+                <Link to="/contact" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Kontakt</Button>
+                </Link>
+                <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
+                </a>
+                <Link to="/privacy" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Datenschutz</Button>
+                </Link>
+                <Link to="/terms" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">AGB</Button>
+                </Link>
+                <Link to="/imprint" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Impressum</Button>
+                </Link>
+                <div className="border-t my-2" />
                 <Button
                   variant="outline"
                   className="w-full"
