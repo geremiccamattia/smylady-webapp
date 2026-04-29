@@ -119,6 +119,7 @@ export default function EventDetail() {
 
   // Check if this is an external/Ticketmaster event
   const isExternalEvent = event?.isTicketmaster || event?.isExternalEvent || event?.source === 'ticketmaster'
+  const isDoorPayment = event?.paymentType === 'door'
   const externalUrl = event?.ticketmasterUrl || event?.externalUrl
 
   // Redirect to external URL if this is a Ticketmaster/external event
@@ -395,6 +396,30 @@ export default function EventDetail() {
       return
     }
 
+    // Abendkasse: reserve like a free ticket, payment happens at the door
+    if (isDoorPayment) {
+      setIsPurchasing(true)
+      buyFreeEvent(
+        { eventId: eventId!, tierId: selectedTierId || undefined },
+        {
+          onSuccess: (ticket: any) => {
+            queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
+            toast({ title: 'Reservierung erfolgreich!', description: 'Dein Platz ist reserviert. Zahlung erfolgt an der Abendkasse.' })
+            navigate(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
+          },
+          onError: (error: any) => {
+            toast({
+              variant: 'destructive',
+              title: t('common.error'),
+              description: error.response?.data?.message || error.message || t('tickets.purchaseFailed'),
+            })
+          },
+          onSettled: () => setIsPurchasing(false),
+        }
+      )
+      return
+    }
+
     setIsPurchasing(true)
 
     // Determine price: use selected tier price if tiers exist, else event price
@@ -612,10 +637,17 @@ export default function EventDetail() {
         {/* Price Badge */}
         <div className={cn(
           "absolute bottom-4 left-4 px-4 py-2 rounded-lg text-white font-bold text-lg",
-          isExternalEvent ? "bg-blue-600" : "gradient-bg"
+          isExternalEvent ? "bg-blue-600" :
+          isDoorPayment ? "bg-orange-500" :
+          "gradient-bg"
         )}>
           {isExternalEvent
             ? t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
+            : isDoorPayment
+            ? (() => {
+                const price = Number(event.price) > 0 ? ` · ${formatPrice(event.price)}` : ''
+                return `Abendkasse${price}`
+              })()
             : (() => {
                 const tiers = (event as any).ticketTiers
                 if (tiers && tiers.length > 0) {
@@ -1242,20 +1274,30 @@ export default function EventDetail() {
                     {t('events.soldOut')}
                   </Button>
                 ) : (
-                  <Button
-                    variant="gradient"
-                    size="lg"
-                    className="w-full gap-2"
-                    onClick={handlePurchaseTicket}
-                    loading={isPurchasing}
-                    disabled={
-                      isPurchasing ||
-                      ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
-                    }
-                  >
-                    <Ticket className="h-5 w-5" />
-                    {Number(event.price) > 0 ? t('tickets.buyTicket') : 'Kostenlos reservieren'}
-                  </Button>
+                  <>
+                    {isDoorPayment && (
+                      <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 mb-2">
+                        <Info className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-orange-700 dark:text-orange-300">
+                          Die Tickets für dieses Event werden <strong>ausschließlich an der Abendkasse</strong> verkauft. Du kannst deinen Platz hier kostenlos reservieren und zahlst vor Ort.
+                        </p>
+                      </div>
+                    )}
+                    <Button
+                      variant="gradient"
+                      size="lg"
+                      className="w-full gap-2"
+                      onClick={handlePurchaseTicket}
+                      loading={isPurchasing}
+                      disabled={
+                        isPurchasing ||
+                        ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
+                      }
+                    >
+                      <Ticket className="h-5 w-5" />
+                      {isDoorPayment ? 'Platz reservieren' : Number(event.price) > 0 ? t('tickets.buyTicket') : 'Kostenlos reservieren'}
+                    </Button>
+                  </>
                 )}
               </>
             )}

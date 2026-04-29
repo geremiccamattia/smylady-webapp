@@ -95,6 +95,7 @@ export interface Event {
     soldCount: number
   }[]
   allowGuestMemories?: boolean
+  paymentType?: 'online' | 'door'
   status: 'draft' | 'published' | 'cancelled' | 'completed' | 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'
   isFavorite?: boolean
   createdAt: string
