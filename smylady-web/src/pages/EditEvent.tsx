@@ -55,6 +55,7 @@ export default function EditEvent() {
   }
 
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
+  const [payAtDoor, setPayAtDoor] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -126,7 +127,8 @@ export default function EditEvent() {
         visibility: event.visibility || 'public',
       })
       setAllowGuestMemories(event.allowGuestMemories !== false)
-      
+      setPayAtDoor((event as any).paymentType === 'door')
+
       // Set ticket tiers if present
       if (event.ticketTiers && event.ticketTiers?.length > 0) {
         setUseTiers(true)
@@ -222,9 +224,8 @@ export default function EditEvent() {
   }
 
   const hasPaidTickets = () => {
-    if (useTiers) {
-      return ticketTiers.some(t => parseFloat(t.price) > 0)
-    }
+    if (payAtDoor) return false
+    if (useTiers) return ticketTiers.some(t => parseFloat(t.price) > 0)
     return parseFloat(formData.price) > 0
   }
 
@@ -284,6 +285,7 @@ export default function EditEvent() {
       eventFormData.append('offerings', JSON.stringify(offeringsArray))
       eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
       eventFormData.append('allowGuestMemories', String(allowGuestMemories))
+      eventFormData.append('paymentType', payAtDoor ? 'door' : 'online')
 
       // Append numeric fields as parsed numbers
       eventFormData.append('minimumAge', String(parseInt(minimumAge) || 0))
@@ -506,6 +508,27 @@ export default function EditEvent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Abendkasse Toggle */}
+            <div className="flex items-center justify-between py-3 px-4 bg-muted/40 rounded-lg border">
+              <div>
+                <Label className="text-sm font-medium">Tickets an der Abendkasse zahlen</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Gäste reservieren ihren Platz und zahlen vor Ort
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPayAtDoor(!payAtDoor)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  payAtDoor ? 'bg-primary' : 'bg-gray-300'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  payAtDoor ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+
             <div className="flex items-center gap-2 mb-4">
               <input
                 type="checkbox"
@@ -517,7 +540,7 @@ export default function EditEvent() {
               <Label htmlFor="useTiers">Mehrere Tickettypen</Label>
             </div>
 
-            {!useTiers && (
+            {!payAtDoor && !useTiers && (
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">{t('editEvent.priceLabel')} *</Label>
@@ -529,7 +552,7 @@ export default function EditEvent() {
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     placeholder={t('editEvent.pricePlaceholder')}
-                    required={!useTiers}
+                    required={!useTiers && !payAtDoor}
                   />
                 </div>
                 <div className="space-y-2">
@@ -541,9 +564,24 @@ export default function EditEvent() {
                     value={formData.totalTickets}
                     onChange={(e) => setFormData({ ...formData, totalTickets: e.target.value })}
                     placeholder={t('editEvent.maxParticipants')}
-                    required={!useTiers}
+                    required={!useTiers && !payAtDoor}
                   />
                 </div>
+              </div>
+            )}
+
+            {payAtDoor && !useTiers && (
+              <div className="space-y-2">
+                <Label htmlFor="price">Preis an der Abendkasse (€)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="0.00 (optional)"
+                />
               </div>
             )}
 
@@ -582,7 +620,7 @@ export default function EditEvent() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label>Preis (€) *</Label>
+                        <Label>{payAtDoor ? 'Preis (€)' : 'Preis (€) *'}</Label>
                         <Input
                           type="number"
                           min="0"
@@ -590,7 +628,7 @@ export default function EditEvent() {
                           value={tier.price}
                           onChange={(e) => updateTier(index, 'price', e.target.value)}
                           placeholder="0.00"
-                          required={useTiers}
+                          required={useTiers && !payAtDoor}
                         />
                       </div>
                       <div className="space-y-2">

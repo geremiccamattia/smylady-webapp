@@ -148,6 +148,7 @@ export default function CreateEvent() {
   )
 
   const [useTiers, setUseTiers] = useState(false)
+  const [payAtDoor, setPayAtDoor] = useState(false)
   const [ticketTiers, setTicketTiers] = useState([
     { name: '', description: '', price: '', quantity: '' },
   ])
@@ -339,6 +340,7 @@ export default function CreateEvent() {
   }
 
   const hasPaidTickets = () => {
+    if (payAtDoor) return false
     if (useTiers) {
       return ticketTiers.some(t => parseFloat(t.price) > 0)
     }
@@ -477,6 +479,7 @@ export default function CreateEvent() {
         eventFormData.append('invitedUsers', JSON.stringify(invitedUsers))
       }
       eventFormData.append('allowGuestMemories', String(allowGuestMemories))
+      eventFormData.append('paymentType', payAtDoor ? 'door' : 'online')
 
       eventFormData.append(
         'location',
@@ -871,37 +874,60 @@ export default function CreateEvent() {
                 />
               </div>
 
-              {/* Tickets & Pricing */}
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  type="checkbox"
-                  id="useTiers"
-                  checked={useTiers}
-                  onChange={(e) => handleUseTiersChange(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="useTiers">Mehrere Tickettypen</Label>
-              </div>
-
-              {!useTiers && (
-                <div className="space-y-2">
-                  <Label htmlFor="price">{t('createEvent.setPrice')}</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder={t('createEvent.pricePlaceholder', { defaultValue: '0.00 (kostenlos)' })}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {t('createEvent.priceHint', { defaultValue: 'Lasse das Feld leer oder gib 0 ein für ein kostenloses Event' })}
+              {/* Abendkasse Toggle */}
+              <div className="flex items-center justify-between py-2 px-4 bg-muted/40 rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium">Tickets an der Abendkasse zahlen</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Gäste reservieren ihren Platz und zahlen vor Ort
                   </p>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setPayAtDoor(!payAtDoor)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    payAtDoor ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    payAtDoor ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
 
-              {useTiers && (
+              {/* Tickets & Pricing */}
+              {!payAtDoor && (
+                <>
+                  <div className="flex items-center gap-2 mb-4">
+                    <input
+                      type="checkbox"
+                      id="useTiers"
+                      checked={useTiers}
+                      onChange={(e) => handleUseTiersChange(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="useTiers">Mehrere Tickettypen</Label>
+                  </div>
+
+                  {!useTiers && (
+                    <div className="space-y-2">
+                      <Label htmlFor="price">{t('createEvent.setPrice')}</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        placeholder={t('createEvent.pricePlaceholder', { defaultValue: '0.00 (kostenlos)' })}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        {t('createEvent.priceHint', { defaultValue: 'Lasse das Feld leer oder gib 0 ein für ein kostenloses Event' })}
+                      </p>
+                    </div>
+                  )}
+
+                  {useTiers && (
                 <div className="space-y-4">
                   {ticketTiers.map((tier, index) => (
                     <div key={index} className="p-4 border rounded-lg space-y-3">
@@ -980,6 +1006,109 @@ export default function CreateEvent() {
                     + Tickettyp hinzufügen
                   </button>
                 </div>
+                  )}
+                </>
+              )}
+
+              {payAtDoor && (
+                <>
+                  <div className="flex items-center gap-2 mb-4">
+                    <input
+                      type="checkbox"
+                      id="useTiers"
+                      checked={useTiers}
+                      onChange={(e) => handleUseTiersChange(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="useTiers">Mehrere Tickettypen</Label>
+                  </div>
+
+                  {!useTiers && (
+                    <div className="space-y-2">
+                      <Label htmlFor="price">Preis an der Abendkasse (€)</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        placeholder="0.00 (optional)"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional – wird auf der EventCard angezeigt
+                      </p>
+                    </div>
+                  )}
+
+                  {useTiers && (
+                    <div className="space-y-4">
+                      {ticketTiers.map((tier, index) => (
+                        <div key={index} className="p-4 border rounded-lg space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">Tickettyp {index + 1}</span>
+                            {ticketTiers.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeTier(index)}
+                                className="text-red-500 hover:text-red-700 text-sm"
+                              >
+                                Entfernen
+                              </button>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Name *</Label>
+                            <Input
+                              value={tier.name}
+                              onChange={(e) => updateTier(index, 'name', e.target.value)}
+                              placeholder="z.B. Standard, VIP, Early Bird"
+                              required={useTiers}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Beschreibung</Label>
+                            <Input
+                              value={tier.description}
+                              onChange={(e) => updateTier(index, 'description', e.target.value)}
+                              placeholder="Kurze Beschreibung dieses Tickettyps"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label>Preis (€)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={tier.price}
+                                onChange={(e) => updateTier(index, 'price', e.target.value)}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Menge</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={tier.quantity}
+                                onChange={(e) => updateTier(index, 'quantity', e.target.value)}
+                                placeholder="Optional"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={addTier}
+                        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 hover:border-primary rounded-lg text-sm text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        + Tickettyp hinzufügen
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

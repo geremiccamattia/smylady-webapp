@@ -121,7 +121,9 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
     if (isExternalEvent) {
       return t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
     }
-    // If event has ticket tiers, show "Ab X" with the lowest tier price
+    if ((event as any).paymentType === 'door') {
+      return 'Abendkasse'
+    }
     const tiers = (event as any).ticketTiers
     if (tiers && tiers.length > 0) {
       const minPrice = Math.min(...tiers.map((t: any) => t.price))
@@ -180,7 +182,9 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
         {/* Price Badge */}
         <div className={cn(
           "absolute bottom-2 left-2 px-3 py-1 rounded-full text-white text-sm font-semibold",
-          isExternalEvent ? "bg-blue-600" : "gradient-bg"
+          isExternalEvent ? "bg-blue-600" :
+          event.paymentType === 'door' ? "bg-orange-500" :
+          "gradient-bg"
         )}>
           {getPriceDisplay()}
         </div>
