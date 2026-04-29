@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/blog/:path*",
+      "destination": "https://blog.shareyourparty.de/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
