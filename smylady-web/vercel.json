@@ -7,6 +7,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/blog/:path*",
+      "destination": "https://blog.shareyourparty.de/:path*"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
