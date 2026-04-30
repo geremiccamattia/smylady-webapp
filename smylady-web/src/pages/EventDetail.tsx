@@ -1116,7 +1116,18 @@ export default function EventDetail() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t('events.location')}</p>
-                  <p className="font-semibold">{event.locationName}</p>
+                  {event.location?.coordinates?.[0] && event.location?.coordinates?.[1] ? (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.locationName)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      {event.locationName}
+                    </a>
+                  ) : (
+                    <p className="font-semibold">{event.locationName}</p>
+                  )}
                 </div>
               </div>
               {/* Tickets available - hide for external events */}
