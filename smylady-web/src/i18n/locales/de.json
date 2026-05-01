@@ -226,6 +226,8 @@
     "refunded": "Erstattet",
     "buyNow": "Jetzt kaufen",
     "buyTicket": "Ticket kaufen",
+    "imIn": "Bin dabei",
+    "reserveSpot": "Platz reservieren",
     "calculatingRefund": "Rückerstattung wird berechnet...",
     "cancelAnytime": "Jederzeit stornierbar",
     "cancelDisabledScanned": "Stornierung nicht möglich: Ticket wurde bereits gescannt",
