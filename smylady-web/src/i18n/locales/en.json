@@ -231,6 +231,8 @@
     "refunded": "Refunded",
     "buyNow": "Buy now",
     "buyTicket": "Buy ticket",
+    "imIn": "I'm in",
+    "reserveSpot": "Reserve a Spot",
     "calculatingRefund": "Calculating refund...",
     "cancelAnytime": "Cancel anytime",
     "cancelError": "Cancellation failed",
