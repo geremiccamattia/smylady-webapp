@@ -291,28 +291,6 @@ export default function EditEvent() {
     return eventFormData
   }
 
-  const handleSeriesUpdate = async (scope: 'this' | 'future' | 'all') => {
-    setIsLoading(true)
-    try {
-      const eventFormData = buildEventFormData()
-      eventFormData.append('scope', scope)
-      await eventsService.updateEventSeries(id!, eventFormData)
-      toast({
-        title: t('editEvent.updateSuccess'),
-        description: t('editEvent.changesSaved'),
-      })
-      navigate(`/event/${id}`)
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: t('common.error'),
-        description: error.response?.data?.message || t('editEvent.updateFailed'),
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
