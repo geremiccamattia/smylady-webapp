@@ -22,6 +22,7 @@ export default function EditEvent() {
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()
   const [isLoading, setIsLoading] = useState(false)
+  const [seriesScope, setSeriesScope] = useState<'this' | 'future' | 'all' | null>(null)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<string[]>([])
@@ -229,6 +230,89 @@ export default function EditEvent() {
     return parseFloat(formData.price) > 0
   }
 
+  const buildEventFormData = () => {
+    const eventFormData = new FormData()
+
+    const { offerings, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, ...restFormData } = formData
+    Object.entries(restFormData).forEach(([key, value]) => {
+      eventFormData.append(key, value)
+    })
+
+    if (eventDate) {
+      eventFormData.append('eventDate', new Date(eventDate).toISOString())
+    }
+
+    if (eventDate && eventStartTime) {
+      const startDateTime = new Date(`${eventDate}T${eventStartTime}:00`)
+      eventFormData.append('eventStartTime', startDateTime.toISOString())
+    }
+
+    if (eventDate && eventEndTime) {
+      const endDateTime = new Date(`${eventDate}T${eventEndTime}:00`)
+      eventFormData.append('eventEndTime', endDateTime.toISOString())
+    } else if (eventDate && eventStartTime) {
+      const fallbackEnd = new Date(`${eventDate}T${eventStartTime}:00`)
+      fallbackEnd.setHours(fallbackEnd.getHours() + 4)
+      eventFormData.append('eventEndTime', fallbackEnd.toISOString())
+    }
+
+    const offeringsArray = offerings ? offerings.split(',').map(s => s.trim()).filter(Boolean) : []
+    const restrictionsArray = restrictions ? restrictions.split(',').map(s => s.trim()).filter(Boolean) : []
+    eventFormData.append('offerings', JSON.stringify(offeringsArray))
+    eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
+    eventFormData.append('allowGuestMemories', String(allowGuestMemories))
+    eventFormData.append('paymentType', payAtDoor ? 'door' : 'online')
+    eventFormData.append('minimumAge', String(parseInt(minimumAge) || 0))
+
+    if (useTiers && ticketTiers.length > 0) {
+      const validTiers = ticketTiers.filter(t => t.name && t.price !== '')
+      const tiersPayload = validTiers.map(t => ({
+        name: t.name,
+        description: t.description,
+        price: parseFloat(t.price) || 0,
+        ...(t.quantity ? { quantity: parseInt(t.quantity) } : {}),
+      }))
+      eventFormData.append('ticketTiers', JSON.stringify(tiersPayload))
+    } else {
+      eventFormData.append('price', String(parseFloat(price) || 0))
+      eventFormData.append('totalTickets', String(parseInt(totalTickets) || 0))
+    }
+
+    eventFormData.append('existingImages', JSON.stringify(existingImages))
+
+    if (event?.location) {
+      eventFormData.append('location', JSON.stringify(event.location))
+    }
+
+    images.forEach(image => {
+      eventFormData.append('files', image)
+    })
+
+    return eventFormData
+  }
+
+  const handleSeriesUpdate = async (scope: 'this' | 'future' | 'all') => {
+    setIsLoading(true)
+    try {
+      const eventFormData = buildEventFormData()
+      eventFormData.append('scope', scope)
+      await eventsService.updateEventSeries(id!, eventFormData)
+      toast({
+        title: t('editEvent.updateSuccess'),
+        description: t('editEvent.changesSaved'),
+      })
+      navigate(`/event/${id}`)
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: error.response?.data?.message || t('editEvent.updateFailed'),
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -247,98 +331,33 @@ export default function EditEvent() {
       return
     }
 
+    if (useTiers && ticketTiers.filter(t => t.name && t.price !== '').length === 0) {
+      toast({ variant: 'destructive', title: 'Fehler', description: 'Bitte mindestens einen Tickettyp mit Name und Preis anlegen.' })
+      return
+    }
+
     setIsLoading(true)
-
     try {
-      const eventFormData = new FormData()
+      const eventFormData = buildEventFormData()
 
-      // Add text fields (excluding fields that need special handling)
-      const { offerings, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, ...restFormData } = formData
-      Object.entries(restFormData).forEach(([key, value]) => {
-        eventFormData.append(key, value)
-      })
-
-      // Append eventDate as ISO string
-      if (eventDate) {
-        eventFormData.append('eventDate', new Date(eventDate).toISOString())
-      }
-
-      // Append eventStartTime as ISO datetime
-      if (eventDate && eventStartTime) {
-        const startDateTime = new Date(`${eventDate}T${eventStartTime}:00`)
-        eventFormData.append('eventStartTime', startDateTime.toISOString())
-      }
-
-      // Append eventEndTime as ISO datetime, with +4h fallback if empty
-      if (eventDate && eventEndTime) {
-        const endDateTime = new Date(`${eventDate}T${eventEndTime}:00`)
-        eventFormData.append('eventEndTime', endDateTime.toISOString())
-      } else if (eventDate && eventStartTime) {
-        const fallbackEnd = new Date(`${eventDate}T${eventStartTime}:00`)
-        fallbackEnd.setHours(fallbackEnd.getHours() + 4)
-        eventFormData.append('eventEndTime', fallbackEnd.toISOString())
-      }
-
-      // Append offerings and restrictions as JSON arrays
-      const offeringsArray = offerings ? offerings.split(',').map(s => s.trim()).filter(Boolean) : []
-      const restrictionsArray = restrictions ? restrictions.split(',').map(s => s.trim()).filter(Boolean) : []
-      eventFormData.append('offerings', JSON.stringify(offeringsArray))
-      eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
-      eventFormData.append('allowGuestMemories', String(allowGuestMemories))
-      eventFormData.append('paymentType', payAtDoor ? 'door' : 'online')
-
-      // Append numeric fields as parsed numbers
-      eventFormData.append('minimumAge', String(parseInt(minimumAge) || 0))
-
-      if (useTiers && ticketTiers.length > 0) {
-        const validTiers = ticketTiers.filter(t => t.name && t.price !== '')
-        if (validTiers.length === 0) {
-          toast({ variant: 'destructive', title: 'Fehler', description: 'Bitte mindestens einen Tickettyp mit Name und Preis anlegen.' })
+      if ((event as any)?.eventSeriesId) {
+        if (!seriesScope) {
+          toast({ variant: 'destructive', title: 'Bitte wähle aus', description: 'Bitte wähle aus welche Events der Serie du bearbeiten möchtest.' })
           setIsLoading(false)
           return
         }
-        const tiersPayload = validTiers.map(t => ({
-          name: t.name,
-          description: t.description,
-          price: parseFloat(t.price) || 0,
-          ...(t.quantity ? { quantity: parseInt(t.quantity) } : {}),
-        }))
-        eventFormData.append('ticketTiers', JSON.stringify(tiersPayload))
+        eventFormData.append('scope', seriesScope)
+        await eventsService.updateEventSeries(id!, eventFormData)
       } else {
-        eventFormData.append('price', String(parseFloat(price) || 0))
-        eventFormData.append('totalTickets', String(parseInt(totalTickets) || 0))
+        await eventsService.updateEvent(id!, eventFormData)
       }
-
-      // Add existing images to keep
-      eventFormData.append('existingImages', JSON.stringify(existingImages))
-
-      // Add location as JSON
-      if (event?.location) {
-        eventFormData.append('location', JSON.stringify(event.location))
-      }
-
-      // Add new images
-      images.forEach(image => {
-        eventFormData.append('files', image)
-      })
-
-      await eventsService.updateEvent(id!, eventFormData)
 
       window.dataLayer = window.dataLayer || []
       window.dataLayer.push({ event: 'update_event' })
-
-      toast({
-        title: t('editEvent.updateSuccess'),
-        description: t('editEvent.changesSaved'),
-      })
-
+      toast({ title: t('editEvent.updateSuccess'), description: t('editEvent.changesSaved') })
       navigate(`/event/${id}`)
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: t('common.error'),
-        description: error.response?.data?.message || t('editEvent.updateFailed'),
-      })
+      toast({ variant: 'destructive', title: t('common.error'), description: error.response?.data?.message || t('editEvent.updateFailed') })
     } finally {
       setIsLoading(false)
     }
@@ -802,23 +821,53 @@ export default function EditEvent() {
         </Card>
 
         {/* Submit */}
-        <div className="flex gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1"
-            onClick={() => navigate(-1)}
-          >
-            {t('common.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            className="flex-1 gradient-bg"
-            disabled={isLoading}
-          >
-            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {t('editEvent.saveChanges')}
-          </Button>
+        <div className="space-y-4">
+          {(event as any)?.eventSeriesId && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground font-medium">
+                Dieses Event ist Teil einer Serie. Was möchtest du ändern?
+              </p>
+              <div className="flex gap-2">
+                {(['this', 'future', 'all'] as const).map((scope) => {
+                  const labels = {
+                    this: 'Nur dieses Event',
+                    future: 'Dieses + Folgende',
+                    all: 'Alle Events',
+                  }
+                  return (
+                    <Button
+                      key={scope}
+                      type="button"
+                      variant={seriesScope === scope ? 'gradient' : 'outline'}
+                      className="flex-1"
+                      onClick={() => setSeriesScope(scope)}
+                    >
+                      {labels[scope]}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => navigate(-1)}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 gradient-bg"
+              disabled={isLoading || ((event as any)?.eventSeriesId && !seriesScope)}
+            >
+              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t('editEvent.saveChanges')}
+            </Button>
+          </div>
         </div>
       </form>
 

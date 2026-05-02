@@ -80,6 +80,11 @@ export const eventsService = {
     await apiClient.delete(`/events/${id}`)
   },
 
+  // Delete event series
+  async deleteEventSeries(id: string): Promise<void> {
+    await apiClient.delete(`/events/${id}/series`)
+  },
+
   // Cancel event
   async cancelEvent(id: string, reason?: string): Promise<Event> {
     const response = await apiClient.patch(`/events/${id}/cancel`, { reason })
@@ -148,6 +153,22 @@ export const eventsService = {
   // ──────────────────────────────────────────────────
   // PUBLIC ENDPOINTS (no auth required)
   // ──────────────────────────────────────────────────
+
+  // Create event series
+  async createEventSeries(eventData: FormData): Promise<{ seriesId: string; events: Event[] }> {
+    const response = await apiClient.post('/events/series', eventData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    })
+    return response.data.data
+  },
+
+  // Update event series
+  async updateEventSeries(id: string, eventData: FormData): Promise<void> {
+    await apiClient.patch(`/events/${id}/series`, eventData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
 
   // Get public events without authentication
   async getPublicEvents(filters: EventFilters = {}, upcoming: boolean = false): Promise<Event[]> {

@@ -24,7 +24,9 @@ import {
   UserPlus,
   Loader2,
   Check,
+  Repeat,
 } from 'lucide-react'
+import RecurringEventModal from '@/components/events/RecurringEventModal'
 import {
   Dialog,
   DialogContent,
@@ -149,6 +151,12 @@ export default function CreateEvent() {
 
   const [useTiers, setUseTiers] = useState(false)
   const [payAtDoor, setPayAtDoor] = useState(false)
+  const [showRecurringModal, setShowRecurringModal] = useState(false)
+  const [seriesConfig, setSeriesConfig] = useState<{
+    recurrence: string
+    occurrences?: number
+    customDates?: string[]
+  } | null>(null)
   const [ticketTiers, setTicketTiers] = useState([
     { name: '', description: '', price: '', quantity: '' },
   ])
@@ -494,7 +502,12 @@ export default function CreateEvent() {
         eventFormData.append('files', image)
       })
 
-      await eventsService.createEvent(eventFormData)
+      if (seriesConfig) {
+        eventFormData.append('series', JSON.stringify(seriesConfig))
+        await eventsService.createEventSeries(eventFormData)
+      } else {
+        await eventsService.createEvent(eventFormData)
+      }
 
       window.dataLayer = window.dataLayer || []
       window.dataLayer.push({ event: 'create_event' })
@@ -647,6 +660,51 @@ export default function CreateEvent() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Wiederkehrendes Event */}
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Wiederkehrendes Event</p>
+                    <p className="text-xs text-muted-foreground">
+                      {seriesConfig
+                        ? seriesConfig.recurrence === 'custom'
+                          ? `${seriesConfig.customDates?.length} Termine`
+                          : seriesConfig.recurrence === 'weekly'
+                          ? `Wöchentlich · ${seriesConfig.occurrences}x`
+                          : `Monatlich · ${seriesConfig.occurrences}x`
+                        : 'Einmalig'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {seriesConfig && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setSeriesConfig(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setShowRecurringModal(true)}
+                      disabled={!formData.eventDate}
+                    >
+                      <Repeat className="h-4 w-4" />
+                      {seriesConfig ? 'Ändern' : 'Einrichten'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <RecurringEventModal
+              open={showRecurringModal}
+              onClose={() => setShowRecurringModal(false)}
+              onConfirm={setSeriesConfig}
+              baseDate={formData.eventDate}
+            />
 
             {/* Location (matching mobile) */}
             <Card>

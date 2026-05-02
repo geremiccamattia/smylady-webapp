@@ -76,6 +76,8 @@ export default function EventDetail() {
   const { mutate: buyFreeEvent } = useBuyFreeEvent()
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDeleteSeriesDialog, setShowDeleteSeriesDialog] = useState(false)
+  const [isDeletingSeries, setIsDeletingSeries] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showBoostModal, setShowBoostModal] = useState(false)
@@ -503,6 +505,20 @@ export default function EventDetail() {
     } else {
       navigator.clipboard.writeText(url)
       toast({ title: t('common.linkCopied') })
+    }
+  }
+
+  const handleDeleteEventSeries = async () => {
+    setIsDeletingSeries(true)
+    try {
+      await eventsService.deleteEventSeries(id!)
+      toast({ title: 'Event-Serie gelöscht' })
+      navigate('/my-events')
+    } catch {
+      toast({ variant: 'destructive', title: t('common.error'), description: 'Serie konnte nicht gelöscht werden.' })
+    } finally {
+      setIsDeletingSeries(false)
+      setShowDeleteSeriesDialog(false)
     }
   }
 
@@ -1272,6 +1288,16 @@ export default function EventDetail() {
                       <Trash2 className="h-4 w-4" />
                       {t('events.deleteEvent', { defaultValue: 'Event löschen' })}
                     </Button>
+                    {(event as any).eventSeriesId && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
+                        onClick={() => setShowDeleteSeriesDialog(true)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t('events.deleteEventSeries', { defaultValue: 'Event Serie löschen' })}
+                      </Button>
+                    )}
                   </div>
                 ) : purchasedTicket ? (
                   <Button variant="gradient" className="w-full gap-2" asChild>
@@ -1444,7 +1470,7 @@ export default function EventDetail() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
+            <AlertDialogCancel disabled={isDeleting} onClick={() => setShowDeleteDialog(false)}>
               {t('common.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
@@ -1455,6 +1481,29 @@ export default function EventDetail() {
               {isDeleting
                 ? t('common.loading')
                 : t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteSeriesDialog} onOpenChange={setShowDeleteSeriesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('events.deleteSeriesTitle', { defaultValue: 'Event Serie löschen?' })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('events.deleteSeriesMessage', { defaultValue: 'Möchtest du die gesamte Event-Serie wirklich löschen? Alle Events dieser Serie werden unwiderruflich gelöscht.' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingSeries} onClick={() => setShowDeleteSeriesDialog(false)}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={handleDeleteEventSeries}
+              disabled={isDeletingSeries}
+            >
+              {isDeletingSeries ? t('common.loading') : 'Alle löschen'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

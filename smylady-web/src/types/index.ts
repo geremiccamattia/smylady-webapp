@@ -121,6 +121,9 @@ export interface Event {
   boostEndDate?: string
   boostRadius?: number
   boostImpressions?: number
+  eventSeriesId?: string
+  seriesIndex?: number
+  seriesRecurrence?: 'weekly' | 'monthly' | 'custom'
 }
 
 export interface EventFilters {
