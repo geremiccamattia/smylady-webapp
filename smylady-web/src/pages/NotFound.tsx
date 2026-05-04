@@ -1,8 +1,16 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Home, ArrowLeft } from 'lucide-react'
 
 export default function NotFound() {
+  useEffect(() => {
+    if (window.location.pathname.startsWith('/blog')) {
+      const blogPath = window.location.pathname.replace('/blog', '') || '/'
+      window.location.href = `https://blog.shareyourparty.de${blogPath}`
+    }
+  }, [])
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="text-center">
