@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/blog-redirect.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
   "rewrites": [
     {
       "source": "/blog/:path*",

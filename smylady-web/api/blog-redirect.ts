@@ -1,9 +1,6 @@
-export const config = {
-  runtime: 'edge',
-}
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-export default function handler(request: Request) {
-  const url = new URL(request.url)
-  const blogPath = url.pathname.replace('/blog', '') || '/'
-  return Response.redirect(`https://blog.shareyourparty.de${blogPath}${url.search}`, 301)
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  const path = req.url?.replace('/blog', '') || '/'
+  res.redirect(301, `https://blog.shareyourparty.de${path}`)
 }
