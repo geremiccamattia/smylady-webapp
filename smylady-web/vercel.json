@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/blog-redirect.ts": {
+    "api/blog-redirect.js": {
       "runtime": "@vercel/node@3.0.0"
     }
   },
