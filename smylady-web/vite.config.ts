@@ -31,7 +31,10 @@ export default defineConfig({
           if (id.includes('node_modules/@radix-ui')) {
             return 'vendor-ui'
           }
-if (id.includes('node_modules/socket.io')) {
+          if (id.includes('node_modules/heic2any')) {
+            return 'vendor-heic2any'
+          }
+          if (id.includes('node_modules/socket.io')) {
             return 'vendor-socket'
           }
           if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) {
