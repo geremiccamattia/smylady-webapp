@@ -1,3 +1,4 @@
+import imageCompression from 'browser-image-compression'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -265,14 +266,26 @@ export default function CreateEvent() {
     }
   }
 
-  const handleCropComplete = (croppedFile: File) => {
-    setImages((prev) => [...prev, croppedFile])
+  const handleCropComplete = async (croppedFile: File) => {
+    let fileToUse = croppedFile
+    try {
+      const compressed = await imageCompression(croppedFile, {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      })
+      fileToUse = new File([compressed], croppedFile.name, { type: compressed.type })
+    } catch {
+      console.warn('Image compression failed, using original')
+    }
+
+    setImages((prev) => [...prev, fileToUse])
 
     const reader = new FileReader()
     reader.onloadend = () => {
       setImagePreviews((prev) => [...prev, reader.result as string])
     }
-    reader.readAsDataURL(croppedFile)
+    reader.readAsDataURL(fileToUse)
 
     if (selectedImageUrl) {
       URL.revokeObjectURL(selectedImageUrl)

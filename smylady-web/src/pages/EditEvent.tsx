@@ -1,3 +1,4 @@
+import imageCompression from 'browser-image-compression'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -177,30 +178,37 @@ export default function EditEvent() {
     }
   }
 
-  const handleCropComplete = (croppedFile: File) => {
-    // Add cropped image
-    setImages(prev => [...prev, croppedFile])
-    
-    // Generate preview
+  const handleCropComplete = async (croppedFile: File) => {
+    let fileToUse = croppedFile
+    try {
+      const compressed = await imageCompression(croppedFile, {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      })
+      fileToUse = new File([compressed], croppedFile.name, { type: compressed.type })
+    } catch {
+      console.warn('Image compression failed, using original')
+    }
+
+    setImages(prev => [...prev, fileToUse])
+
     const reader = new FileReader()
     reader.onloadend = () => {
       setImagePreviews(prev => [...prev, reader.result as string])
     }
-    reader.readAsDataURL(croppedFile)
-    
-    // Clean up current URL
+    reader.readAsDataURL(fileToUse)
+
     if (selectedImageUrl) {
       URL.revokeObjectURL(selectedImageUrl)
       setSelectedImageUrl('')
     }
-    
-    // Process next pending file
+
     if (pendingFiles.length > 0) {
       const nextFile = pendingFiles[0]
       setPendingFiles(pendingFiles.slice(1))
       const imageUrl = URL.createObjectURL(nextFile)
       setSelectedImageUrl(imageUrl)
-      // Keep modal open for next image
     } else {
       setCropModalOpen(false)
     }
