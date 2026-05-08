@@ -25,9 +25,6 @@ export default defineConfig({
           if (id.includes('node_modules/@tanstack')) {
             return 'vendor-query'
           }
-          if (id.includes('node_modules/@stripe')) {
-            return 'vendor-stripe'
-          }
           if (id.includes('node_modules/@radix-ui')) {
             return 'vendor-ui'
           }
