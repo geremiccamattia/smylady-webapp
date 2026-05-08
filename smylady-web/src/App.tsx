@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -73,8 +74,29 @@ import Privacy from '@/pages/legal/Privacy'
 import Impressum from '@/pages/legal/Impressum'
 import Terms from '@/pages/legal/Terms'
 import Contact from '@/pages/legal/Contact'
+import Pricing from '@/pages/legal/Pricing'
 
 function App() {
+  const { i18n } = useTranslation()
+
+  useEffect(() => {
+    document.documentElement.lang = i18n.language
+
+    const isEN = i18n.language === 'en'
+
+    document.querySelector('meta[name="description"]')
+      ?.setAttribute('content', isEN
+        ? 'Discover events near you – parties, concerts, festivals and more. Find your next experience on Share Your Party.'
+        : 'Entdecke Events in deiner Nähe – Partys, Konzerte, Festivals und mehr. Finde dein nächstes Erlebnis auf Share Your Party.'
+      )
+
+    document.querySelector('meta[property="og:description"]')
+      ?.setAttribute('content', isEN
+        ? 'Discover events near you – parties, concerts, festivals and more.'
+        : 'Entdecke Events in deiner Nähe – Partys, Konzerte, Festivals und mehr.'
+      )
+  }, [i18n.language])
+
   useEffect(() => {
     injectJsonLd('schema-website', {
       '@context': 'https://schema.org',
@@ -170,6 +192,7 @@ function App() {
           <Route path="imprint" element={<Impressum />} />
           <Route path="terms" element={<Terms />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="pricing" element={<Pricing />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

@@ -51,6 +51,7 @@ export default function Footer() {
               <li><Link to="/privacy" className="hover:text-foreground">{t('legal.privacy')}</Link></li>
               <li><Link to="/terms" className="hover:text-foreground">{t('legal.terms')}</Link></li>
               <li><Link to="/imprint" className="hover:text-foreground">{t('legal.impressum')}</Link></li>
+              <li><Link to="/pricing" className="hover:text-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Link></li>
             </ul>
           </div>
         </div>

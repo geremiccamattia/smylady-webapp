@@ -195,6 +195,9 @@ export default function Header() {
                 <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
                 </a>
+                <Link to="/pricing" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Button>
+                </Link>
                 <Link to="/privacy" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Datenschutz</Button>
                 </Link>
@@ -228,6 +231,9 @@ export default function Header() {
                 <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
                 </a>
+                <Link to="/pricing" onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Button>
+                </Link>
                 <Link to="/privacy" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Datenschutz</Button>
                 </Link>

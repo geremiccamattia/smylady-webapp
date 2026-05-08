@@ -612,6 +612,31 @@
       "secureNote": "Your data is processed securely through Stripe"
     }
   },
+  "pricing": {
+    "title": "Pricing & Conditions",
+    "subtitle": "Transparent fees for organizers and guests on Share Your Party.",
+    "freeEvents": "Free Events",
+    "freeEventsDesc": "For free events, we charge no fees whatsoever – neither for organizers nor for guests. Using Share Your Party for free events is completely free of charge.",
+    "organizerFees": "Organizer Fees",
+    "organizerFeesDesc": "The organizer fee is automatically deducted from ticket revenue and forwarded to Share Your Party.",
+    "guestFees": "Guest Fees",
+    "guestFeesDesc": "The guest fee is added to the ticket price at checkout and is transparently displayed.",
+    "example": "Example Calculation",
+    "exampleDesc": "A ticket costs €20.00:",
+    "boost": "Event Boost",
+    "boostDesc": "Boosting events is an optional paid feature. Organizers choose their own budget, duration and radius. The minimum budget is €5. More details about the Boost feature can be found when creating or editing your event.",
+    "questions": "For questions about our pricing and conditions, please contact",
+    "termsNote": "More information can be found in our",
+    "ticketPrice": "Ticket Price",
+    "fee": "Fee",
+    "upTo50": "€1.00 – €50.00",
+    "over50": "Over €50.00",
+    "guestFeeLabel": "Guest Fee (3%)",
+    "guestTotal": "Guest pays in total",
+    "organizerFeeLabel": "Organizer Fee (4%)",
+    "organizerReceives": "Organizer receives",
+    "sypReceives": "Share Your Party receives"
+  },
   "legal": {
     "privacy": "Privacy Policy",
     "terms": "Terms & Conditions",
