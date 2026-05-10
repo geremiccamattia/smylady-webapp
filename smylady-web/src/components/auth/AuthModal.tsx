@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -8,6 +9,8 @@ export default function AuthModal() {
   const { isAuthModalVisible, hideAuthModal } = useAuthModal()
   const navigate = useNavigate()
   const location = useLocation()
+  const { t, i18n } = useTranslation()
+  console.log('[AuthModal] current language:', i18n.language)
 
   return (
     <Dialog open={isAuthModalVisible} onOpenChange={hideAuthModal}>
@@ -17,10 +20,10 @@ export default function AuthModal() {
             <LogIn className="h-8 w-8 text-white" />
           </div>
           <DialogTitle className="text-2xl font-bold text-center">
-            Anmeldung erforderlich
+            {t('auth.loginRequired', { defaultValue: 'Anmeldung erforderlich' })}
           </DialogTitle>
           <DialogDescription className="text-center text-base mt-2">
-            Um diese Aktion durchzuführen, musst du eingeloggt sein.
+            {t('auth.loginRequiredDesc', { defaultValue: 'Um diese Aktion durchzuführen, musst du eingeloggt sein.' })}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 mt-4">
@@ -34,7 +37,7 @@ export default function AuthModal() {
             }}
           >
             <UserPlus className="h-5 w-5" />
-            Kostenlos registrieren
+            {t('auth.registerFree', { defaultValue: 'Kostenlos registrieren' })}
           </Button>
           <Button
             variant="outline"
@@ -46,7 +49,7 @@ export default function AuthModal() {
             }}
           >
             <LogIn className="h-5 w-5" />
-            Anmelden
+            {t('auth.login')}
           </Button>
         </div>
       </DialogContent>

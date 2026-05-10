@@ -199,7 +199,7 @@ function App() {
       </Routes>
       <Toaster />
       <CookieConsent />
-      <AuthModal />
+      <AuthModal key={i18n.language} />
       </SocketProvider>
       </AuthModalProvider>
     </AuthProvider>

@@ -935,7 +935,7 @@ function PostCard({ post }: { post: Post }) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => requireAuth(() => setShowComments(!showComments))}
+            onClick={() => setShowComments(!showComments)}
           >
             <MessageCircle className="h-4 w-4 mr-1" />
             {post.commentCount || 0}
@@ -1015,10 +1015,10 @@ function PostCard({ post }: { post: Post }) {
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           <span>{formatTime(comment.createdAt)}</span>
                           <button
-                            onClick={() => {
+                            onClick={() => requireAuth(() => {
                               // Like comment = toggle 👍 emoji reaction
                               commentReactionMutation.mutate({ commentIndex, emoji: DEFAULT_LIKE_EMOJI })
-                            }}
+                            })}
                             className={cn(
                               'hover:text-foreground flex items-center gap-0.5',
                               getUserReaction(comment.reactions || [], currentUserId) === DEFAULT_LIKE_EMOJI && 'text-primary'
@@ -1031,7 +1031,7 @@ function PostCard({ post }: { post: Post }) {
                             {t('posts.like')}
                           </button>
                           <button
-                            onClick={() => openCommentEmojiPicker(commentIndex)}
+                            onClick={() => requireAuth(() => openCommentEmojiPicker(commentIndex))}
                             className={cn(
                               'hover:text-foreground',
                               getUserReaction(comment.reactions || [], currentUserId) && getUserReaction(comment.reactions || [], currentUserId) !== DEFAULT_LIKE_EMOJI && 'text-primary'
@@ -1043,7 +1043,7 @@ function PostCard({ post }: { post: Post }) {
                             }
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={() => requireAuth(() => {
                               if (replyingTo === commentIndex) {
                                 setReplyingTo(null)
                                 setReplyText('')
@@ -1052,7 +1052,7 @@ function PostCard({ post }: { post: Post }) {
                                 const userName = commentUser.username || commentUser.name
                                 setReplyText(`@${userName} `)
                               }
-                            }}
+                            })}
                             className="hover:text-foreground"
                           >
                             {t('posts.reply')}
@@ -1151,10 +1151,10 @@ function PostCard({ post }: { post: Post }) {
                               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                 <span>{formatTime(reply.createdAt)}</span>
                                 <button
-                                  onClick={() => {
+                                  onClick={() => requireAuth(() => {
                                     // Like reply = toggle 👍 emoji reaction
                                     replyReactionMutation.mutate({ commentIndex, replyIndex, emoji: DEFAULT_LIKE_EMOJI })
-                                  }}
+                                  })}
                                   className={cn(
                                     'hover:text-foreground flex items-center gap-0.5',
                                     getUserReaction(reply.reactions || [], currentUserId) === DEFAULT_LIKE_EMOJI && 'text-primary'
@@ -1167,7 +1167,7 @@ function PostCard({ post }: { post: Post }) {
                                   {t('posts.like')}
                                 </button>
                                 <button
-                                  onClick={() => openReplyEmojiPicker(commentIndex, replyIndex)}
+                                  onClick={() => requireAuth(() => openReplyEmojiPicker(commentIndex, replyIndex))}
                                   className={cn(
                                     'hover:text-foreground',
                                     getUserReaction(reply.reactions || [], currentUserId) && getUserReaction(reply.reactions || [], currentUserId) !== DEFAULT_LIKE_EMOJI && 'text-primary'
@@ -1179,11 +1179,11 @@ function PostCard({ post }: { post: Post }) {
                                   }
                                 </button>
                                 <button
-                                  onClick={() => {
+                                  onClick={() => requireAuth(() => {
                                     setReplyingTo(commentIndex)
                                     const userName = replyUser.username || replyUser.name
                                     setReplyText(`@${userName} `)
-                                  }}
+                                  })}
                                   className="hover:text-foreground"
                                 >
                                   {t('posts.reply')}

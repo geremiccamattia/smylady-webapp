@@ -67,6 +67,8 @@
     "name": "Name",
     "username": "Username",
     "registerFree": "Register for free",
+    "loginRequired": "Login required",
+    "loginRequiredDesc": "You need to be logged in to perform this action.",
     "loginToSee": "Log in to see your feed.",
     "backToLogin": "Back to login",
     "changePassword": "Change password",
