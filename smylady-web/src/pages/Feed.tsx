@@ -316,7 +316,6 @@ function PostCard({ post }: { post: Post }) {
     setLoadingReactions(true)
     try {
       if (!isAuthenticated) {
-        console.log('[Reactions] post.reactions:', JSON.stringify(post.reactions?.slice(0, 2)))
         const usersFromReactions = (post.reactions || []).map((r: any) => {
           const u = typeof r.userId === 'object' ? r.userId : { _id: r.userId }
           return {
