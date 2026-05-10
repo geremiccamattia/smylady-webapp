@@ -189,7 +189,7 @@ export default function Feed() {
 
 // Post Card Component
 function PostCard({ post }: { post: Post }) {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const { requireAuth } = useRequireAuth()
   const { toast } = useToast()
   const { t, i18n } = useTranslation()
@@ -315,14 +315,26 @@ function PostCard({ post }: { post: Post }) {
     setShowReactionsModal(true)
     setLoadingReactions(true)
     try {
-      // Fetch both likes and reactions, combine them
+      if (!isAuthenticated) {
+        console.log('[Reactions] post.reactions:', JSON.stringify(post.reactions?.slice(0, 2)))
+        const usersFromReactions = (post.reactions || []).map((r: any) => {
+          const u = typeof r.userId === 'object' ? r.userId : { _id: r.userId }
+          return {
+            _id: u._id || u.id || '',
+            name: u.name || 'User',
+            username: u.username,
+            profileImage: u.profileImage,
+            emoji: r.emoji,
+          }
+        })
+        setReactedUsers(usersFromReactions)
+        return
+      }
       const [likeUsers, reactionUsers] = await Promise.all([
         postsService.getPostLikes(post._id),
         postsService.getPostReactions(post._id),
       ])
-      // Merge: reactions have emoji, likes get a default heart
       const likeUsersWithEmoji = likeUsers.map(u => ({ ...u, emoji: u.emoji || '❤️' }))
-      // Deduplicate by _id (a user can only be in one system)
       const allUsers = [...reactionUsers]
       const reactionUserIds = new Set(reactionUsers.map(u => u._id))
       for (const lu of likeUsersWithEmoji) {
