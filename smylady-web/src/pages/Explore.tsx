@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { eventsService } from '@/services/events'
+import { publicClient } from '@/services/api'
 import { ticketmasterService } from '@/services/ticketmaster'
 import {
   isTicketmasterEnabled,
@@ -13,6 +14,7 @@ import {
   isLiveLocationEnabled,
 } from '@/services/location'
 import EventCard from '@/components/events/EventCard'
+import { SpotlightCard } from '@/components/ads/SpotlightCard'
 import LocationModal, { LocationResult } from '@/components/LocationModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +39,16 @@ import {
 import { EVENT_CATEGORIES, MUSIC_TYPES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { Event } from '@/types'
+
+interface SpotlightAd {
+  _id: string
+  headline: string
+  description: string
+  imageUrl: string
+  targetUrl: string
+  locationLabel?: string
+  categoryLabel?: string
+}
 
 // Fallback location (only used when geolocation is denied/unavailable and no saved location)
 const FALLBACK_LOCATION: LocationResult = {
@@ -188,6 +200,34 @@ export default function Explore() {
   const organicEvents = allEvents.filter(
     (e) => e.boostStatus !== 'active' || !e.boostEndDate || new Date(e.boostEndDate) <= new Date()
   )
+
+  const { data: ads = [] } = useQuery<SpotlightAd[]>({
+    queryKey: ['spotlight-ads', selectedLocation?.lat, selectedLocation?.lng, radius],
+    queryFn: () =>
+      publicClient
+        .get('/spotlight/active', {
+          params: {
+            latitude: selectedLocation?.lat,
+            longitude: selectedLocation?.lng,
+            radius,
+          },
+        })
+        .then((r) => r.data.data),
+    enabled: locationLoaded && !!selectedLocation,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const feedItems = useMemo(() => {
+    const items: (Event | SpotlightAd)[] = []
+    let adIndex = 0
+    organicEvents.forEach((event, i) => {
+      if (i > 0 && i % 3 === 2 && adIndex < ads.length) {
+        items.push(ads[adIndex++])
+      }
+      items.push(event)
+    })
+    return items
+  }, [organicEvents, ads])
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -452,11 +492,15 @@ export default function Explore() {
               </div>
             )}
 
-            {/* Organische Events */}
+            {/* Organische Events + Spotlight Ads */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {organicEvents.map((event) => (
-                <EventCard key={event.id || event._id} event={event} />
-              ))}
+              {feedItems.map((item) =>
+                'targetUrl' in item ? (
+                  <SpotlightCard key={`ad-${item._id}`} ad={item} />
+                ) : (
+                  <EventCard key={item.id || item._id} event={item} />
+                )
+              )}
             </div>
           </div>
         </>

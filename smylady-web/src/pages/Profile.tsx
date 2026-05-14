@@ -31,6 +31,7 @@ import {
   EyeOff,
   X,
   Save,
+  Megaphone,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -454,7 +455,7 @@ export default function Profile() {
       )}
 
       {/* Quick Links */}
-      <div className="grid md:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Link to="/my-tickets">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardContent className="p-6 flex items-center gap-4">
@@ -508,6 +509,39 @@ export default function Profile() {
           </Card>
         </Link>
       </div>
+
+      {/* Werbung Banner */}
+      <Card className="border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/40 rounded-full shrink-0">
+                <Megaphone className="h-6 w-6 text-orange-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Werbung schalten</h3>
+                <p className="text-sm text-muted-foreground">
+                  Bewirb deine Events oder erstelle ein eigenes Spotlight mit Link & Bild.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 shrink-0 w-full sm:w-auto">
+              <Link to="/my-events" className="flex-1 sm:flex-none">
+                <Button variant="outline" className="w-full border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30">
+                  <PartyPopper className="h-4 w-4 mr-2 text-purple-500" />
+                  Events bewerben
+                </Button>
+              </Link>
+              <Link to="/advertise/spotlight" className="flex-1 sm:flex-none">
+                <Button variant="gradient" className="w-full">
+                  <Megaphone className="h-4 w-4 mr-2" />
+                  Spotlight
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Account Info */}
       <Card>

@@ -43,4 +43,12 @@ apiClient.interceptors.response.use(
   }
 )
 
-export { apiClient }
+const publicClient: AxiosInstance = axios.create({
+  baseURL: CONFIG.API_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+export { apiClient, publicClient }

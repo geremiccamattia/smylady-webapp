@@ -25,6 +25,7 @@ import MyEvents from '@/pages/MyEvents'
 import MyTickets from '@/pages/MyTickets'
 import TicketDetail from '@/pages/TicketDetail'
 import CreateEvent from '@/pages/CreateEvent'
+import CreateSpotlight from '@/pages/CreateSpotlight'
 import EditEvent from '@/pages/EditEvent'
 import Explore from '@/pages/Explore'
 import Chat from '@/pages/Chat'
@@ -168,6 +169,7 @@ function App() {
             <Route path="my-tickets" element={<MyTickets />} />
             <Route path="ticket/:ticketId" element={<TicketDetail />} />
             <Route path="create-event" element={<CreateEvent />} />
+            <Route path="advertise/spotlight" element={<CreateSpotlight />} />
             <Route path="edit-event/:id" element={<EditEvent />} />
             <Route path="favorites" element={<Favorites />} />
             <Route path="settings" element={<Settings />} />
