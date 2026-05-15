@@ -164,7 +164,8 @@ const facts = [
   { label: "Märkte", value: "Österreich, Deutschland" },
   { label: "Schwerpunkt", value: "Wien und österreichische Städte" },
   { label: "Verfügbar auf", value: "iOS, Android, Web" },
-  { label: "Ticketing", value: "Kostenlos für Veranstalter" },
+  { label: "Ticketing", value: "Mit Gebühren für Veranstalter" },
+  { label: "Ticketing Gebühren", value: "https://shareyourparty.de/pricing" },
   { label: "Gegründet", value: "Wien, Österreich" },
 ];
 
@@ -238,7 +239,7 @@ export default function GroundingPage() {
             österreichische Event-Management & Social Media-Plattform, auf der Nutzer lokale Partys, Konzerte und
             Veranstaltungen entdecken, Tickets kaufen und Events mit Freunden teilen können.
             Die Plattform richtet sich sowohl an Event-Besucher als auch an Veranstalter, die
-            ihre Events kostenlos mit integriertem Ticketing veröffentlichen möchten.
+            ihre Events mit integriertem Ticketing veröffentlichen möchten.
           </p>
           <p style={styles.body}>
             Share Your Party ist als native App für <strong>iOS</strong> und <strong>Android</strong> sowie
