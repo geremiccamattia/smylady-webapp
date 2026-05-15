@@ -41,6 +41,7 @@ import QRScanner from '@/pages/QRScanner'
 import NotFound from '@/pages/NotFound'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 
+
 // New Pages
 import HostEvents from '@/pages/HostEvents'
 import PostDetail from '@/pages/PostDetail'
@@ -70,12 +71,16 @@ import FriendsFeed from '@/pages/FriendsFeed'
 import StoryViewer from '@/pages/StoryViewer'
 import EventMemories from '@/pages/EventMemories'
 
+// @ts-ignore
+import GroundingPage from './pages/GroundingPage'
+
 // Legal Pages
 import Privacy from '@/pages/legal/Privacy'
 import Impressum from '@/pages/legal/Impressum'
 import Terms from '@/pages/legal/Terms'
 import Contact from '@/pages/legal/Contact'
 import Pricing from '@/pages/legal/Pricing'
+
 
 function App() {
   const { i18n } = useTranslation()
@@ -195,6 +200,7 @@ function App() {
           <Route path="terms" element={<Terms />} />
           <Route path="contact" element={<Contact />} />
           <Route path="pricing" element={<Pricing />} />
+          <Route path="grounding" element={<GroundingPage />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

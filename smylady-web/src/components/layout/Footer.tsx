@@ -32,6 +32,7 @@ export default function Footer() {
               <li><Link to="/my-tickets" className="hover:text-foreground">{t('tickets.myTickets')}</Link></li>
               <li><Link to="/favorites" className="hover:text-foreground">{t('favorites.title')}</Link></li>
               <li><Link to="/events/wien" className="hover:text-foreground">Events in Wien</Link></li>
+              <li><Link to="/grounding" className="hover:text-foreground">Über Share Your Party</Link></li>
             </ul>
           </div>
 
