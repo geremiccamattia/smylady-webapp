@@ -17,3 +17,5 @@ dist-ssr
 *.sw?
 nul 
 .vercel
+
+.next/
