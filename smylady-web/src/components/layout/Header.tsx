@@ -17,8 +17,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 export default function Header() {
   const { t } = useTranslation()
   const { user, isAuthenticated, logout } = useAuth()
-  const router = useRouter()
-  const location = usePathname()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 

@@ -122,9 +122,7 @@ export default function Notifications() {
     // Memory-related notifications → navigate to memories with specific memory
     const memoryTypes = ['memory_tag', 'memory_like', 'memory_comment', 'memory_mention', 'memory_reaction', 'comment_reply', 'comment_mention']
     if (memoryTypes.includes(notification.type) && notification.eventId && notification.memoryId) {
-      navigate(`/event/${notification.eventId}/memories`, {
-        state: { memoryId: notification.memoryId, memoryIndex: notification.memoryIndex }
-      })
+      router.push(`/event/${notification.eventId}/memories`)
       return
     }
 

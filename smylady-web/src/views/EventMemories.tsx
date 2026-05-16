@@ -36,7 +36,7 @@ type SortOption = 'newest' | 'oldest' | 'mostLiked'
 export default function EventMemories() {
   const { eventId } = useParams<{ eventId: string }>()
   const router = useRouter()
-  const location = usePathname()
+  const pathname = usePathname()
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user, isAuthenticated } = useAuth()
@@ -45,7 +45,7 @@ export default function EventMemories() {
   const currentUserId = user?.id || user?._id
 
   // State from notification navigation
-  const navState = location.state as { memoryId?: string; memoryIndex?: number } | null
+  const navState = null as { memoryId?: string; memoryIndex?: number } | null
 
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
   const [showUpload, setShowUpload] = useState(false)
@@ -231,7 +231,7 @@ export default function EventMemories() {
         router.replace(pathname)
       }
     }
-  }, [navState, memories, selectedMemory, router, location.pathname])
+  }, [navState, memories, selectedMemory, router, pathname])
 
   // Handle memory update from MemoryViewer (instant update before query refetch)
   const handleMemoryUpdate = useCallback((updatedMemory: Memory) => {

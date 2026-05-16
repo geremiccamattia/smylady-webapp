@@ -38,7 +38,7 @@ export default function Onboarding() {
     if (hasSeen === 'true') {
       router.replace('/login')
     }
-  }, [navigate])
+  }, [router])
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {

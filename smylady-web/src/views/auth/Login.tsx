@@ -181,8 +181,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { login, isAuthenticated, isLoading: authLoading } = useAuth()
-  const router = useRouter()
-  const location = usePathname()
+  const router = useRouter()
   const { toast } = useToast()
   const queryClient = useQueryClient()
 

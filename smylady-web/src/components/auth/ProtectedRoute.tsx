@@ -1,24 +1,20 @@
 'use client'
 
-// TODO: migrate from react-router-dom: Outlet
-import { redirect, usePathname } from 'next/navigation'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function ProtectedRoute() {
+export default function ProtectedRoute({ children }: { children?: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
-  const location = usePathname()
+  const router = useRouter()
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login')
+    }
+  }, [isAuthenticated, isLoading, router])
 
-  if (!isAuthenticated) {
-    return <Navigate href="/login" state={{ from: location }} replace />
-  }
+  if (isLoading || !isAuthenticated) return null
 
-  return <Outlet />
+  return <>{children}</>
 }

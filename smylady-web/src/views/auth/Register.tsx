@@ -27,7 +27,7 @@ export default function Register() {
   const { register } = useAuth()
   const router = useRouter()
   const location = usePathname()
-  const from = (location.state as any)?.from?.pathname || '/explore'
+  const from = '/explore'
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {

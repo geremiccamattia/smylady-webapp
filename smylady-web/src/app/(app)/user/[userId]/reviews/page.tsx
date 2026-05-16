@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import OrganizerReviews from '@/views/OrganizerReviews'
 
 export default function OrganizerReviewsPage() {
-  return <OrganizerReviews />
+  return (
+    <Suspense>
+      <OrganizerReviews />
+    </Suspense>
+  )
 }

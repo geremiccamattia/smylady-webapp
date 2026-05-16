@@ -1,14 +1,1 @@
-{
-  "functions": {
-    "api/blog-redirect.js": {
-      "runtime": "@vercel/node@4.0.0"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/blog/:path*",
-      "destination": "/api/blog-redirect"
-    },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
+{}

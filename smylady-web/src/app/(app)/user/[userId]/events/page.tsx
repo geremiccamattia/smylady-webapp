@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import HostEvents from '@/views/HostEvents'
 
 export default function HostEventsPage() {
-  return <HostEvents />
+  return (
+    <Suspense>
+      <HostEvents />
+    </Suspense>
+  )
 }

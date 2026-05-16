@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import PaymentComplete from '@/views/PaymentComplete'
 
 export default function PaymentCompletePage() {
-  return <PaymentComplete />
+  return (
+    <Suspense>
+      <PaymentComplete />
+    </Suspense>
+  )
 }

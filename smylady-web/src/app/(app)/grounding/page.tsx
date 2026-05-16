@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+// @ts-ignore
 import GroundingPage from '@/views/GroundingPage'
 
 export const metadata: Metadata = {

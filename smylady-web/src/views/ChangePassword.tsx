@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -37,9 +37,13 @@ export default function ChangePassword() {
 
   const newPassword = watch('newPassword')
 
-  // Get email and token from sessionStorage (set during forgot password flow)
-  const email = sessionStorage.getItem('reset_email') || ''
-  const token = sessionStorage.getItem('reset_token') || ''
+  const [email, setEmail] = useState('')
+  const [token, setToken] = useState('')
+
+  useEffect(() => {
+    setEmail(sessionStorage.getItem('reset_email') || '')
+    setToken(sessionStorage.getItem('reset_token') || '')
+  }, [])
 
   const resetPasswordMutation = useMutation({
     mutationFn: (data: { password: string }) =>

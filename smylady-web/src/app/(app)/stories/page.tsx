@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import StoryViewer from '@/views/StoryViewer'
 
 export default function StoryViewerPage() {
-  return <StoryViewer />
+  return (
+    <Suspense>
+      <StoryViewer />
+    </Suspense>
+  )
 }

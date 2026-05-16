@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import ExploreClient from '@/views/Explore'
 
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 }
 
 export default function ExplorePage() {
-  return <ExploreClient />
+  return (
+    <Suspense>
+      <ExploreClient />
+    </Suspense>
+  )
 }

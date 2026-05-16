@@ -9,8 +9,7 @@ import { LogIn, UserPlus } from 'lucide-react'
 
 export default function AuthModal() {
   const { isAuthModalVisible, hideAuthModal } = useAuthModal()
-  const router = useRouter()
-  const location = usePathname()
+  const router = useRouter()
   const { t, i18n } = useTranslation()
   console.log('[AuthModal] current language:', i18n.language)
 

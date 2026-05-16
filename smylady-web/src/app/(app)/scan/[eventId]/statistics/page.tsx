@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import ScanStatistics from '@/views/ScanStatistics'
 
 export default function ScanStatisticsPage() {
-  return <ScanStatistics />
+  return (
+    <Suspense>
+      <ScanStatistics />
+    </Suspense>
+  )
 }

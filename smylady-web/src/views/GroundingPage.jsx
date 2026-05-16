@@ -1,3 +1,7 @@
+'use client'
+
+'use client'
+
 import { useEffect } from "react";
 
 const BRAND = "#e9548c";
@@ -533,3 +537,5 @@ const styles = {
     fontFamily: "sans-serif",
   },
 };
+
+
