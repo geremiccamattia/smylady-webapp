@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function Contact() {
   const { toast } = useToast()
-  const navigate = useRouter()
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
     email: '',

@@ -115,7 +115,7 @@ interface Subscriber {
 }
 
 export default function CreateEvent() {
-  const navigate = useRouter()
+  const router = useRouter()
   const { t } = useTranslation()
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()

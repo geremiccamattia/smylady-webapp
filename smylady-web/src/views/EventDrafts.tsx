@@ -29,7 +29,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function EventDrafts() {
   const { t } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
 
   const [drafts, setDrafts] = useState<DraftMetadata[]>([])

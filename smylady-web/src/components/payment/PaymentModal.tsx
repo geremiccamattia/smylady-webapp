@@ -36,7 +36,7 @@ export function PaymentModal({
   const { t } = useTranslation()
   const stripe = useStripe()
   const elements = useElements()
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle')

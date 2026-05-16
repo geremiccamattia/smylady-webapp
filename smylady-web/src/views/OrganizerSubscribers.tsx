@@ -19,7 +19,7 @@ import { getInitials, resolveImageUrl } from '@/lib/utils'
 
 export default function OrganizerSubscribers() {
   const { t } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')

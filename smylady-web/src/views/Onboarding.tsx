@@ -29,7 +29,7 @@ const steps: OnboardingStep[] = [
 const STORAGE_KEY = 'syp_has_seen_onboarding'
 
 export default function Onboarding() {
-  const navigate = useRouter()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
 
   useEffect(() => {

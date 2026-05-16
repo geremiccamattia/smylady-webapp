@@ -37,7 +37,7 @@ function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
 export default function OrganizerReviews() {
   const { t } = useTranslation()
   const { userId } = useParams<{ userId: string }>()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const userName = searchParams.get('name') || ''
 

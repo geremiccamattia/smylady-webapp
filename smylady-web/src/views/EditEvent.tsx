@@ -20,7 +20,7 @@ import { Upload, X, Calendar, MapPin, Ticket, Music, Info, ArrowLeft, Loader2 } 
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useRouter()
+  const router = useRouter()
   const { t } = useTranslation()
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()

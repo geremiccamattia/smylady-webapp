@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function Terms() {
-  const navigate = useRouter()
+  const router = useRouter()
 
   return (
     <div>

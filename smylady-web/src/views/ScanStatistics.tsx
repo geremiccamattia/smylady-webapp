@@ -40,7 +40,7 @@ type TabType = 'all' | 'scanned' | 'pending'
 export default function ScanStatistics() {
   const { t } = useTranslation()
   const { eventId } = useParams<{ eventId: string }>()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const eventName = searchParams.get('name') || ''
 
   const [activeTab, setActiveTab] = useState<TabType>('all')

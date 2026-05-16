@@ -58,6 +58,7 @@ export default function Header() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
+              suppressHydrationWarning
               placeholder={t('common.search') + '...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -71,15 +72,15 @@ export default function Header() {
           {isAuthenticated ? (
             <>
               <Link href="/explore">
-                <Button variant="ghost" size="sm">{t('nav.explore')}</Button>
+                <Button suppressHydrationWarning variant="ghost" size="sm">{t('nav.explore')}</Button>
               </Link>
               <Link href="/search-users">
-                <Button variant="ghost" size="icon" title={t('nav.searchUsers', { defaultValue: 'Search Users' })}>
+                <Button suppressHydrationWarning variant="ghost" size="icon" title={t('nav.searchUsers', { defaultValue: 'Search Users' })}>
                   <Users className="h-5 w-5" />
                 </Button>
               </Link>
               <Link href="/create-event">
-                <Button variant="gradient" size="sm" className="gap-2">
+                <Button suppressHydrationWarning variant="gradient" size="sm" className="gap-2">
                   <Plus className="h-4 w-4" />
                   {t('nav.createEvent')}
                 </Button>
@@ -117,15 +118,16 @@ export default function Header() {
           ) : (
             <>
               <Link href="/explore">
-                <Button variant="ghost" size="sm">{t('nav.explore')}</Button>
+                <Button suppressHydrationWarning variant="ghost" size="sm">{t('nav.explore')}</Button>
               </Link>
               <Link href="/feed">
-                <Button variant="ghost" size="sm">
+                <Button suppressHydrationWarning variant="ghost" size="sm">
                   <Newspaper className="h-4 w-4 mr-2" />
                   {t('nav.feed', { defaultValue: 'Feed' })}
                 </Button>
               </Link>
               <Button
+                suppressHydrationWarning
                 variant="outline"
                 size="sm"
                 onClick={() => router.push('/login')}
@@ -133,7 +135,7 @@ export default function Header() {
                 {t('auth.login')}
               </Button>
               <Link href="/register">
-                <Button variant="gradient" size="sm">{t('auth.register')}</Button>
+                <Button suppressHydrationWarning variant="gradient" size="sm">{t('auth.register')}</Button>
               </Link>
               <LanguageSwitcher />
             </>
@@ -158,6 +160,7 @@ export default function Header() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
+              suppressHydrationWarning
               placeholder={t('common.search') + '...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

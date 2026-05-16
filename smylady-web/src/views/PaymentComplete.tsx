@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button'
 
 export default function PaymentComplete() {
   const { t } = useTranslation()
-  const [searchParams] = useSearchParams()
-  const navigate = useRouter()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const ticketId = searchParams.get('ticketId')
 
   useEffect(() => {

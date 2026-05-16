@@ -63,7 +63,7 @@ import {
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useRouter()
+  const router = useRouter()
   const { t } = useTranslation()
   const { toast } = useToast()
   const { isAuthenticated, user } = useAuth()
@@ -139,7 +139,7 @@ export default function EventDetail() {
       // Navigate back to explore page after opening external link
       router.replace('/explore')
     }
-  }, [isExternalEvent, externalUrl, navigate])
+  }, [isExternalEvent, externalUrl, router])
 
   useEffect(() => {
     if (event?.ticketTiers && event?.ticketTiers?.length > 0) {

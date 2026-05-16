@@ -29,7 +29,7 @@ type ListType = 'subscribers' | 'following'
 export default function UserList() {
   const { t } = useTranslation()
   const { userId } = useParams<{ userId: string }>()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const type = (searchParams.get('type') as ListType) || 'subscribers'
 
   const [searchTerm, setSearchTerm] = useState('')

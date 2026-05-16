@@ -18,8 +18,8 @@ const OTP_LENGTH = 6
 
 export default function OTP() {
   const { t } = useTranslation()
-  const navigate = useRouter()
-  const [searchParams] = useSearchParams()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { login } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()

@@ -197,7 +197,7 @@ function PostCard({ post }: { post: Post }) {
   const { toast } = useToast()
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
-  const navigate = useRouter()
+  const router = useRouter()
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [commentMentions, setCommentMentions] = useState<string[]>([])

@@ -30,7 +30,7 @@ export default function PostDetail() {
   const { postId } = useParams<{ postId: string }>()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const navigate = useRouter()
+  const router = useRouter()
 
   // Comment state
   const [commentText, setCommentText] = useState('')

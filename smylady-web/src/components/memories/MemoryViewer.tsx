@@ -94,7 +94,7 @@ export default function MemoryViewer({
   const { user } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const navigate = useRouter()
+  const router = useRouter()
   const imageRef = useRef<HTMLImageElement>(null)
 
   const [comment, setComment] = useState('')

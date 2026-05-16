@@ -40,10 +40,10 @@ import { getInitials, resolveImageUrl, formatRelativeTime } from '@/lib/utils'
 export default function Conversation() {
   const { t } = useTranslation()
   const { conversationId } = useParams<{ conversationId: string }>()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const recipientId = searchParams.get('recipientId')
   const recipientName = searchParams.get('recipientName')
-  const navigate = useRouter()
+  const router = useRouter()
   const { user: currentUser } = useAuth()
   const { toast } = useToast()
 

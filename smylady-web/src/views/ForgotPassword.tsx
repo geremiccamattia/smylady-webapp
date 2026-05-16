@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function ForgotPassword() {
   const { t } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
 
   const [email, setEmail] = useState('')

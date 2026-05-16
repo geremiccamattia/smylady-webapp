@@ -25,7 +25,7 @@ import {
 
 export default function PreviewEvent() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)

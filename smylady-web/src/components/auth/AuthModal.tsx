@@ -35,7 +35,7 @@ export default function AuthModal() {
             className="w-full gap-2 rounded-full"
             onClick={() => {
               hideAuthModal()
-              navigate('/register', { state: { from: location } })
+              router.push('/register')
             }}
           >
             <UserPlus className="h-5 w-5" />
@@ -47,7 +47,7 @@ export default function AuthModal() {
             className="w-full gap-2 rounded-full"
             onClick={() => {
               hideAuthModal()
-              navigate('/login', { state: { from: location } })
+              router.push('/login')
             }}
           >
             <LogIn className="h-5 w-5" />

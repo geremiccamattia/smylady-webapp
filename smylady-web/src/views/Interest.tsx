@@ -23,7 +23,7 @@ const interests = [
 
 export default function Interest() {
   const { t } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
   const { user, updateUser } = useAuth()
   const { toast } = useToast()
 

@@ -16,7 +16,7 @@ type Step = 'email' | 'otp' | 'password'
 
 export default function ForgotPassword() {
   const { t } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
 
   const [step, setStep] = useState<Step>('email')

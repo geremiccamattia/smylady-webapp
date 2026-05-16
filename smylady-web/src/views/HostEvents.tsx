@@ -23,7 +23,7 @@ import type { Event } from '@/types'
 export default function HostEvents() {
   const { t } = useTranslation()
   const { userId } = useParams<{ userId: string }>()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const hostName = searchParams.get('name') || ''
   const hostImage = searchParams.get('image') || ''
   const { user: currentUser } = useAuth()

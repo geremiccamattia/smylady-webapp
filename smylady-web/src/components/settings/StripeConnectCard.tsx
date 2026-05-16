@@ -43,7 +43,7 @@ export function StripeConnectCard() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user } = useAuth()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const [isConnecting, setIsConnecting] = useState(false)
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)

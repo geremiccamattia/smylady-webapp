@@ -46,7 +46,7 @@ interface ScanStatistics {
 
 export default function QRScanner() {
   const { eventId } = useParams<{ eventId: string }>()
-  const navigate = useRouter()
+  const router = useRouter()
   const { t } = useTranslation()
   const { toast } = useToast()
   const queryClient = useQueryClient()

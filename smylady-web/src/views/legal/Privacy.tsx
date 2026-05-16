@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 
 export default function Privacy() {
   const email = 'office@shareyourparty.de'
-  const navigate = useRouter()
+  const router = useRouter()
 
   return (
     <div>

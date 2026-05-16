@@ -40,7 +40,7 @@ import { useTranslation } from 'react-i18next'
 export default function TicketDetail() {
   const { t } = useTranslation()
   const { ticketId } = useParams<{ ticketId: string }>()
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()

@@ -45,7 +45,7 @@ interface FriendsEvent {
 
 export default function FriendsFeed() {
   const { t, i18n } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<'posts' | 'events'>('posts')
 

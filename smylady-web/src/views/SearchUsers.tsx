@@ -15,7 +15,7 @@ import { getInitials, resolveImageUrl } from '@/lib/utils'
 
 export default function SearchUsers() {
   const { t } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
   const { user: currentUser, isAuthenticated } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [friendSuggestions, setFriendSuggestions] = useState<SearchedUser[]>([])

@@ -86,8 +86,8 @@ function SmartImage({ src, alt, className }: { src?: string; alt?: string; class
 
 export default function StoryViewer() {
   const { t, i18n } = useTranslation()
-  const navigate = useRouter()
-  const [searchParams] = useSearchParams()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { toast } = useToast()

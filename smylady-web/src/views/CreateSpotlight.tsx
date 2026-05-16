@@ -120,7 +120,7 @@ function SpotlightPaymentHandler({
   const stripe = useStripe()
   const elements = useElements()
   const { toast } = useToast()
-  const navigate = useRouter()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async () => {
@@ -168,7 +168,7 @@ function SpotlightPaymentHandler({
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function CreateSpotlight() {
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
   const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')

@@ -34,7 +34,7 @@ function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
 export default function EventReviews() {
   const { t } = useTranslation()
   const { eventId } = useParams<{ eventId: string }>()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const eventName = searchParams.get('name') || ''
 
   const [reviews, setReviews] = useState<Review[]>([])

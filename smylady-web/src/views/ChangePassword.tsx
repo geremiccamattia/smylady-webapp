@@ -22,7 +22,7 @@ interface ChangePasswordForm {
 
 export default function ChangePassword() {
   const { t } = useTranslation()
-  const navigate = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
 
   const [showNewPassword, setShowNewPassword] = useState(false)

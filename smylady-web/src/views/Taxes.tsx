@@ -22,7 +22,7 @@ const taxItems: TaxItem[] = [
 ]
 
 export default function Taxes() {
-  const navigate = useRouter()
+  const router = useRouter()
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

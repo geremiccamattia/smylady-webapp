@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -69,7 +69,9 @@ export default function Settings() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user, refreshUser } = useAuth()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
 
   // Settings state
   const [liveLocation, setLiveLocation] = useState(false)
@@ -92,7 +94,7 @@ export default function Settings() {
         description: t('settings.stripeConnectedDesc'),
       })
       // Remove the query parameter
-      setSearchParams({}, { replace: true })
+      router.replace(pathname)
     } else if (stripeStatus === 'refresh') {
       toast({
         variant: 'destructive',
@@ -100,9 +102,9 @@ export default function Settings() {
         description: t('settings.stripeIncompleteDesc'),
       })
       // Remove the query parameter
-      setSearchParams({}, { replace: true })
+      router.replace(pathname)
     }
-  }, [searchParams, setSearchParams, toast])
+  }, [searchParams, router, pathname, toast])
 
   // Load settings on mount
   useEffect(() => {
