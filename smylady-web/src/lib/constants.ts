@@ -1,9 +1,11 @@
+'use client'
+
 // API Configuration
 export const CONFIG = {
-  API_URL: import.meta.env.VITE_API_URL || 'https://smylady-backend.onrender.com',
-  SOCKET_URL: import.meta.env.VITE_SOCKET_URL || 'https://smylady-backend.onrender.com',
-  STRIPE_PUBLIC_KEY: import.meta.env.VITE_STRIPE_PUBLIC_KEY || '',
-  GOOGLE_MAPS_API_KEY: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+  API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://smylady-backend.onrender.com',
+  SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || 'https://smylady-backend.onrender.com',
+  STRIPE_PUBLIC_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY || '',
+  GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
 }
 
 // Storage Keys (localStorage)

@@ -1,3 +1,5 @@
+'use client'
+
 export { apiClient } from './api'
 export { authService } from './auth'
 export { eventsService } from './events'

@@ -1,3 +1,5 @@
+'use client'
+
 // Location Service for Web (Browser Geolocation API)
 
 const STORAGE_KEYS = {
@@ -16,7 +18,7 @@ export interface LocationResult {
  * Check if live location is enabled by user
  */
 export const isLiveLocationEnabled = (): boolean => {
-  const enabled = localStorage.getItem(STORAGE_KEYS.LIVE_LOCATION_ENABLED)
+  const enabled = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.LIVE_LOCATION_ENABLED) : null
   return enabled === 'true'
 }
 
@@ -24,14 +26,14 @@ export const isLiveLocationEnabled = (): boolean => {
  * Set live location preference
  */
 export const setLiveLocationEnabled = (enabled: boolean): void => {
-  localStorage.setItem(STORAGE_KEYS.LIVE_LOCATION_ENABLED, enabled ? 'true' : 'false')
+  if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEYS.LIVE_LOCATION_ENABLED, enabled ? 'true' : 'false')
 }
 
 /**
  * Check if Ticketmaster integration is enabled
  */
 export const isTicketmasterEnabled = (): boolean => {
-  const enabled = localStorage.getItem(STORAGE_KEYS.TICKETMASTER_ENABLED)
+  const enabled = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.TICKETMASTER_ENABLED) : null
   return enabled === 'true'
 }
 
@@ -39,7 +41,7 @@ export const isTicketmasterEnabled = (): boolean => {
  * Set Ticketmaster preference
  */
 export const setTicketmasterEnabled = (enabled: boolean): void => {
-  localStorage.setItem(STORAGE_KEYS.TICKETMASTER_ENABLED, enabled ? 'true' : 'false')
+  if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEYS.TICKETMASTER_ENABLED, enabled ? 'true' : 'false')
 }
 
 /**
@@ -50,7 +52,7 @@ export const saveManualLocation = (location: {
   lng: number
   description: string
 }): void => {
-  localStorage.setItem(STORAGE_KEYS.MANUAL_LOCATION, JSON.stringify(location))
+  if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEYS.MANUAL_LOCATION, JSON.stringify(location))
 }
 
 /**
@@ -61,7 +63,7 @@ export const getManualLocation = (): {
   lng: number
   description: string
 } | null => {
-  const location = localStorage.getItem(STORAGE_KEYS.MANUAL_LOCATION)
+  const location = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.MANUAL_LOCATION) : null
   return location ? JSON.parse(location) : null
 }
 

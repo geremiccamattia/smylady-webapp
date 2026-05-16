@@ -1,5 +1,7 @@
+'use client'
+
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import Link from 'next/link'
 import { X, Settings, Cookie } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -161,10 +163,10 @@ export default function CookieConsent() {
 
               {/* Quick Links */}
               <div className="flex gap-4 text-sm mb-4">
-                <Link to="/privacy" className="text-primary hover:underline">
+                <Link href="/privacy" className="text-primary hover:underline">
                   Datenschutzerklärung
                 </Link>
-                <Link to="/imprint" className="text-primary hover:underline">
+                <Link href="/imprint" className="text-primary hover:underline">
                   Impressum
                 </Link>
               </div>

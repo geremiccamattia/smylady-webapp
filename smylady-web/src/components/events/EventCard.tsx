@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
 import { Heart, MapPin, Calendar, Clock, Users, ExternalLink, Zap } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -278,7 +280,7 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   }
 
   return (
-    <Link to={`/event/${generateEventSlug(event.name, eventId!)}`}>
+    <Link href={`/event/${generateEventSlug(event.name, eventId!)}`}>
       {cardContent}
     </Link>
   )

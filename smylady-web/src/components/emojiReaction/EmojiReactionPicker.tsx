@@ -1,3 +1,5 @@
+'use client'
+
 import { cn, resolveImageUrl } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 

@@ -1,6 +1,10 @@
+'use client'
+
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Routes, Route, Navigate } from 'react-router-dom'
+// TODO: migrate from react-router-dom: Routes
+// TODO: migrate from react-router-dom: Route
+import { redirect } from 'next/navigation'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AuthModalProvider } from '@/contexts/AuthModalContext'
@@ -11,7 +15,7 @@ import AuthModal from '@/components/auth/AuthModal'
 import { injectJsonLd, removeJsonLd } from '@/lib/utils'
 
 function HomeRedirect() {
-  return <Navigate to="/explore" replace />
+  return <Navigate href="/explore" replace />
 }
 
 // Pages

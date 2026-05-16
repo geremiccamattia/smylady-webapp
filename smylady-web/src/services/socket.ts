@@ -1,7 +1,9 @@
+'use client'
+
 import { io, Socket } from 'socket.io-client'
 import { STORAGE_KEYS } from '@/lib/constants'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://app.shareyourparty.de'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app.shareyourparty.de'
 // Backend WebSocket Gateway uses namespace '/chat' - must append it to the URL
 const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://') + '/chat'
 
@@ -326,3 +328,4 @@ class SocketManager {
 // Export singleton instance
 export const socketManager = new SocketManager()
 export default socketManager
+

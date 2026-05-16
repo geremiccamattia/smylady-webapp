@@ -1,3 +1,5 @@
+'use client'
+
 // User Types
 export interface User {
   id: string

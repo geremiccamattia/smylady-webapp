@@ -1,3 +1,5 @@
+'use client'
+
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { CONFIG, STORAGE_KEYS } from '@/lib/constants'
 

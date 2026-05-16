@@ -1,3 +1,5 @@
+'use client'
+
 import { ExternalLink, MapPin } from 'lucide-react'
 import { resolveImageUrl } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'

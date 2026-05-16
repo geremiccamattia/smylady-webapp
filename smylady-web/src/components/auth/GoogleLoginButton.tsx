@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
@@ -8,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Loader2 } from 'lucide-react'
 
 // Google OAuth Web Client ID for Share Your Party Web App
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '878037089362-gg85vmgb1ejt539u8rhlf37ie48sicqv.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '878037089362-gg85vmgb1ejt539u8rhlf37ie48sicqv.apps.googleusercontent.com'
 
 interface GoogleLoginButtonProps {
   onSuccess?: () => void
@@ -196,3 +198,4 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
     </div>
   )
 }
+

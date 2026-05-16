@@ -201,3 +201,4 @@ export function injectJsonLd(id: string, data: object): void {
 export function removeJsonLd(id: string): void {
   document.getElementById(id)?.remove()
 }
+

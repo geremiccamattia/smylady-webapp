@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { Link } from 'react-router-dom'
+import Link from 'next/link'
 import {
   Star,
   Edit,
@@ -377,7 +379,7 @@ function ReviewCard({ review }: { review: Review }) {
   return (
     <div className="pb-4 border-b last:border-0 last:pb-0">
       <div className="flex items-center gap-3 mb-2">
-        <Link to={`/user/${reviewUserId}`}>
+        <Link href={`/user/${reviewUserId}`}>
           <Avatar className="h-10 w-10">
             <AvatarImage src={resolveImageUrl(reviewUser?.profileImage)} />
             <AvatarFallback>{getInitials(reviewUser?.name || '')}</AvatarFallback>
@@ -385,7 +387,7 @@ function ReviewCard({ review }: { review: Review }) {
         </Link>
         <div>
           <Link
-            to={`/user/${reviewUserId}`}
+            href={`/user/${reviewUserId}`}
             className="font-medium hover:underline"
           >
             {reviewUser?.name || 'User'}

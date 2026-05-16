@@ -1,3 +1,5 @@
+'use client'
+
 import { apiClient } from './api'
 
 export interface GuestListItem {

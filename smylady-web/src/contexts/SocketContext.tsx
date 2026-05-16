@@ -1,3 +1,5 @@
+'use client'
+
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { socketManager } from '@/services/socket'

@@ -1,3 +1,5 @@
+'use client'
+
 import { apiClient } from './api'
 
 // Helper to get the correct memory URL (supports both old and new field names)

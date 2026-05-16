@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'

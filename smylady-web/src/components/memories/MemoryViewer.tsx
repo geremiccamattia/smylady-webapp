@@ -1,6 +1,8 @@
+'use client'
+
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import {
   X,
@@ -92,7 +94,7 @@ export default function MemoryViewer({
   const { user } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
+  const navigate = useRouter()
   const imageRef = useRef<HTMLImageElement>(null)
 
   const [comment, setComment] = useState('')
@@ -604,7 +606,7 @@ export default function MemoryViewer({
                 key={index}
                 className="absolute bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium shadow-lg transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform"
                 style={{ left: `${tag.x}%`, top: `${tag.y}%` }}
-                onClick={() => navigate(`/user/${tagUserId}`)}
+                onClick={() => router.push(`/user/${tagUserId}`)}
               >
                 {tagUserName}
               </div>
@@ -634,7 +636,7 @@ export default function MemoryViewer({
         <div className="p-4 border-b flex items-center gap-3">
           <Avatar
             className="cursor-pointer"
-            onClick={() => uploadedByUser?._id && navigate(`/user/${uploadedByUser._id}`)}
+            onClick={() => uploadedByUser?._id && router.push(`/user/${uploadedByUser._id}`)}
           >
             <AvatarImage src={resolveImageUrl(uploadedByUser?.profileImage)} />
             <AvatarFallback>{getInitials(uploadedByUser?.name || '')}</AvatarFallback>
@@ -642,7 +644,7 @@ export default function MemoryViewer({
           <div className="flex-1">
             <p
               className="font-medium cursor-pointer hover:underline"
-              onClick={() => uploadedByUser?._id && navigate(`/user/${uploadedByUser._id}`)}
+              onClick={() => uploadedByUser?._id && router.push(`/user/${uploadedByUser._id}`)}
             >
               {uploadedByUser.name}
             </p>
@@ -718,7 +720,7 @@ export default function MemoryViewer({
             <RenderTextWithMentions
               text={memory.caption}
               participants={participants}
-              onMentionPress={(userId) => navigate(`/user/${userId}`)}
+              onMentionPress={(userId) => router.push(`/user/${userId}`)}
               className="text-sm"
             />
           </div>
@@ -797,7 +799,7 @@ export default function MemoryViewer({
                 <div className="flex gap-2">
                   <Avatar
                     className="w-8 h-8 cursor-pointer"
-                    onClick={() => commentItem.userId?._id && navigate(`/user/${commentItem.userId._id}`)}
+                    onClick={() => commentItem.userId?._id && router.push(`/user/${commentItem.userId._id}`)}
                   >
                     <AvatarImage src={resolveImageUrl(commentItem.userId?.profileImage)} />
                     <AvatarFallback className="text-xs">
@@ -808,7 +810,7 @@ export default function MemoryViewer({
                     <div className="bg-muted rounded-lg px-3 py-2">
                       <p
                         className="font-medium text-sm cursor-pointer hover:underline"
-                        onClick={() => commentItem.userId?._id && navigate(`/user/${commentItem.userId._id}`)}
+                        onClick={() => commentItem.userId?._id && router.push(`/user/${commentItem.userId._id}`)}
                       >
                         {commentItem.userId?.name || 'User'}
                       </p>
@@ -818,7 +820,7 @@ export default function MemoryViewer({
                         mentions={commentItem.mentions as any}
                         participants={participants}
                         resolvedMentionUsers={resolvedMentionUsers}
-                        onMentionPress={(userId) => navigate(`/user/${userId}`)}
+                        onMentionPress={(userId) => router.push(`/user/${userId}`)}
                         className="text-sm"
                       />
                     </div>
@@ -893,7 +895,7 @@ export default function MemoryViewer({
                       <div key={replyIndex} className="flex gap-2">
                         <Avatar
                           className="w-6 h-6 cursor-pointer"
-                          onClick={() => reply.userId?._id && navigate(`/user/${reply.userId._id}`)}
+                          onClick={() => reply.userId?._id && router.push(`/user/${reply.userId._id}`)}
                         >
                           <AvatarImage src={resolveImageUrl(reply.userId?.profileImage)} />
                           <AvatarFallback className="text-xs">
@@ -904,7 +906,7 @@ export default function MemoryViewer({
                           <div className="bg-muted rounded-lg px-3 py-2">
                             <p
                               className="font-medium text-xs cursor-pointer hover:underline"
-                              onClick={() => reply.userId?._id && navigate(`/user/${reply.userId._id}`)}
+                              onClick={() => reply.userId?._id && router.push(`/user/${reply.userId._id}`)}
                             >
                               {reply.userId?.name || 'User'}
                             </p>
@@ -914,7 +916,7 @@ export default function MemoryViewer({
                               mentions={reply.mentions as any}
                               participants={participants}
                               resolvedMentionUsers={resolvedMentionUsers}
-                              onMentionPress={(userId) => navigate(`/user/${userId}`)}
+                              onMentionPress={(userId) => router.push(`/user/${userId}`)}
                               className="text-sm"
                             />
                           </div>
@@ -1124,7 +1126,7 @@ export default function MemoryViewer({
                       className="flex items-center gap-3 p-3 hover:bg-muted cursor-pointer"
                       onClick={() => {
                         setShowReactionsModal(false)
-                        navigate(`/user/${reaction.userId}`)
+                        router.push(`/user/${reaction.userId}`)
                       }}
                     >
                       <span className="text-xl">{reaction.emoji}</span>

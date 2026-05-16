@@ -1,3 +1,5 @@
+'use client'
+
 import { apiClient } from './api'
 
 const DRAFT_KEY = 'syp_event_draft'

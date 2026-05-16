@@ -1,5 +1,7 @@
+'use client'
+
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -7,8 +9,8 @@ import { LogIn, UserPlus } from 'lucide-react'
 
 export default function AuthModal() {
   const { isAuthModalVisible, hideAuthModal } = useAuthModal()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const router = useRouter()
+  const location = usePathname()
   const { t, i18n } = useTranslation()
   console.log('[AuthModal] current language:', i18n.language)
 

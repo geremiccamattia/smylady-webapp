@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 
 export default function Footer() {
@@ -27,12 +29,12 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">{t('home.quickLinks')}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/explore" className="hover:text-foreground">{t('home.discoverEvents')}</Link></li>
-              <li><Link to="/create-event" className="hover:text-foreground">{t('events.createEvent')}</Link></li>
-              <li><Link to="/my-tickets" className="hover:text-foreground">{t('tickets.myTickets')}</Link></li>
-              <li><Link to="/favorites" className="hover:text-foreground">{t('favorites.title')}</Link></li>
-              <li><Link to="/events/wien" className="hover:text-foreground">Events in Wien</Link></li>
-              <li><Link to="/grounding" className="hover:text-foreground">Über Share Your Party</Link></li>
+              <li><Link href="/explore" className="hover:text-foreground">{t('home.discoverEvents')}</Link></li>
+              <li><Link href="/create-event" className="hover:text-foreground">{t('events.createEvent')}</Link></li>
+              <li><Link href="/my-tickets" className="hover:text-foreground">{t('tickets.myTickets')}</Link></li>
+              <li><Link href="/favorites" className="hover:text-foreground">{t('favorites.title')}</Link></li>
+              <li><Link href="/events/wien" className="hover:text-foreground">Events in Wien</Link></li>
+              <li><Link href="/grounding" className="hover:text-foreground">Über Share Your Party</Link></li>
             </ul>
           </div>
 
@@ -40,7 +42,7 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">{t('home.support')}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/contact" className="hover:text-foreground">{t('legal.contact')}</Link></li>
+              <li><Link href="/contact" className="hover:text-foreground">{t('legal.contact')}</Link></li>
               <li><a href="mailto:office@shareyourparty.de" className="hover:text-foreground">{t('home.emailSupport')}</a></li>
             </ul>
           </div>
@@ -49,10 +51,10 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">{t('home.legalTitle')}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/privacy" className="hover:text-foreground">{t('legal.privacy')}</Link></li>
-              <li><Link to="/terms" className="hover:text-foreground">{t('legal.terms')}</Link></li>
-              <li><Link to="/imprint" className="hover:text-foreground">{t('legal.impressum')}</Link></li>
-              <li><Link to="/pricing" className="hover:text-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Link></li>
+              <li><Link href="/privacy" className="hover:text-foreground">{t('legal.privacy')}</Link></li>
+              <li><Link href="/terms" className="hover:text-foreground">{t('legal.terms')}</Link></li>
+              <li><Link href="/imprint" className="hover:text-foreground">{t('legal.impressum')}</Link></li>
+              <li><Link href="/pricing" className="hover:text-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Link></li>
             </ul>
           </div>
         </div>

@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin, X, Navigation, Loader2, Search } from 'lucide-react'

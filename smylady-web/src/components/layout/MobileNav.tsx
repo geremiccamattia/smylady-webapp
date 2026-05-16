@@ -1,4 +1,7 @@
-import { Link, useLocation } from 'react-router-dom'
+'use client'
+
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { Home, Search, Plus, Ticket, User, Newspaper } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -13,7 +16,7 @@ const navItems = [
 ]
 
 export default function MobileNav() {
-  const location = useLocation()
+  const location = usePathname()
   const { isAuthenticated } = useAuth()
 
   const visibleItems = navItems.filter(item => 
@@ -24,13 +27,13 @@ export default function MobileNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t">
       <div className="flex items-center justify-around h-16">
         {visibleItems.map((item) => {
-          const isActive = location.pathname === item.path
+          const isActive = location === item.path
           const Icon = item.icon
           
           return (
             <Link
               key={item.path}
-              to={item.path}
+              href={item.path}
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors",
                 isActive 

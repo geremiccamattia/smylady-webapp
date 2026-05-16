@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build && node -e \"const fs=require('fs');const p=require('path');const src=p.join('dist','index.html');const dst=p.join('dist','index.htm');if(fs.existsSync(src)){fs.copyFileSync(src,dst);console.log('Created index.htm')}\"",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -39,6 +39,7 @@
     "i18next": "^25.8.13",
     "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^0.462.0",
+    "next": "^16.2.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-easy-crop": "^5.5.6",
@@ -58,12 +59,10 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vercel/node": "^5.7.15",
-    "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.10.0",
     "postcss": "^8.4.45",
     "tailwindcss": "^3.4.11",
-    "typescript": "^5.5.4",
-    "vite": "^5.4.4"
+    "typescript": "^5.5.4"
   }
 }

@@ -1,3 +1,5 @@
+'use client'
+
 import { apiClient } from './api'
 import { Event } from '@/types'
 

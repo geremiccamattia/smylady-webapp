@@ -1,9 +1,12 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+'use client'
+
+// TODO: migrate from react-router-dom: Outlet
+import { redirect, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth()
-  const location = useLocation()
+  const location = usePathname()
 
   if (isLoading) {
     return (
@@ -14,7 +17,7 @@ export default function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate href="/login" state={{ from: location }} replace />
   }
 
   return <Outlet />

@@ -1,3 +1,5 @@
+'use client'
+
 import axios from 'axios'
 import { apiClient } from './api'
 import { CONFIG } from '@/lib/constants'

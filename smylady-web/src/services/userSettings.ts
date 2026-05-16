@@ -1,3 +1,5 @@
+'use client'
+
 import { apiClient } from './api'
 import { STORAGE_KEYS } from '@/lib/constants'
 

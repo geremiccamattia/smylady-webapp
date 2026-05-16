@@ -1,9 +1,11 @@
+'use client'
+
 import { createContext, useContext, ReactNode } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 
 // Load Stripe with the publishable key from environment variables
-const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY
 console.log('Stripe key:', stripePublishableKey ? 'loaded' : 'missing')
 
 let stripePromise: Promise<Stripe | null> | null = null
@@ -80,3 +82,4 @@ export function StripeElementsWrapper({ clientSecret, children }: StripeElements
     </Elements>
   )
 }
+

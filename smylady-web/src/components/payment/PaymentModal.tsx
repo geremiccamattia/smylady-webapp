@@ -1,6 +1,8 @@
+'use client'
+
 import { useState } from 'react'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import {
   Dialog,
@@ -34,7 +36,7 @@ export function PaymentModal({
   const { t } = useTranslation()
   const stripe = useStripe()
   const elements = useElements()
-  const navigate = useNavigate()
+  const navigate = useRouter()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle')
@@ -82,7 +84,7 @@ export function PaymentModal({
             })
             setTimeout(() => {
               onClose()
-              navigate(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
+              router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
             }, 1500)
           },
           onError: () => {
@@ -94,7 +96,7 @@ export function PaymentModal({
             })
             setTimeout(() => {
               onClose()
-              navigate('/payment-complete')
+              router.push('/payment-complete')
             }, 1500)
           },
         })

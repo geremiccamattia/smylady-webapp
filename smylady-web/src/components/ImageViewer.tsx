@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, useRef } from 'react'
 import { X, ZoomIn, ZoomOut, RotateCw, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Dialog, DialogPortal, DialogOverlay } from '@/components/ui/dialog'
