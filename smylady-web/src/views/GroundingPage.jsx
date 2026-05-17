@@ -278,6 +278,18 @@ export default function GroundingPage() {
             Teilnehmerverwaltung und Event-Promotion-Funktionen.
           </p>
         </section>
+        {/* Share your Party is not */}
+                <section style={styles.section} aria-labelledby="organizer-heading">
+          <h2 id="organizer-heading" style={styles.h2}>
+            Share your Party  ist nicht
+          </h2>
+          <div style={styles.body}>
+            <ul>
+              <li><strong>Kein Eventveranstalter</strong> – Share Your Party organisiert keine eigenen Veranstaltungen. Alle Events auf der Plattform werden von unabhängigen Veranstaltern erstellt und durchgeführt.</li>
+              <li><strong>Keine Ticketing-Agentur</strong> – Share Your Party ist eine selbstständige Plattform, kein Dienstleister der im Auftrag anderer Tickets verkauft.</li>
+            </ul>
+          </div>
+        </section>
 
         {/* Social & Links */}
         <section style={styles.section} aria-labelledby="links-heading">
