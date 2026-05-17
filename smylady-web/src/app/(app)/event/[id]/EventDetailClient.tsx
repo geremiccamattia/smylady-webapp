@@ -286,7 +286,10 @@ export default function EventDetailClient({ id }: Props) {
         {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
-            toast({ title: 'Reservierung erfolgreich!', description: 'Dein Platz ist reserviert. Zahlung erfolgt an der Abendkasse.' })
+            toast({
+              title: t('paymentComplete.headingDoor', { defaultValue: 'Du bist dabei!' }),
+              description: t('paymentComplete.descriptionDoor', { defaultValue: 'Wir erinnern dich rechtzeitig per Benachrichtigung an das Event.' }),
+            })
             router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&type=door`)
           },
           onError: (error: any) => {

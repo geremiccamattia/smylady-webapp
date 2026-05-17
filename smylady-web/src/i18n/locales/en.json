@@ -790,8 +790,12 @@
     "secureNote": "Your payment is processed securely via Stripe"
   },
   "paymentComplete": {
-    "heading": "Payment complete",
-    "description": "Your ticket has been successfully created",
+    "headingDoor": "You're in!",
+    "headingFree": "Reservation complete!",
+    "heading": "Payment successful!",
+    "descriptionDoor": "We'll send you a reminder notification before the event.",
+    "descriptionFree": "Your ticket has been successfully reserved.",
+    "description": "Your ticket has been successfully purchased.",
     "exploreBtn": "Discover more events",
     "previewBtn": "View ticket"
   },

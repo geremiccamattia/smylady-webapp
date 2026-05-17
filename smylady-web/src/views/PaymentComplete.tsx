@@ -14,14 +14,16 @@ export default function PaymentComplete() {
   const ticketId = searchParams.get('ticketId')
   const type = searchParams.get('type') // 'door' | 'free' | null
 
-  const heading = type === 'door' || type === 'free'
-    ? 'Reservierung abgeschlossen!'
+  const heading = type === 'door'
+    ? t('paymentComplete.headingDoor', { defaultValue: 'Du bist dabei!' })
+    : type === 'free'
+    ? t('paymentComplete.headingFree', { defaultValue: 'Reservierung abgeschlossen!' })
     : t('paymentComplete.heading', { defaultValue: 'Zahlung erfolgreich!' })
 
   const description = type === 'door'
-    ? 'Dein Platz wurde erfolgreich reserviert. Zahlung erfolgt an der Abendkasse.'
+    ? t('paymentComplete.descriptionDoor', { defaultValue: 'Wir erinnern dich rechtzeitig per Benachrichtigung an das Event.' })
     : type === 'free'
-    ? 'Dein Ticket wurde erfolgreich reserviert.'
+    ? t('paymentComplete.descriptionFree', { defaultValue: 'Dein Ticket wurde erfolgreich reserviert.' })
     : t('paymentComplete.description', { defaultValue: 'Dein Ticket wurde erfolgreich gekauft.' })
 
   useEffect(() => {
