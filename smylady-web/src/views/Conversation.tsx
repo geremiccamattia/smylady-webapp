@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -37,7 +37,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, resolveImageUrl, formatRelativeTime } from '@/lib/utils'
 
-export default function Conversation() {
+function ConversationContent() {
   const { t } = useTranslation()
   const { conversationId } = useParams<{ conversationId: string }>()
   const searchParams = useSearchParams()
@@ -412,5 +412,13 @@ export default function Conversation() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+export default function Conversation() {
+  return (
+    <Suspense>
+      <ConversationContent />
+    </Suspense>
   )
 }

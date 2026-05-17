@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -37,7 +37,7 @@ interface ScanItem {
 
 type TabType = 'all' | 'scanned' | 'pending'
 
-export default function ScanStatistics() {
+function ScanStatisticsContent() {
   const { t } = useTranslation()
   const { eventId } = useParams<{ eventId: string }>()
   const searchParams = useSearchParams()
@@ -284,5 +284,13 @@ export default function ScanStatistics() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function ScanStatistics() {
+  return (
+    <Suspense>
+      <ScanStatisticsContent />
+    </Suspense>
   )
 }

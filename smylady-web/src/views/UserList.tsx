@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -26,7 +26,7 @@ interface UserListItem {
 
 type ListType = 'subscribers' | 'following'
 
-export default function UserList() {
+function UserListContent() {
   const { t } = useTranslation()
   const { userId } = useParams<{ userId: string }>()
   const searchParams = useSearchParams()
@@ -150,5 +150,13 @@ export default function UserList() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function UserList() {
+  return (
+    <Suspense>
+      <UserListContent />
+    </Suspense>
   )
 }

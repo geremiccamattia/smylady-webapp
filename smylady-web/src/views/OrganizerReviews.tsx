@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -34,7 +34,7 @@ function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
   )
 }
 
-export default function OrganizerReviews() {
+function OrganizerReviewsContent() {
   const { t } = useTranslation()
   const { userId } = useParams<{ userId: string }>()
   const searchParams = useSearchParams()
@@ -235,5 +235,13 @@ export default function OrganizerReviews() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function OrganizerReviews() {
+  return (
+    <Suspense>
+      <OrganizerReviewsContent />
+    </Suspense>
   )
 }

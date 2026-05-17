@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -65,7 +65,7 @@ function ToggleSwitch({
   )
 }
 
-export default function Settings() {
+function SettingsContent() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user, refreshUser } = useAuth()
@@ -389,5 +389,13 @@ export default function Settings() {
         onClose={() => setShowDeleteAccount(false)}
       />
     </div>
+  )
+}
+
+export default function Settings() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
   )
 }

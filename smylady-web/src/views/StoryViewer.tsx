@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -84,7 +84,7 @@ function SmartImage({ src, alt, className }: { src?: string; alt?: string; class
   )
 }
 
-export default function StoryViewer() {
+function StoryViewerContent() {
   const { t, i18n } = useTranslation()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -549,5 +549,13 @@ export default function StoryViewer() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function StoryViewer() {
+  return (
+    <Suspense>
+      <StoryViewerContent />
+    </Suspense>
   )
 }

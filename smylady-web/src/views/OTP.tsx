@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 
 const OTP_LENGTH = 6
 
-export default function OTP() {
+function OTPContent() {
   const { t } = useTranslation()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -255,5 +255,13 @@ export default function OTP() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function OTP() {
+  return (
+    <Suspense>
+      <OTPContent />
+    </Suspense>
   )
 }

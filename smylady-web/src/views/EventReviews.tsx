@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -31,7 +31,7 @@ function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
   )
 }
 
-export default function EventReviews() {
+function EventReviewsContent() {
   const { t } = useTranslation()
   const { eventId } = useParams<{ eventId: string }>()
   const searchParams = useSearchParams()
@@ -224,5 +224,13 @@ export default function EventReviews() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function EventReviews() {
+  return (
+    <Suspense>
+      <EventReviewsContent />
+    </Suspense>
   )
 }

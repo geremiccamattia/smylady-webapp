@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -60,7 +60,7 @@ const FALLBACK_LOCATION: LocationResult = {
   lng: 16.3738,
 }
 
-export default function Explore() {
+function ExploreContent() {
   const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
   const searchParams = useSearchParams()
@@ -537,5 +537,13 @@ export default function Explore() {
         initialLocation={selectedLocation}
       />
     </div>
+  )
+}
+
+export default function Explore() {
+  return (
+    <Suspense>
+      <ExploreContent />
+    </Suspense>
   )
 }

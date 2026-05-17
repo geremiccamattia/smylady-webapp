@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast'
 import { getInitials, resolveImageUrl } from '@/lib/utils'
 import type { Event } from '@/types'
 
-export default function HostEvents() {
+function HostEventsContent() {
   const { t } = useTranslation()
   const { userId } = useParams<{ userId: string }>()
   const searchParams = useSearchParams()
@@ -272,5 +272,13 @@ export default function HostEvents() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function HostEvents() {
+  return (
+    <Suspense>
+      <HostEventsContent />
+    </Suspense>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-export function StripeConnectCard() {
+function StripeConnectCardContent() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user } = useAuth()
@@ -336,5 +336,13 @@ export function StripeConnectCard() {
         ) : null}
       </CardContent>
     </Card>
+  )
+}
+
+export function StripeConnectCard() {
+  return (
+    <Suspense>
+      <StripeConnectCardContent />
+    </Suspense>
   )
 }
