@@ -663,13 +663,13 @@ export default function EventDetail() {
             : isDoorPayment
             ? (() => {
                 const price = Number(event.price) > 0 ? ` · ${formatPrice(event.price)}` : ''
-                return `Abendkasse${price}`
+                return `${t('event.doorPayment', { defaultValue: 'Abendkasse' })}${price}`
               })()
             : (() => {
                 const tiers = (event as any).ticketTiers
                 if (tiers && tiers.length > 0) {
-                  const minPrice = Math.min(...tiers.map((t: any) => t.price))
-                  return `Ab ${formatPrice(minPrice)}`
+                  const minPrice = Math.min(...tiers.map((tier: any) => tier.price))
+                  return `${t('event.from', { defaultValue: 'Ab' })} ${formatPrice(minPrice)}`
                 }
                 return Number(event.price) > 0 ? formatPrice(event.price) : t('events.free')
               })()
@@ -1317,7 +1317,9 @@ export default function EventDetail() {
                       <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 mb-2">
                         <Info className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-orange-700 dark:text-orange-300">
-                          Die Tickets für dieses Event werden <strong>ausschließlich an der Abendkasse</strong> verkauft. Du kannst deinen Platz hier kostenlos reservieren und zahlst vor Ort.
+                          {t('event.doorPaymentInfo', {
+                            defaultValue: 'Die Tickets für dieses Event werden ausschließlich an der Abendkasse verkauft. Du kannst deinen Platz hier kostenlos reservieren und zahlst vor Ort.'
+                          })}
                         </p>
                       </div>
                     )}

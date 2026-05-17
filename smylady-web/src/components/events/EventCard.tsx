@@ -126,12 +126,12 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
       return t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
     }
     if ((event as any).paymentType === 'door') {
-      return 'Abendkasse'
+      return t('event.doorPayment', { defaultValue: 'Abendkasse' })
     }
     const tiers = (event as any).ticketTiers
     if (tiers && tiers.length > 0) {
-      const minPrice = Math.min(...tiers.map((t: any) => t.price))
-      return `Ab ${formatPrice(minPrice)}`
+      const minPrice = Math.min(...tiers.map((tier: any) => tier.price))
+      return `${t('event.from', { defaultValue: 'Ab' })} ${formatPrice(minPrice)}`
     }
     return numericPrice > 0 ? formatPrice(numericPrice) : t('event.free', { defaultValue: 'Kostenlos' })
   }
