@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslation } from 'react-i18next'
+import { useRouter, usePathname } from 'next/navigation'
 import { Globe } from 'lucide-react'
 import {
   DropdownMenu,
@@ -17,11 +18,27 @@ const languages = [
 
 export default function LanguageSwitcher() {
   const { i18n } = useTranslation()
+  const router = useRouter()
+  const pathname = usePathname()
 
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0]
 
   const handleLanguageChange = (langCode: string) => {
+    // 1. i18next Sprache ändern (setzt Cookie)
     i18n.changeLanguage(langCode)
+
+    // 2. Zur richtigen URL navigieren
+    if (langCode === 'en') {
+      // Zu /en/... navigieren falls noch nicht dort
+      if (!pathname.startsWith('/en')) {
+        router.push(`/en${pathname}`)
+      }
+    } else {
+      // /en/... entfernen für Deutsch
+      if (pathname.startsWith('/en')) {
+        router.push(pathname.replace(/^\/en/, '') || '/')
+      }
+    }
   }
 
   return (

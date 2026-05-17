@@ -65,9 +65,7 @@ export default function Feed() {
   const [showCreatePost, setShowCreatePost] = useState(false)
 
   useEffect(() => {
-    document.title = 'Feed | Share Your Party'
     return () => {
-      document.title = 'Share Your Party'
     }
   }, [])
 

@@ -8,7 +8,6 @@ export default function Pricing() {
   const { t } = useTranslation()
 
   useEffect(() => {
-    document.title = 'Preise & Konditionen | Share Your Party'
   }, [])
 
   return (

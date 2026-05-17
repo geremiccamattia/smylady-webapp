@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'next/navigation'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { chatService } from '@/services/chat'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +19,7 @@ import { useTranslation } from 'react-i18next'
 
 export default function Chat() {
   const { t } = useTranslation()
+  const localePath = useLocalePath()
   const { conversationId } = useParams<{ conversationId?: string }>()
   const { user } = useAuth()
   const { toast } = useToast()
@@ -210,7 +212,7 @@ export default function Chat() {
                   return (
                     <Link
                       key={room.roomId}
-                      href={`/chat/${room.roomId}`}
+                      href={localePath(`/chat/${room.roomId}`)}
                       className={cn(
                         "flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors",
                         isActive && "bg-primary/10"
@@ -257,7 +259,7 @@ export default function Chat() {
             <>
               {/* Chat Header */}
               <div className="p-4 border-b flex items-center gap-3">
-                <Link href="/chat" className="md:hidden">
+                <Link href={localePath("/chat")} className="md:hidden">
                   <Button variant="ghost" size="icon">
                     <ArrowLeft className="h-5 w-5" />
                   </Button>

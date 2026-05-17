@@ -248,3 +248,17 @@ interface Event {
   restrictions: string | string[]
 }
 ```
+## Next.js Migration - TypeScript Build Fix Rules
+
+When fixing `vercel build --prod` TypeScript errors, apply these rules:
+
+- `location.state` → `null` (React Router state doesn't exist in Next.js)
+- `navigate(x, { state: ... })` → `router.push(x)` (drop state)
+- `const navigate = useRouter()` → `const router = useRouter()`
+- `navigate(x)` → `router.push(x)`
+- `location.pathname` in dependency arrays → replace with `pathname` from `usePathname()`
+- `loadStripe(process.env.X)` → `loadStripe(process.env.X!)`
+- Unused imports → remove from import statement
+- `location.state` → `null`
+- Never add `react-router-dom` back
+- After each fix run `vercel build --prod` to verify

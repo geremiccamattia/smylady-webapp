@@ -242,9 +242,7 @@ export default function Explore() {
   }, [searchQuery, selectedCategory, selectedMusicType])
 
   useEffect(() => {
-    document.title = 'Events entdecken | Share Your Party'
     return () => {
-      document.title = 'Share Your Party'
     }
   }, [])
 

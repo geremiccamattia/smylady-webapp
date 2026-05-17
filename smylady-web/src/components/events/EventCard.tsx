@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Event } from '@/types'
 import { formatDate, formatPrice, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
 import { useState, useCallback } from 'react'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { favoritesService } from '@/services/favorites'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -21,6 +22,7 @@ interface EventCardProps {
 export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
+  const localePath = useLocalePath()
   const { toast } = useToast()
   const { showAuthModal } = useAuthModal()
   const [isFavorite, setIsFavorite] = useState(event.isFavorite || false)
@@ -280,7 +282,8 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   }
 
   return (
-    <Link href={`/event/${generateEventSlug(event.name, eventId!)}`}>
+    <Link href={localePath(`/event/${generateEventSlug(event.name, eventId!)}`)}>
+
       {cardContent}
     </Link>
   )

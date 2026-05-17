@@ -1,5 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
@@ -64,6 +65,7 @@ interface Props { id: string }
 
 export default function EventDetailClient({ id }: Props) {
   const router = useRouter()
+  const localePath = useLocalePath()
   const { t } = useTranslation()
   const { toast } = useToast()
   const { isAuthenticated, user } = useAuth()
@@ -593,7 +595,8 @@ export default function EventDetailClient({ id }: Props) {
                 <p className="font-semibold">{creator.name}</p>
               </div>
               <div className="flex gap-2">
-                <Link href={`/user/${creatorId}`}>
+                <Link href={localePath(`/user/${creatorId}`)}>
+
                   <Button variant="outline" size="sm">
                     <User className="h-4 w-4 mr-1" />
                     {t('common.profile')}

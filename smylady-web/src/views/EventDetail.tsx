@@ -163,7 +163,6 @@ export default function EventDetail() {
     const slugUrl = `https://shareyourparty.de/event/${generateEventSlug(event.name, event._id || event.id || '')}`
 
     // Title
-    document.title = `${eventName} | Share Your Party`
 
     // Meta Description
     let metaDesc = document.querySelector('meta[name="description"]')
@@ -269,7 +268,6 @@ export default function EventDetail() {
     })
 
     return () => {
-      document.title = 'Share Your Party'
       document.querySelector('meta[name="description"]')
         ?.setAttribute('content', 'Entdecke Events in deiner Nähe')
       document.querySelector('link[rel="canonical"]')?.remove()

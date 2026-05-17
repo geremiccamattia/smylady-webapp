@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -17,7 +18,8 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 export default function Header() {
   const { t } = useTranslation()
   const { user, isAuthenticated, logout } = useAuth()
-  const router = useRouter()
+  const router = useRouter()
+  const localePath = useLocalePath()
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 
@@ -40,7 +42,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
+        <Link href={localePath("/explore")} className="flex items-center gap-2">
           <img 
             src="/logo.png" 
             alt="Share Your Party" 
@@ -70,31 +72,31 @@ export default function Header() {
         <nav className="hidden md:flex items-center gap-4">
           {isAuthenticated ? (
             <>
-              <Link href="/explore">
+              <Link href={localePath("/explore")}>
                 <Button suppressHydrationWarning variant="ghost" size="sm">{t('nav.explore')}</Button>
               </Link>
-              <Link href="/search-users">
+              <Link href={localePath("/search-users")}>
                 <Button suppressHydrationWarning variant="ghost" size="icon" title={t('nav.searchUsers', { defaultValue: 'Search Users' })}>
                   <Users className="h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/create-event">
+              <Link href={localePath("/create-event")}>
                 <Button suppressHydrationWarning variant="gradient" size="sm" className="gap-2">
                   <Plus className="h-4 w-4" />
                   {t('nav.createEvent')}
                 </Button>
               </Link>
-              <Link href="/feed">
+              <Link href={localePath("/feed")}>
                 <Button variant="ghost" size="icon">
                   <Newspaper className="h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/chat">
+              <Link href={localePath("/chat")}>
                 <Button variant="ghost" size="icon" className="relative">
                   <MessageCircle className="h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/notifications">
+              <Link href={localePath("/notifications")}>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
@@ -104,7 +106,7 @@ export default function Header() {
                   )}
                 </Button>
               </Link>
-              <Link href={`/user/${user?._id || user?.id}`}>
+              <Link href={localePath(`/user/${user?._id || user?.id}`)}>
                 <Avatar className="cursor-pointer ring-2 ring-primary/20 hover:ring-primary transition-all">
                   <AvatarImage src={resolveImageUrl(user?.profileImage)} alt={user?.name} />
                   <AvatarFallback className="gradient-bg text-white">
@@ -116,10 +118,10 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link href="/explore">
+              <Link href={localePath("/explore")}>
                 <Button suppressHydrationWarning variant="ghost" size="sm">{t('nav.explore')}</Button>
               </Link>
-              <Link href="/feed">
+              <Link href={localePath("/feed")}>
                 <Button suppressHydrationWarning variant="ghost" size="sm">
                   <Newspaper className="h-4 w-4 mr-2" />
                   {t('nav.feed', { defaultValue: 'Feed' })}
@@ -133,7 +135,7 @@ export default function Header() {
               >
                 {t('auth.login')}
               </Button>
-              <Link href="/register">
+              <Link href={localePath("/register")}>
                 <Button suppressHydrationWarning variant="gradient" size="sm">{t('auth.register')}</Button>
               </Link>
               <LanguageSwitcher />
@@ -173,43 +175,43 @@ export default function Header() {
       {showMobileMenu && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-background border-b shadow-lg">
           <nav className="flex flex-col p-4 gap-2">
-            <Link href="/explore" onClick={() => setShowMobileMenu(false)}>
+            <Link href={localePath("/explore")} onClick={() => setShowMobileMenu(false)}>
               <Button variant="ghost" className="w-full justify-start">Entdecken</Button>
             </Link>
-            <Link href="/search-users" onClick={() => setShowMobileMenu(false)}>
+            <Link href={localePath("/search-users")} onClick={() => setShowMobileMenu(false)}>
               <Button variant="ghost" className="w-full justify-start">Personen suchen</Button>
             </Link>
             {isAuthenticated ? (
               <>
-                <Link href="/create-event" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/create-event")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start">Event erstellen</Button>
                 </Link>
-                <Link href="/my-tickets" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/my-tickets")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start">Meine Tickets</Button>
                 </Link>
-                <Link href="/favorites" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/favorites")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start">Favoriten</Button>
                 </Link>
-                <Link href={`/user/${user?._id || user?.id}`} onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath(`/user/${user?._id || user?.id}`)} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start">Profil</Button>
                 </Link>
                 <div className="border-t my-2" />
-                <Link href="/contact" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/contact")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Kontakt</Button>
                 </Link>
                 <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
                 </a>
-                <Link href="/pricing" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/pricing")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Button>
                 </Link>
-                <Link href="/privacy" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/privacy")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Datenschutz</Button>
                 </Link>
-                <Link href="/terms" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/terms")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">AGB</Button>
                 </Link>
-                <Link href="/imprint" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/imprint")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Impressum</Button>
                 </Link>
                 <div className="border-t my-2" />
@@ -226,26 +228,26 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link href="/feed" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/feed")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start">Feed</Button>
                 </Link>
                 <div className="border-t my-2" />
-                <Link href="/contact" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/contact")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Kontakt</Button>
                 </Link>
                 <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
                 </a>
-                <Link href="/pricing" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/pricing")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Button>
                 </Link>
-                <Link href="/privacy" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/privacy")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Datenschutz</Button>
                 </Link>
-                <Link href="/terms" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/terms")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">AGB</Button>
                 </Link>
-                <Link href="/imprint" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/imprint")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Impressum</Button>
                 </Link>
                 <div className="border-t my-2" />
@@ -259,7 +261,7 @@ export default function Header() {
                 >
                   Anmelden
                 </Button>
-                <Link href="/register" onClick={() => setShowMobileMenu(false)}>
+                <Link href={localePath("/register")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="gradient" className="w-full">Registrieren</Button>
                 </Link>
               </>

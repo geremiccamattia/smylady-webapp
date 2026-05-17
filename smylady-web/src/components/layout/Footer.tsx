@@ -20,7 +20,7 @@ export default function Footer() {
               />
               <span className="font-bold text-xl gradient-text">Share Your Party</span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground" suppressHydrationWarning>
               {t('home.footerDesc')}
             </p>
           </div>

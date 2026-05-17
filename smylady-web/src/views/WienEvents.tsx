@@ -18,7 +18,6 @@ export default function WienEvents() {
   })
 
   useEffect(() => {
-    document.title = 'Events in Wien – Partys & Veranstaltungen | Share Your Party'
 
     let metaDesc = document.querySelector('meta[name="description"]')
     if (!metaDesc) {
@@ -40,7 +39,6 @@ export default function WienEvents() {
     canonical.setAttribute('href', 'https://shareyourparty.de/events/wien')
 
     return () => {
-      document.title = 'Share Your Party'
       document.querySelector('link[rel="canonical"]')?.remove()
     }
   }, [])
