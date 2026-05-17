@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, Ticket, Compass } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
-export default function PaymentComplete() {
+function PaymentCompleteContent() {
   const { t } = useTranslation()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -57,5 +57,13 @@ export default function PaymentComplete() {
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function PaymentComplete() {
+  return (
+    <Suspense>
+      <PaymentCompleteContent />
+    </Suspense>
   )
 }
