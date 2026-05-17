@@ -12,6 +12,17 @@ export default function PaymentComplete() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const ticketId = searchParams.get('ticketId')
+  const type = searchParams.get('type') // 'door' | 'free' | null
+
+  const heading = type === 'door' || type === 'free'
+    ? 'Reservierung abgeschlossen!'
+    : t('paymentComplete.heading', { defaultValue: 'Zahlung erfolgreich!' })
+
+  const description = type === 'door'
+    ? 'Dein Platz wurde erfolgreich reserviert. Zahlung erfolgt an der Abendkasse.'
+    : type === 'free'
+    ? 'Dein Ticket wurde erfolgreich reserviert.'
+    : t('paymentComplete.description', { defaultValue: 'Dein Ticket wurde erfolgreich gekauft.' })
 
   useEffect(() => {
     window.dataLayer = window.dataLayer || []
@@ -22,14 +33,8 @@ export default function PaymentComplete() {
     <div className="container max-w-md mx-auto py-12 px-4 text-center">
       <div className="mb-8">
         <CheckCircle className="h-24 w-24 mx-auto text-green-500 mb-6" />
-        <h1 className="text-2xl font-bold mb-2">
-          {t('paymentComplete.heading', { defaultValue: 'Zahlung erfolgreich!' })}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('paymentComplete.description', {
-            defaultValue: 'Dein Ticket wurde erfolgreich gekauft.',
-          })}
-        </p>
+        <h1 className="text-2xl font-bold mb-2">{heading}</h1>
+        <p className="text-muted-foreground">{description}</p>
       </div>
 
       <div className="space-y-3">

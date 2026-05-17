@@ -408,7 +408,7 @@ export default function EventDetail() {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
             toast({ title: 'Reservierung erfolgreich!', description: 'Dein Platz ist reserviert. Zahlung erfolgt an der Abendkasse.' })
-            router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
+            router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&type=door`)
           },
           onError: (error: any) => {
             toast({

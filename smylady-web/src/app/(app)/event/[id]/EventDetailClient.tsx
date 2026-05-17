@@ -287,7 +287,7 @@ export default function EventDetailClient({ id }: Props) {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
             toast({ title: 'Reservierung erfolgreich!', description: 'Dein Platz ist reserviert. Zahlung erfolgt an der Abendkasse.' })
-            router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
+            router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&type=door`)
           },
           onError: (error: any) => {
             toast({
@@ -315,7 +315,7 @@ export default function EventDetailClient({ id }: Props) {
       buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined }, {
         onSuccess: (ticket) => {
           toast({ title: t('common.success'), description: t('tickets.freeCreated') })
-          router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
+          router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&type=free`)
         },
         onError: (error: any) => {
           toast({
