@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { eventsService } from '@/services/events'
@@ -613,16 +614,16 @@ export default function EventDetail() {
 
       {/* Hero Image */}
       <div className="relative aspect-[21/9] rounded-xl overflow-hidden mb-6">
-        <img
+        <NextImage
           src={resolveImageUrl(event.locationImages?.[0]?.url || event.thumbnailUrl || event.images?.[0]) || 'https://via.placeholder.com/1200x500?text=Event'}
           alt={event.name}
-          className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover cursor-pointer hover:opacity-95 transition-opacity"
           onClick={() => {
             setImageViewerIndex(0)
             setImageViewerOpen(true)
-          }}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/1200x500?text=Event'
           }}
         />
         {/* Actions Overlay */}
@@ -827,19 +828,20 @@ export default function EventDetail() {
                 <h2 className="text-xl font-semibold mb-3">{t('events.images')}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {galleryImages.map((img, i) => (
-                    <img
-                      key={i}
-                      src={resolveImageUrl(img)}
-                      alt={`${event.name} - ${t('events.image')} ${i + 1}`}
-                      className="rounded-lg aspect-square object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => {
                         setImageViewerIndex(i)
                         setImageViewerOpen(true)
                       }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none'
-                      }}
-                    />
+                    >
+                      <NextImage
+                        src={resolveImageUrl(img) || ''}
+                        alt={`${event.name} - ${t('events.image')} ${i + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -903,13 +905,12 @@ export default function EventDetail() {
                               </div>
                             </div>
                           ) : (
-                            <img
-                              src={resolveImageUrl(memUrl)}
+                            <NextImage
+                              src={resolveImageUrl(memUrl) || 'https://via.placeholder.com/300x300?text=Memory'}
                               alt={memory.caption || 'Memory'}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x300?text=Memory'
-                              }}
+                              fill
+                              sizes="(max-width: 640px) 50vw, 25vw"
+                              className="object-cover"
                             />
                           )}
                           {/* Uploader avatar */}

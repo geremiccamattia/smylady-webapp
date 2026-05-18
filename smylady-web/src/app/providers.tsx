@@ -2,13 +2,25 @@
 
 import '@/i18n'
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { AuthModalProvider } from '@/contexts/AuthModalContext'
 import { SocketProvider } from '@/contexts/SocketContext'
 import { Toaster } from '@/components/ui/toaster'
-import CookieConsent from '@/components/CookieConsent'
 import AuthModal from '@/components/auth/AuthModal'
+
+const CookieConsent = dynamic(() => import('@/components/CookieConsent'), {
+  ssr: false,
+})
+
+function ConditionalSocketProvider({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth()
+
+  if (!isAuthenticated) return <>{children}</>
+
+  return <SocketProvider>{children}</SocketProvider>
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -19,12 +31,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AuthModalProvider>
-          <SocketProvider>
+          <ConditionalSocketProvider>
             {children}
             <Toaster />
             <CookieConsent />
             <AuthModal />
-          </SocketProvider>
+          </ConditionalSocketProvider>
         </AuthModalProvider>
       </AuthProvider>
     </QueryClientProvider>

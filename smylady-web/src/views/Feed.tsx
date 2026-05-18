@@ -16,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { StoriesBar } from '@/components/stories/StoriesBar'
 import {
   EmojiReactionPicker,
@@ -798,30 +799,38 @@ function PostCard({ post }: { post: Post }) {
                     className="rounded-lg w-full object-cover max-h-80"
                   />
                 ) : (
-                  <img
-                    key={idx}
-                    src={resolveImageUrl(media.url)}
+                  <div key={idx} className="relative w-full rounded-lg overflow-hidden" style={{ maxHeight: '20rem' }}>
+                    <Image
+                      src={resolveImageUrl(media.url) || ''}
+                      alt=""
+                      width={800}
+                      height={450}
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => {
+                        setPostImageViewerIndex(idx)
+                        setPostImageViewerOpen(true)
+                      }}
+                    />
+                  </div>
+                )
+              ))
+            ) : (
+              post.images?.map((image, idx) => (
+                <div key={idx} className="relative w-full rounded-lg overflow-hidden" style={{ maxHeight: '20rem' }}>
+                  <Image
+                    src={resolveImageUrl(image) || ''}
                     alt=""
-                    className="rounded-lg w-full object-cover max-h-80 cursor-pointer hover:opacity-90 transition-opacity"
+                    width={800}
+                    height={450}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={() => {
                       setPostImageViewerIndex(idx)
                       setPostImageViewerOpen(true)
                     }}
                   />
-                )
-              ))
-            ) : (
-              post.images?.map((image, idx) => (
-                <img
-                  key={idx}
-                  src={resolveImageUrl(image)}
-                  alt=""
-                  className="rounded-lg w-full object-cover max-h-80 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => {
-                    setPostImageViewerIndex(idx)
-                    setPostImageViewerOpen(true)
-                  }}
-                />
+                </div>
               ))
             )}
           </div>
@@ -835,10 +844,12 @@ function PostCard({ post }: { post: Post }) {
           >
             <div className="flex items-center gap-3">
               {post.eventId.thumbnailUrl && (
-                <img
-                  src={resolveImageUrl(post.eventId.thumbnailUrl)}
+                <Image
+                  src={resolveImageUrl(post.eventId.thumbnailUrl) || ''}
                   alt=""
-                  className="w-16 h-16 rounded-lg object-cover"
+                  width={64}
+                  height={64}
+                  className="rounded-lg object-cover"
                 />
               )}
               <div>

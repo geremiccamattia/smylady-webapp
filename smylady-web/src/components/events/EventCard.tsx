@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Heart, MapPin, Calendar, Clock, Users, ExternalLink, Zap } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Event } from '@/types'
 import { formatDate, formatPrice, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { favoritesService } from '@/services/favorites'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,7 +28,6 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   const { showAuthModal } = useAuthModal()
   const [isFavorite, setIsFavorite] = useState(event.isFavorite || false)
   const [isLoading, setIsLoading] = useState(false)
-  const [imageLoaded, setImageLoaded] = useState(false)
 
   const eventId = event.id || event._id
   // Handle different image structures: locationImages array with url property, or direct images array
@@ -37,15 +37,6 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
   // Generate a unique placeholder based on event ID to avoid all events showing the same fallback
   const uniquePlaceholder = `https://via.placeholder.com/400x225/6366f1/ffffff?text=${encodeURIComponent(event.name?.substring(0, 15) || 'Event')}`
   const imageUrl = resolveImageUrl(rawImageUrl) || uniquePlaceholder
-
-  const handleImageLoad = useCallback(() => {
-    setImageLoaded(true)
-  }, [])
-
-  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    setImageLoaded(true);
-    (e.target as HTMLImageElement).src = uniquePlaceholder
-  }, [uniquePlaceholder])
 
   // Check if this is a Ticketmaster/external event
   const isExternalEvent = event.isTicketmaster || event.isExternalEvent || event.source === 'ticketmaster'
@@ -141,20 +132,15 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
       {/* Image */}
       <div className="relative aspect-[16/9] overflow-hidden bg-muted">
-        {/* Skeleton loader */}
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-muted animate-pulse" />
-        )}
-        <img
+        <Image
           src={imageUrl}
           alt={event.name}
-          className={cn(
-            "w-full h-full object-cover group-hover:scale-105 transition-all duration-300",
-            imageLoaded ? "opacity-100" : "opacity-0"
-          )}
-          loading="eager"
-          onLoad={handleImageLoad}
-          onError={handleImageError}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover group-hover:scale-105 transition-all duration-300"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = uniquePlaceholder
+          }}
         />
         {/* External Event Badge */}
         {isExternalEvent && (
