@@ -18,9 +18,10 @@ import { useAuthModal } from '@/contexts/AuthModalContext'
 interface EventCardProps {
   event: Event
   onFavoriteChange?: (eventId: string, isFavorite: boolean) => void
+  priority?: boolean
 }
 
-export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
+export default function EventCard({ event, onFavoriteChange, priority = false }: EventCardProps) {
   const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
   const localePath = useLocalePath()
@@ -137,6 +138,7 @@ export default function EventCard({ event, onFavoriteChange }: EventCardProps) {
           alt={event.name}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={priority}
           className="object-cover group-hover:scale-105 transition-all duration-300"
           onError={(e) => {
             (e.target as HTMLImageElement).src = uniquePlaceholder

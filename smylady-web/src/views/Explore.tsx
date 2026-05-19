@@ -486,8 +486,8 @@ function ExploreContent() {
                   <span className="text-sm font-medium text-amber-500">Gesponserte Events</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {boostedEvents.map((event) => (
-                    <EventCard key={event.id || event._id} event={event} />
+                  {boostedEvents.map((event, index) => (
+                    <EventCard key={event.id || event._id} event={event} priority={index < 3} />
                   ))}
                 </div>
                 <div className="border-t my-4" />
@@ -496,11 +496,11 @@ function ExploreContent() {
 
             {/* Organische Events + Spotlight Ads */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {feedItems.map((item) =>
+              {feedItems.map((item, index) =>
                 'targetUrl' in item ? (
                   <SpotlightCard key={`ad-${item._id}`} ad={item} />
                 ) : (
-                  <EventCard key={item.id || item._id} event={item} />
+                  <EventCard key={item.id || item._id} event={item} priority={index < 3} />
                 )
               )}
             </div>

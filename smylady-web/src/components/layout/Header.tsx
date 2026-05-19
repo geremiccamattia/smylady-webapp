@@ -40,33 +40,38 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        {/* Logo */}
-        <Link href={localePath("/explore")} className="flex items-center gap-2">
-          <img 
-            src="/logo.png" 
-            alt="Share Your Party" 
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <span className="hidden sm:block font-bold text-xl gradient-text">
-            Share Your Party
-          </span>
-        </Link>
-
-        {/* Search Bar - Desktop */}
-        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              suppressHydrationWarning
-              placeholder={t('common.search') + '...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4"
+      <div className="container mx-auto px-4 h-16 flex items-center gap-4">
+        {/* Left: Logo + Search — flex-1 keeps the left edge fixed regardless of nav width */}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          {/* Logo */}
+          <Link href={localePath("/explore")} className="flex-shrink-0 flex items-center gap-2">
+            <img
+              src="/logo.png"
+              alt="Share Your Party"
+              width={40}
+              height={40}
+              className="rounded-full object-cover"
             />
-          </div>
-        </form>
+            <span className="hidden sm:block font-bold text-xl gradient-text">
+              Share Your Party
+            </span>
+          </Link>
+
+          {/* Search Bar - Desktop */}
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                suppressHydrationWarning
+                placeholder={t('common.search') + '...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4"
+              />
+            </div>
+          </form>
+        </div>
 
         {/* Navigation - Desktop */}
         <nav className="hidden md:flex items-center gap-4">
@@ -147,7 +152,7 @@ export default function Header() {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
+          className="md:hidden flex-shrink-0"
           onClick={() => setShowMobileMenu(!showMobileMenu)}
         >
           <Menu className="h-6 w-6" />
