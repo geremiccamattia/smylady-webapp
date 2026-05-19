@@ -104,28 +104,50 @@ export default function TicketDetail() {
     }
   }
 
-  const handleDownload = () => {
-    // Download QR code as image
+  const handleDownload = async () => {
+    if (!ticket) return
+
+    console.log('qrCode:', ticket?.qrCode?.substring(0, 80))
+
+    // Fall 1: base64 direkt downloaden
+    if (ticket.qrCode?.startsWith('data:image')) {
+      const downloadLink = document.createElement('a')
+      downloadLink.download = `ticket-${ticketId}.png`
+      downloadLink.href = ticket.qrCode
+      downloadLink.click()
+      return
+    }
+
+    // Fall 2: URL → fetch → als Blob downloaden
+    if (ticket.qrCode?.startsWith('http')) {
+      const response = await fetch(ticket.qrCode)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const downloadLink = document.createElement('a')
+      downloadLink.download = `ticket-${ticketId}.png`
+      downloadLink.href = url
+      downloadLink.click()
+      URL.revokeObjectURL(url)
+      return
+    }
+
+    // Fall 3: SVG QR Code
     const svg = document.getElementById('ticket-qr-code')
     if (!svg) return
-
     const svgData = new XMLSerializer().serializeToString(svg)
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     const img = new window.Image()
-
     img.onload = () => {
       canvas.width = img.width
       canvas.height = img.height
       ctx?.drawImage(img, 0, 0)
       const pngFile = canvas.toDataURL('image/png')
-
       const downloadLink = document.createElement('a')
       downloadLink.download = `ticket-${ticketId}.png`
       downloadLink.href = pngFile
       downloadLink.click()
     }
-
     img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
   }
 
