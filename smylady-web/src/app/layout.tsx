@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import Providers from './providers'
-import '@/index.css'   // ← ggf. Pfad anpassen falls du globals.css o.ä. hast
+import '@/index.css'
 
 export const metadata: Metadata = {
   title: {
@@ -23,10 +23,6 @@ export const metadata: Metadata = {
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
     ],
     apple: { url: '/apple-touch-icon.png', sizes: '180x180' },
-    other: [
-      { rel: 'icon', url: '/favicon-192x192.png', sizes: '192x192' },
-      { rel: 'icon', url: '/favicon-512x512.png', sizes: '512x512' },
-    ],
   },
 }
 

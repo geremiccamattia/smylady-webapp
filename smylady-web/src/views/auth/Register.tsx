@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +30,7 @@ export default function Register() {
   const location = usePathname()
   const from = '/explore'
   const { toast } = useToast()
+  const { t } = useTranslation()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,8 +38,8 @@ export default function Register() {
     if (password !== confirmPassword) {
       toast({
         variant: 'destructive',
-        title: 'Fehler',
-        description: 'Die Passwörter stimmen nicht überein.',
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('auth.passwordsDoNotMatch', { defaultValue: 'Passwords do not match' }),
       })
       return
     }
@@ -45,8 +47,8 @@ export default function Register() {
     if (password.length < 6) {
       toast({
         variant: 'destructive',
-        title: 'Fehler',
-        description: 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('auth.passwordTooShort', { defaultValue: 'Password too short' }),
       })
       return
     }
@@ -60,14 +62,14 @@ export default function Register() {
       setRegisteredEmail(email)
       setStep('verify')
       toast({
-        title: 'Registrierung erfolgreich!',
-        description: 'Bitte überprüfe deine E-Mail für den Bestätigungscode.',
+        title: t('auth.registerSuccess', { defaultValue: 'Registration successful!' }),
+        description: t('auth.checkEmailOTP', { defaultValue: 'Please check your email for the verification code.' }),
       })
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Registrierung fehlgeschlagen',
-        description: error.response?.data?.message || 'Bitte versuche es erneut.',
+        title: t('auth.registerFailed', { defaultValue: 'Registration failed' }),
+        description: error.response?.data?.message || t('common.retry', { defaultValue: 'Try again' }),
       })
     } finally {
       setIsLoading(false)
@@ -83,13 +85,16 @@ export default function Register() {
         otp,
         type: 'sign-up',
       })
-      toast({ title: 'E-Mail bestätigt!', description: 'Du kannst dich jetzt anmelden.' })
+      toast({
+        title: t('auth.emailConfirmed', { defaultValue: 'Email confirmed!' }),
+        description: t('auth.canLogin', { defaultValue: 'You can now sign in.' }),
+      })
       router.replace(from)
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Ungültiger Code',
-        description: error.response?.data?.message || 'Bitte versuche es erneut.',
+        title: t('auth.invalidCode', { defaultValue: 'Invalid code' }),
+        description: error.response?.data?.message || t('common.retry', { defaultValue: 'Try again' }),
       })
     } finally {
       setIsLoading(false)
@@ -103,28 +108,28 @@ export default function Register() {
           <button
             onClick={() => router.back()}
             className="absolute top-4 left-4 p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            aria-label="Zurück"
+            aria-label={t('common.back', { defaultValue: 'Back' })}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <img
-            src="/logo.png" 
-            alt="Share Your Party" 
+            src="/logo.png"
+            alt="Share Your Party"
             className="mx-auto w-16 h-16 rounded-full object-cover mb-4"
           />
-          <CardTitle className="text-2xl gradient-text">Account erstellen</CardTitle>
+          <CardTitle className="text-2xl gradient-text">{t('auth.createAccount', { defaultValue: 'Create account' })}</CardTitle>
           <CardDescription>
-            Registriere dich um Events zu entdecken und zu teilen
+            {t('auth.registerSubtitle', { defaultValue: 'Sign up to discover and share events' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {step === 'verify' ? (
             <form onSubmit={handleVerify} className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                Wir haben einen Bestätigungscode an {registeredEmail} gesendet.
+                {t('auth.verificationSent', { email: registeredEmail, defaultValue: `We have sent a verification code to ${registeredEmail}.` })}
               </p>
               <div className="space-y-2">
-                <Label htmlFor="otp">Bestätigungscode</Label>
+                <Label htmlFor="otp">{t('auth.verificationCode', { defaultValue: 'Verification code' })}</Label>
                 <Input
                   id="otp"
                   type="text"
@@ -136,13 +141,13 @@ export default function Register() {
                 />
               </div>
               <Button type="submit" variant="gradient" className="w-full" loading={isLoading}>
-                Bestätigen
+                {t('common.confirm', { defaultValue: 'Confirm' })}
               </Button>
             </form>
           ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">{t('auth.name', { defaultValue: 'Name' })}</Label>
               <Input
                 id="name"
                 type="text"
@@ -153,7 +158,7 @@ export default function Register() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">E-Mail</Label>
+              <Label htmlFor="email">{t('auth.email', { defaultValue: 'Email' })}</Label>
               <Input
                 id="email"
                 type="email"
@@ -164,7 +169,7 @@ export default function Register() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dob">Geburtsdatum</Label>
+              <Label htmlFor="dob">{t('auth.dateOfBirth', { defaultValue: 'Date of birth' })}</Label>
               <Input
                 id="dob"
                 type="date"
@@ -174,7 +179,7 @@ export default function Register() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Passwort</Label>
+              <Label htmlFor="password">{t('auth.password', { defaultValue: 'Password' })}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -194,7 +199,7 @@ export default function Register() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+              <Label htmlFor="confirmPassword">{t('auth.confirmPassword', { defaultValue: 'Confirm password' })}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -205,7 +210,7 @@ export default function Register() {
               />
             </div>
             <Button type="submit" variant="gradient" className="w-full" loading={isLoading}>
-              Registrieren
+              {t('auth.register', { defaultValue: 'Register' })}
             </Button>
           </form>
           )}
@@ -218,7 +223,7 @@ export default function Register() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">
-                  Oder
+                  {t('common.or', { defaultValue: 'or' })}
                 </span>
               </div>
             </div>
@@ -236,22 +241,22 @@ export default function Register() {
           </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Bereits ein Konto?{' '}
+            {t('auth.hasAccount', { defaultValue: 'Already have an account?' })}{' '}
             <Link href="/login" className="text-primary hover:underline font-medium">
-              Jetzt anmelden
+              {t('auth.loginNow', { defaultValue: 'Sign in now' })}
             </Link>
           </p>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            Mit der Registrierung stimmst du unseren{' '}
+            {t('auth.termsPrefix', { defaultValue: 'By registering you agree to our' })}{' '}
             <Link href="/terms" className="text-primary hover:underline">
-              AGB
+              {t('auth.termsLink', { defaultValue: 'Terms & Conditions' })}
             </Link>{' '}
-            und{' '}
+            {t('common.and', { defaultValue: 'and' })}{' '}
             <Link href="/privacy" className="text-primary hover:underline">
-              Datenschutzrichtlinien
-            </Link>{' '}
-            zu.
+              {t('auth.privacyLink', { defaultValue: 'Privacy Policy' })}
+            </Link>
+            {'.'}
           </p>
         </CardContent>
       </Card>

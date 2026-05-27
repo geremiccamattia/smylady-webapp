@@ -159,6 +159,7 @@ export default function CreateEvent() {
     recurrence: string
     occurrences?: number
     customDates?: string[]
+    customLabel?: string
   } | null>(null)
   const [ticketTiers, setTicketTiers] = useState([
     { name: '', description: '', price: '', quantity: '' },
@@ -478,7 +479,7 @@ export default function CreateEvent() {
       if (useTiers && ticketTiers.length > 0) {
         const validTiers = ticketTiers.filter(t => t.name && t.price !== '')
         if (validTiers.length === 0) {
-          toast({ variant: 'destructive', title: 'Fehler', description: 'Bitte mindestens einen Tickettyp mit Name und Preis anlegen.' })
+          toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.ticketValidationError', { defaultValue: 'Bitte mindestens einen Tickettyp mit Name und Preis anlegen.' }) })
           setIsLoading(false)
           return
         }
@@ -681,15 +682,17 @@ export default function CreateEvent() {
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-sm">Wiederkehrendes Event</p>
+                    <p className="font-medium text-sm">
+                      {t('createEvent.recurringEvent', { defaultValue: 'Wiederkehrendes Event' })}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {seriesConfig
                         ? seriesConfig.recurrence === 'custom'
-                          ? `${seriesConfig.customDates?.length} Termine`
+                          ? seriesConfig.customLabel
                           : seriesConfig.recurrence === 'weekly'
-                          ? `Wöchentlich · ${seriesConfig.occurrences}x`
-                          : `Monatlich · ${seriesConfig.occurrences}x`
-                        : 'Einmalig'}
+                          ? t('createEvent.weeklyX', { defaultValue: 'Wöchentlich · {{count}}x', count: seriesConfig.occurrences })
+                          : t('createEvent.monthlyX', { defaultValue: 'Monatlich · {{count}}x', count: seriesConfig.occurrences })
+                        : t('createEvent.oneTime', { defaultValue: 'Einmalig' })}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -707,7 +710,9 @@ export default function CreateEvent() {
                       disabled={!formData.eventDate}
                     >
                       <Repeat className="h-4 w-4" />
-                      {seriesConfig ? 'Ändern' : 'Einrichten'}
+                      {seriesConfig
+                        ? t('common.edit', { defaultValue: 'Ändern' })
+                        : t('createEvent.setup', { defaultValue: 'Einrichten' })}
                     </Button>
                   </div>
                 </div>
@@ -870,7 +875,7 @@ export default function CreateEvent() {
                   </select>
                 </div>
                 <div className="flex items-center justify-between py-2">
-                  <Label>Gäste dürfen Fotos hochladen</Label>
+                  <Label>{t('createEvent.allowGuestPhotos', { defaultValue: 'Gäste dürfen Fotos hochladen' })}</Label>
                   <button
                     type="button"
                     onClick={() => setAllowGuestMemories(!allowGuestMemories)}
@@ -950,9 +955,11 @@ export default function CreateEvent() {
               {/* Abendkasse Toggle */}
               <div className="flex items-center justify-between py-2 px-4 bg-muted/40 rounded-lg">
                 <div>
-                  <Label className="text-sm font-medium">Tickets an der Abendkasse zahlen</Label>
+                  <Label className="text-sm font-medium">
+                    {t('createEvent.doorPayment', { defaultValue: 'Tickets an der Abendkasse zahlen' })}
+                  </Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Gäste reservieren ihren Platz und zahlen vor Ort
+                    {t('createEvent.doorPaymentDesc', { defaultValue: 'Gäste reservieren ihren Platz und zahlen vor Ort' })}
                   </p>
                 </div>
                 <button
@@ -979,7 +986,7 @@ export default function CreateEvent() {
                       onChange={(e) => handleUseTiersChange(e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <Label htmlFor="useTiers">Mehrere Tickettypen</Label>
+                    <Label htmlFor="useTiers">{t('createEvent.multipleTicketTypes', { defaultValue: 'Mehrere Tickettypen' })}</Label>
                   </div>
 
                   {!useTiers && (
@@ -1005,7 +1012,7 @@ export default function CreateEvent() {
                   {ticketTiers.map((tier, index) => (
                     <div key={index} className="p-4 border rounded-lg space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">Tickettyp {index + 1}</span>
+                        <span className="font-medium text-sm">{t('createEvent.ticketType', { defaultValue: 'Tickettyp' })} {index + 1}</span>
                         {ticketTiers.length > 1 && (
                           <button
                             type="button"
@@ -1021,21 +1028,21 @@ export default function CreateEvent() {
                         <Input
                           value={tier.name}
                           onChange={(e) => updateTier(index, 'name', e.target.value)}
-                          placeholder="z.B. Standard, VIP, Early Bird"
+                          placeholder={t('createEvent.ticketNamePlaceholder', { defaultValue: 'z.B. Standard, VIP, Early Bird' })}
                           required={useTiers}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Beschreibung</Label>
+                        <Label>{t('createEvent.ticketDescription', { defaultValue: 'Beschreibung' })}</Label>
                         <Input
                           value={tier.description}
                           onChange={(e) => updateTier(index, 'description', e.target.value)}
-                          placeholder="Kurze Beschreibung dieses Tickettyps"
+                          placeholder={t('createEvent.ticketDescPlaceholder', { defaultValue: 'Kurze Beschreibung dieses Tickettyps' })}
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <Label>Preis (€) *</Label>
+                          <Label>{t('createEvent.ticketPrice', { defaultValue: 'Preis (€) *' })}</Label>
                           <Input
                             type="number"
                             min="0"
@@ -1047,7 +1054,7 @@ export default function CreateEvent() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Menge</Label>
+                          <Label>{t('createEvent.ticketQuantity', { defaultValue: 'Menge' })}</Label>
                           <Input
                             type="number"
                             min="1"
@@ -1076,7 +1083,7 @@ export default function CreateEvent() {
                     onClick={addTier}
                     className="w-full py-2 border-2 border-dashed border-muted-foreground/25 hover:border-primary rounded-lg text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
-                    + Tickettyp hinzufügen
+                    + {t('createEvent.addTicketType', { defaultValue: 'Tickettyp hinzufügen' })}
                   </button>
                 </div>
                   )}
@@ -1093,12 +1100,12 @@ export default function CreateEvent() {
                       onChange={(e) => handleUseTiersChange(e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <Label htmlFor="useTiers">Mehrere Tickettypen</Label>
+                    <Label htmlFor="useTiers">{t('createEvent.multipleTicketTypes', { defaultValue: 'Mehrere Tickettypen' })}</Label>
                   </div>
 
                   {!useTiers && (
                     <div className="space-y-2">
-                      <Label htmlFor="price">Preis an der Abendkasse (€)</Label>
+                      <Label htmlFor="price">{t('createEvent.doorPrice', { defaultValue: 'Preis an der Abendkasse (€)' })}</Label>
                       <Input
                         id="price"
                         type="number"
@@ -1119,7 +1126,7 @@ export default function CreateEvent() {
                       {ticketTiers.map((tier, index) => (
                         <div key={index} className="p-4 border rounded-lg space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm">Tickettyp {index + 1}</span>
+                            <span className="font-medium text-sm">{t('createEvent.ticketType', { defaultValue: 'Tickettyp' })} {index + 1}</span>
                             {ticketTiers.length > 1 && (
                               <button
                                 type="button"
@@ -1135,7 +1142,7 @@ export default function CreateEvent() {
                             <Input
                               value={tier.name}
                               onChange={(e) => updateTier(index, 'name', e.target.value)}
-                              placeholder="z.B. Standard, VIP, Early Bird"
+                              placeholder={t('createEvent.ticketNamePlaceholder', { defaultValue: 'z.B. Standard, VIP, Early Bird' })}
                               required={useTiers}
                             />
                           </div>
@@ -1144,12 +1151,12 @@ export default function CreateEvent() {
                             <Input
                               value={tier.description}
                               onChange={(e) => updateTier(index, 'description', e.target.value)}
-                              placeholder="Kurze Beschreibung dieses Tickettyps"
+                              placeholder={t('createEvent.ticketDescPlaceholder', { defaultValue: 'Kurze Beschreibung dieses Tickettyps' })}
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
-                              <Label>Preis (€)</Label>
+                              <Label>{t('createEvent.ticketPrice', { defaultValue: 'Preis (€) *' })}</Label>
                               <Input
                                 type="number"
                                 min="0"
@@ -1160,7 +1167,7 @@ export default function CreateEvent() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Menge</Label>
+                              <Label>{t('createEvent.ticketQuantity', { defaultValue: 'Menge' })}</Label>
                               <Input
                                 type="number"
                                 min="1"
@@ -1177,7 +1184,7 @@ export default function CreateEvent() {
                         onClick={addTier}
                         className="w-full py-2 border-2 border-dashed border-muted-foreground/25 hover:border-primary rounded-lg text-sm text-muted-foreground hover:text-primary transition-colors"
                       >
-                        + Tickettyp hinzufügen
+                        + {t('createEvent.addTicketType', { defaultValue: 'Tickettyp hinzufügen' })}
                       </button>
                     </div>
                   )}

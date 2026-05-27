@@ -36,8 +36,12 @@ import {
   Megaphone,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
+import { useLocalePath } from '@/hooks/useLocalePath'
 
 export default function Profile() {
+  const { t } = useTranslation()
+  const localePath = useLocalePath()
   const { user, logout, updateUser } = useAuth()
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
@@ -180,7 +184,7 @@ export default function Profile() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Edit className="h-5 w-5" />
-                  Profil bearbeiten
+                  {t('profile.editProfile', { defaultValue: 'Profil bearbeiten' })}
                 </h2>
                 <div className="flex gap-2">
                   <Button
@@ -190,11 +194,11 @@ export default function Profile() {
                     onClick={() => setIsEditing(false)}
                   >
                     <X className="h-4 w-4 mr-1" />
-                    Abbrechen
+                    {t('common.cancel', { defaultValue: 'Abbrechen' })}
                   </Button>
                   <Button type="submit" variant="gradient" size="sm" loading={isLoading}>
                     <Save className="h-4 w-4 mr-1" />
-                    Speichern
+                    {t('common.save', { defaultValue: 'Speichern' })}
                   </Button>
                 </div>
               </div>
@@ -219,7 +223,7 @@ export default function Profile() {
                       />
                     </label>
                   </div>
-                  <p className="text-xs text-muted-foreground">Klicke auf die Kamera</p>
+                  <p className="text-xs text-muted-foreground">{t('profile.tapCamera', { defaultValue: 'Klicke auf die Kamera' })}</p>
                 </div>
 
                 {/* Edit Fields */}
@@ -250,7 +254,7 @@ export default function Profile() {
 
                   {/* Age */}
                   <div className="space-y-2">
-                    <Label htmlFor="age">Alter</Label>
+                    <Label htmlFor="age">{t('profile.age', { defaultValue: 'Alter' })}</Label>
                     <Input
                       id="age"
                       type="number"
@@ -258,7 +262,7 @@ export default function Profile() {
                       max="120"
                       value={formData.age}
                       onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                      placeholder="Dein Alter"
+                      placeholder={t('profile.agePlaceholder', { defaultValue: 'Dein Alter' })}
                       className="max-w-[120px]"
                     />
                   </div>
@@ -267,7 +271,7 @@ export default function Profile() {
                   <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
                     <h4 className="font-medium text-sm flex items-center gap-2">
                       <Eye className="h-4 w-4" />
-                      Sichtbarkeit
+                      {t('profile.visibility', { defaultValue: 'Sichtbarkeit' })}
                     </h4>
 
                     {/* Show Age Toggle */}
@@ -279,8 +283,8 @@ export default function Profile() {
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
                         )}
                         <div>
-                          <p className="text-sm font-medium">Alter anzeigen</p>
-                          <p className="text-xs text-muted-foreground">Zeige dein Alter auf deinem Profil</p>
+                          <p className="text-sm font-medium">{t('profile.showAge', { defaultValue: 'Alter anzeigen' })}</p>
+                          <p className="text-xs text-muted-foreground">{t('profile.showAgeDesc', { defaultValue: 'Zeige dein Alter auf deinem Profil' })}</p>
                         </div>
                       </div>
                       <button
@@ -309,8 +313,8 @@ export default function Profile() {
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
                         )}
                         <div>
-                          <p className="text-sm font-medium">Standort anzeigen</p>
-                          <p className="text-xs text-muted-foreground">Zeige deinen Standort auf deinem Profil</p>
+                          <p className="text-sm font-medium">{t('profile.showLocation', { defaultValue: 'Standort anzeigen' })}</p>
+                          <p className="text-xs text-muted-foreground">{t('profile.showLocationDesc', { defaultValue: 'Zeige deinen Standort auf deinem Profil' })}</p>
                         </div>
                       </div>
                       <button
@@ -426,7 +430,7 @@ export default function Profile() {
                     </p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <UserPlus className="h-3 w-3" />
-                      Folge ich
+                      {t('profile.followed', { defaultValue: 'Folge ich' })}
                     </p>
                   </Link>
                   <Link
@@ -448,7 +452,7 @@ export default function Profile() {
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
                   <Edit className="h-4 w-4 mr-2" />
-                  Profil bearbeiten
+                  {t('profile.editProfile', { defaultValue: 'Profil bearbeiten' })}
                 </Button>
               </div>
             </div>
@@ -465,8 +469,8 @@ export default function Profile() {
                 <Ticket className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold">Meine Tickets</h3>
-                <p className="text-sm text-muted-foreground">Alle gekauften Tickets</p>
+                <h3 className="font-semibold">{t('profile.myTickets', { defaultValue: 'Meine Tickets' })}</h3>
+                <p className="text-sm text-muted-foreground">{t('profile.allPurchasedTickets', { defaultValue: 'Alle gekauften Tickets' })}</p>
               </div>
             </CardContent>
           </Card>
@@ -478,8 +482,8 @@ export default function Profile() {
                 <Heart className="h-6 w-6 text-red-500" />
               </div>
               <div>
-                <h3 className="font-semibold">Favoriten</h3>
-                <p className="text-sm text-muted-foreground">Gespeicherte Events</p>
+                <h3 className="font-semibold">{t('profile.favourites', { defaultValue: 'Favoriten' })}</h3>
+                <p className="text-sm text-muted-foreground">{t('profile.savedEvents', { defaultValue: 'Gespeicherte Events' })}</p>
               </div>
             </CardContent>
           </Card>
@@ -491,8 +495,8 @@ export default function Profile() {
                 <PartyPopper className="h-6 w-6 text-purple-500" />
               </div>
               <div>
-                <h3 className="font-semibold">Meine Events</h3>
-                <p className="text-sm text-muted-foreground">Von dir erstellt</p>
+                <h3 className="font-semibold">{t('profile.myEvents', { defaultValue: 'Meine Events' })}</h3>
+                <p className="text-sm text-muted-foreground">{t('profile.createdByYou', { defaultValue: 'Von dir erstellt' })}</p>
               </div>
             </CardContent>
           </Card>
@@ -504,8 +508,8 @@ export default function Profile() {
                 <Settings className="h-6 w-6 text-gray-500" />
               </div>
               <div>
-                <h3 className="font-semibold">Einstellungen</h3>
-                <p className="text-sm text-muted-foreground">App konfigurieren</p>
+                <h3 className="font-semibold">{t('profile.settings', { defaultValue: 'Einstellungen' })}</h3>
+                <p className="text-sm text-muted-foreground">{t('profile.configureApp', { defaultValue: 'App konfigurieren' })}</p>
               </div>
             </CardContent>
           </Card>
@@ -521,9 +525,9 @@ export default function Profile() {
                 <Megaphone className="h-6 w-6 text-orange-500" />
               </div>
               <div>
-                <h3 className="font-semibold">Werbung schalten</h3>
+                <h3 className="font-semibold">{t('profile.placeAd', { defaultValue: 'Werbung schalten' })}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Bewirb deine Events oder erstelle ein eigenes Spotlight mit Link & Bild.
+                  {t('profile.adDescription', { defaultValue: 'Bewirb deine Events oder erstelle ein eigenes Spotlight mit Link & Bild.' })}
                 </p>
               </div>
             </div>
@@ -531,10 +535,10 @@ export default function Profile() {
               <Link href="/my-events" className="flex-1 sm:flex-none">
                 <Button variant="outline" className="w-full border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30">
                   <PartyPopper className="h-4 w-4 mr-2 text-purple-500" />
-                  Events bewerben
+                  {t('profile.sponsorEvents', { defaultValue: 'Events bewerben' })}
                 </Button>
               </Link>
-              <Link href="/advertise/spotlight" className="flex-1 sm:flex-none">
+              <Link href={localePath('/advertise/spotlight')} className="flex-1 sm:flex-none">
                 <Button variant="gradient" className="w-full">
                   <Megaphone className="h-4 w-4 mr-2" />
                   Spotlight
@@ -550,7 +554,7 @@ export default function Profile() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Account-Informationen
+            {t('profile.accountInfo', { defaultValue: 'Account-Informationen' })}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -564,7 +568,7 @@ export default function Profile() {
           <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
             <Settings className="h-5 w-5 text-muted-foreground" />
             <div>
-              <p className="text-sm text-muted-foreground">Rolle</p>
+              <p className="text-sm text-muted-foreground">{t('profile.role', { defaultValue: 'Rolle' })}</p>
               <p className="font-medium capitalize">{user.role}</p>
             </div>
           </div>
@@ -576,14 +580,14 @@ export default function Profile() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">Abmelden</h3>
+              <h3 className="font-semibold">{t('profile.logout', { defaultValue: 'Abmelden' })}</h3>
               <p className="text-sm text-muted-foreground">
-                Du wirst von deinem Account abgemeldet.
+                {t('profile.logoutDescription', { defaultValue: 'Du wirst von deinem Account abgemeldet.' })}
               </p>
             </div>
             <Button variant="destructive" onClick={logout}>
               <LogOut className="h-4 w-4 mr-2" />
-              Abmelden
+              {t('profile.logout', { defaultValue: 'Abmelden' })}
             </Button>
           </div>
         </CardContent>

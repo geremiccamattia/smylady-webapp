@@ -255,11 +255,14 @@
     "ticketId": "Ticket-ID",
     "viewDetails": "Details anzeigen",
     "youHaveTicket": "Du hast bereits ein Ticket",
-    "yourQrCode": "Dein QR-Code"
+    "yourQrCode": "Dein QR-Code",
+    "doorPaymentInfo": "Die Tickets für dieses Event werden ausschließlich an der Abendkasse verkauft. Du zahlst das Ticket vor Ort.",
+    "doorSuccess": "Bis gleich!",
+    "doorSuccessDesc": "Dein Platz ist bestätigt. Zahlung erfolgt an der Abendkasse."
   },
   "profile": {
     "title": "Profil",
-    "editProfile": "Profil bearbeiten",
+    "editProfileBtn": "Profil bearbeiten",
     "personalData": "Persönliche Daten",
     "bio": "Bio",
     "age": "Alter",
@@ -763,7 +766,9 @@
     "secureNote": "Deine Zahlung wird sicher über Stripe verarbeitet"
   },
   "paymentComplete": {
+    "headingFree": "Du bist dabei!",
     "heading": "Zahlung abgeschlossen",
+    "descriptionFree": "Dein Ticket ist bestätigt.",
     "description": "Dein Ticket wurde erfolgreich erstellt",
     "exploreBtn": "Weitere Events entdecken",
     "previewBtn": "Ticket anzeigen"

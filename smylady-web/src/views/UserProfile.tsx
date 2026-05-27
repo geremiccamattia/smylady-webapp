@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 
 import { useToast } from '@/hooks/use-toast'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { getInitials, cn, resolveImageUrl, safeFormatDate, formatRelativeTime, generateEventSlug } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
@@ -117,6 +118,7 @@ export default function UserProfile() {
   const { requireAuth } = useRequireAuth()
   const queryClient = useQueryClient()
   const { t } = useTranslation()
+  const localePath = useLocalePath()
   const [activeTab, setActiveTab] = useState<TabType>('wall')
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [profileImageViewerOpen, setProfileImageViewerOpen] = useState(false)
@@ -541,8 +543,8 @@ export default function UserProfile() {
             )}
             {isOwnProfile && (
               <div className="flex gap-2">
-                <Link href="/profile">
-                  <Button variant="outline">{t('profile.editProfile')}</Button>
+                <Link href={localePath('/profile')}>
+                  <Button variant="outline">{t('profile.editProfileBtn')}</Button>
                 </Link>
                 <Link href="/settings">
                   <Button variant="ghost" size="icon" title={t('settings.title')}>

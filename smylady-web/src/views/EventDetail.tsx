@@ -408,7 +408,7 @@ export default function EventDetail() {
         {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
-            toast({ title: 'Reservierung erfolgreich!', description: 'Dein Platz ist reserviert. Zahlung erfolgt an der Abendkasse.' })
+            toast({ title: t('tickets.doorSuccess', { defaultValue: 'Bis gleich!' }), description: t('tickets.doorSuccessDesc', { defaultValue: 'Dein Platz ist bestätigt. Zahlung erfolgt an der Abendkasse.' }) })
             router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&type=door`)
           },
           onError: (error: any) => {
@@ -1336,7 +1336,9 @@ export default function EventDetail() {
                       }
                     >
                       <Ticket className="h-5 w-5" />
-                      {isDoorPayment ? t('tickets.imIn', { defaultValue: 'Bin dabei' }) : Number(event.price) > 0 ? t('tickets.buyTicket') : t('tickets.reserveSpot', { defaultValue: 'Platz reservieren' })}
+                      {isDoorPayment || Number(event.price) === 0
+                        ? t('tickets.imIn', { defaultValue: 'Bin dabei' })
+                        : t('tickets.buyTicket')}
                     </Button>
                   </>
                 )}

@@ -29,6 +29,12 @@ i18n
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: LANGUAGE_KEY,
       caches: ['localStorage']
+    },
+    saveMissing: true,
+    missingKeyHandler: (_lng, _ns, key, fallbackValue) => {
+      if (_lng.includes('en')) {
+        console.warn(`[i18n MISSING EN] ${key} → "${fallbackValue}"`)
+      }
     }
   })
 

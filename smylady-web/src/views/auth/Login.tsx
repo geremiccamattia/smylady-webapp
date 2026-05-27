@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
@@ -181,7 +181,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { login, isAuthenticated, isLoading: authLoading } = useAuth()
-  const router = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -478,7 +478,7 @@ export default function Login() {
 
               {/* Subtitle */}
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mb-6">
-                Entdecke Events. Sichere Tickets. Teile Erinnerungen.
+                {t('home.tagline', { defaultValue: 'Entdecke Events. Sichere Tickets. Teile Erinnerungen.' })}
               </p>
 
               {/* Compact Feature Icons */}

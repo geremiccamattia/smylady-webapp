@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ArrowLeft, Mail, Send } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 export default function Contact() {
   const { toast } = useToast()
   const router = useRouter()
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,19 +31,19 @@ export default function Contact() {
 
     // Validation
     if (!formData.name.trim()) {
-      toast({ title: 'Fehler', description: 'Bitte gib deinen Namen ein.', variant: 'destructive' })
+      toast({ title: t('common.error'), description: t('contact.errorName', { defaultValue: 'Bitte gib deinen Namen ein.' }), variant: 'destructive' })
       return
     }
     if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast({ title: 'Fehler', description: 'Bitte gib eine gültige E-Mail-Adresse ein.', variant: 'destructive' })
+      toast({ title: t('common.error'), description: t('contact.errorEmail', { defaultValue: 'Bitte gib eine gültige E-Mail-Adresse ein.' }), variant: 'destructive' })
       return
     }
     if (!formData.subject.trim()) {
-      toast({ title: 'Fehler', description: 'Bitte gib einen Betreff ein.', variant: 'destructive' })
+      toast({ title: t('common.error'), description: t('contact.errorSubject', { defaultValue: 'Bitte gib einen Betreff ein.' }), variant: 'destructive' })
       return
     }
     if (!formData.message.trim()) {
-      toast({ title: 'Fehler', description: 'Bitte gib eine Nachricht ein.', variant: 'destructive' })
+      toast({ title: t('common.error'), description: t('contact.errorMessage', { defaultValue: 'Bitte gib eine Nachricht ein.' }), variant: 'destructive' })
       return
     }
 
@@ -55,15 +57,15 @@ export default function Contact() {
     try {
       window.open(mailtoLink, '_self')
       toast({
-        title: 'Erfolg',
-        description: 'Dein E-Mail-Programm wird geöffnet.'
+        title: t('common.success'),
+        description: t('contact.successDesc', { defaultValue: 'Dein E-Mail-Programm wird geöffnet.' })
       })
       // Reset form
       setFormData({ name: '', email: '', subject: '', message: '' })
     } catch {
       toast({
-        title: 'Fehler',
-        description: 'Es konnte kein E-Mail-Programm gefunden werden.',
+        title: t('common.error'),
+        description: t('contact.errorMailClient', { defaultValue: 'Es konnte kein E-Mail-Programm gefunden werden.' }),
         variant: 'destructive'
       })
     } finally {
@@ -80,27 +82,27 @@ export default function Contact() {
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Zurück
+          {t('common.back', { defaultValue: 'Zurück' })}
         </button>
 
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full gradient-bg flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Kontaktformular</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('contact.title', { defaultValue: 'Kontaktformular' })}</h1>
           <p className="text-muted-foreground">
-            Hast du Fragen oder Anregungen? Schreib uns eine Nachricht!
+            {t('contact.subtitle', { defaultValue: 'Hast du Fragen oder Anregungen? Schreib uns eine Nachricht!' })}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-card rounded-lg p-6 border">
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{t('auth.name', { defaultValue: 'Name' })}</Label>
             <Input
               id="name"
               name="name"
-              placeholder="Dein Name"
+              placeholder={t('contact.namePlaceholder', { defaultValue: 'Dein Name' })}
               value={formData.name}
               onChange={handleChange}
             />
@@ -108,12 +110,12 @@ export default function Contact() {
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email">E-Mail</Label>
+            <Label htmlFor="email">{t('auth.email', { defaultValue: 'E-Mail' })}</Label>
             <Input
               id="email"
               name="email"
               type="email"
-              placeholder="Deine E-Mail-Adresse"
+              placeholder={t('contact.emailPlaceholder', { defaultValue: 'Deine E-Mail-Adresse' })}
               value={formData.email}
               onChange={handleChange}
             />
@@ -121,11 +123,11 @@ export default function Contact() {
 
           {/* Subject */}
           <div className="space-y-2">
-            <Label htmlFor="subject">Betreff</Label>
+            <Label htmlFor="subject">{t('contact.subject', { defaultValue: 'Betreff' })}</Label>
             <Input
               id="subject"
               name="subject"
-              placeholder="Worum geht es?"
+              placeholder={t('contact.subjectPlaceholder', { defaultValue: 'Worum geht es?' })}
               value={formData.subject}
               onChange={handleChange}
             />
@@ -133,11 +135,11 @@ export default function Contact() {
 
           {/* Message */}
           <div className="space-y-2">
-            <Label htmlFor="message">Nachricht</Label>
+            <Label htmlFor="message">{t('contact.message', { defaultValue: 'Nachricht' })}</Label>
             <textarea
               id="message"
               name="message"
-              placeholder="Deine Nachricht an uns..."
+              placeholder={t('contact.messagePlaceholder', { defaultValue: 'Deine Nachricht an uns...' })}
               value={formData.message}
               onChange={handleChange}
               rows={5}
@@ -152,13 +154,13 @@ export default function Contact() {
             disabled={isSubmitting}
           >
             <Send className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Wird gesendet...' : 'Nachricht senden'}
+            {isSubmitting ? t('contact.sending', { defaultValue: 'Wird gesendet...' }) : t('contact.send', { defaultValue: 'Nachricht senden' })}
           </Button>
         </form>
 
         {/* Alternative Contact */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>Oder schreib uns direkt an:</p>
+          <p>{t('contact.orEmail', { defaultValue: 'Oder schreib uns direkt an:' })}</p>
           <a
             href="mailto:office@shareyourparty.de"
             className="text-primary hover:underline"

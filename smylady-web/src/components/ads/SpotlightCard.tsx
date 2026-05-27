@@ -21,7 +21,7 @@ interface SpotlightCardProps {
 }
 
 export function SpotlightCard({ ad }: SpotlightCardProps) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isEnglish = i18n.language.startsWith('en')
 
   const headline = (isEnglish && ad.headlineEn) ? ad.headlineEn : ad.headline
@@ -37,7 +37,7 @@ export function SpotlightCard({ ad }: SpotlightCardProps) {
           className="w-full h-full object-cover"
         />
         <span className="absolute top-3 left-3 text-xs font-semibold tracking-widest uppercase bg-black/60 text-white px-2 py-1 rounded">
-          Anzeige
+          {t('spotlight.adBadge', { defaultValue: 'Anzeige' })}
         </span>
       </div>
 
@@ -66,14 +66,14 @@ export function SpotlightCard({ ad }: SpotlightCardProps) {
 
         {/* Gesponsert label + CTA */}
         <div className="mt-auto pt-2 flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">Gesponsert</span>
+          <span className="text-xs text-muted-foreground">{t('spotlight.sponsored', { defaultValue: 'Gesponsert' })}</span>
           <a
             href={ad.targetUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full bg-foreground text-background text-sm font-semibold py-2.5 px-4 rounded-lg hover:opacity-90 transition-opacity"
           >
-            Website besuchen
+            {t('spotlight.visitWebsite', { defaultValue: 'Website besuchen' })}
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>

@@ -17,13 +17,13 @@ function PaymentCompleteContent() {
   const heading = type === 'door'
     ? t('paymentComplete.headingDoor', { defaultValue: 'Du bist dabei!' })
     : type === 'free'
-    ? t('paymentComplete.headingFree', { defaultValue: 'Reservierung abgeschlossen!' })
+    ? t('paymentComplete.headingFree', { defaultValue: 'Du bist dabei!' })
     : t('paymentComplete.heading', { defaultValue: 'Zahlung erfolgreich!' })
 
   const description = type === 'door'
     ? t('paymentComplete.descriptionDoor', { defaultValue: 'Wir erinnern dich rechtzeitig per Benachrichtigung an das Event.' })
     : type === 'free'
-    ? t('paymentComplete.descriptionFree', { defaultValue: 'Dein Ticket wurde erfolgreich reserviert.' })
+    ? t('paymentComplete.descriptionFree', { defaultValue: 'Dein Ticket ist bestätigt.' })
     : t('paymentComplete.description', { defaultValue: 'Dein Ticket wurde erfolgreich gekauft.' })
 
   useEffect(() => {

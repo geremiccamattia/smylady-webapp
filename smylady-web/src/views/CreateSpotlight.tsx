@@ -15,6 +15,7 @@ import { Check, ChevronDown, MapPin, Megaphone, Upload, X, ArrowLeft, CreditCard
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/services/api'
 import LocationModal, { LocationResult } from '@/components/LocationModal'
+import { useTranslation } from 'react-i18next'
 
 const PLANS = {
   starter: {
@@ -62,6 +63,7 @@ function SpotlightPaymentForm({
   onSubmit: () => void
   isLoading: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <Card>
       <CardHeader>
@@ -90,7 +92,7 @@ function SpotlightPaymentForm({
         </div>
         <PaymentElement />
         <p className="text-xs text-muted-foreground">
-          Deine Anzeige wird nach Zahlungseingang und kurzer Prüfung freigeschaltet.
+          {t('spotlight.reviewNote', { defaultValue: 'Deine Anzeige wird nach Zahlungseingang und kurzer Prüfung freigeschaltet.' })}
         </p>
         <Button
           variant="gradient"
@@ -120,6 +122,7 @@ function SpotlightPaymentHandler({
   const stripe = useStripe()
   const elements = useElements()
   const { toast } = useToast()
+  const { t } = useTranslation()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -142,8 +145,8 @@ function SpotlightPaymentHandler({
           headers: { 'Content-Type': 'multipart/form-data' },
         })
         toast({
-          title: 'Spotlight eingereicht ✓',
-          description: 'Deine Anzeige wird nach kurzer Prüfung freigeschaltet.',
+          title: t('spotlight.submitted', { defaultValue: 'Spotlight eingereicht ✓' }),
+          description: t('spotlight.reviewNote', { defaultValue: 'Deine Anzeige wird nach Zahlungseingang und kurzer Prüfung freigeschaltet.' }),
         })
         router.push('/profile')
       }
@@ -171,6 +174,7 @@ export default function CreateSpotlight() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
+  const { t } = useTranslation()
   const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')
 
   const [selectedPlan, setSelectedPlan] = useState<PlanId | 'free' | null>(null)
@@ -277,7 +281,7 @@ export default function CreateSpotlight() {
           </Button>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Megaphone className="h-6 w-6 text-orange-500" />
-            Spotlight bezahlen
+            {t('spotlight.payTitle', { defaultValue: 'Spotlight bezahlen' })}
           </h1>
         </div>
         <Elements
@@ -305,10 +309,10 @@ export default function CreateSpotlight() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Megaphone className="h-6 w-6 text-orange-500" />
-            Spotlight erstellen
+            {t('spotlight.createTitle', { defaultValue: 'Spotlight erstellen' })}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Erreiche gezielt Nutzer in deiner Region.
+            {t('spotlight.createSubtitle', { defaultValue: 'Erreiche gezielt Nutzer in deiner Region.' })}
           </p>
         </div>
       </div>
@@ -318,7 +322,9 @@ export default function CreateSpotlight() {
         {/* Step 1: Plan wählen */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">1. Plan wählen</CardTitle>
+            <CardTitle className="text-base">
+              {t('spotlight.selectPlan', { defaultValue: '1. Plan wählen' })}
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-4">
             {(Object.values(PLANS) as typeof PLANS[PlanId][]).map((plan) => (
@@ -340,7 +346,12 @@ export default function CreateSpotlight() {
                 )}
                 <span className="font-semibold text-base">{plan.name}</span>
                 <span className="text-2xl font-bold">€{plan.price}</span>
-                <span className="text-xs text-muted-foreground">{plan.description}</span>
+                <span className="text-xs text-muted-foreground">
+                  {plan.id === 'starter'
+                    ? t('spotlight.starterDesc', { defaultValue: '1 Anzeige · 7 Tage · 25 km Umkreis' })
+                    : t('spotlight.standardDesc', { defaultValue: '1 Anzeige · 30 Tage · 50 km Umkreis' })
+                  }
+                </span>
               </button>
             ))}
             {isAdmin && (
@@ -361,7 +372,9 @@ export default function CreateSpotlight() {
                 )}
                 <span className="text-xs font-medium text-green-600 uppercase tracking-wide">Admin</span>
                 <span className="font-semibold text-base">Free Spotlight</span>
-                <span className="text-xs text-muted-foreground">Intern · Kein Enddatum · 30 km Umkreis</span>
+                <span className="text-xs text-muted-foreground">
+                  {t('spotlight.freeDesc', { defaultValue: 'Intern · Kein Enddatum · 30 km Umkreis' })}
+                </span>
               </button>
             )}
           </CardContent>
@@ -370,7 +383,9 @@ export default function CreateSpotlight() {
         {/* Step 2: Anzeigen-Details */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">2. Anzeigen-Details</CardTitle>
+            <CardTitle className="text-base">
+              {t('spotlight.adDetails', { defaultValue: '2. Anzeigen-Details' })}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
 
@@ -391,7 +406,9 @@ export default function CreateSpotlight() {
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Beschreibung</Label>
+              <Label htmlFor="description">
+                {t('spotlight.description', { defaultValue: 'Beschreibung' })}
+              </Label>
               <Textarea
                 id="description"
                 placeholder="Kurze Beschreibung deiner Anzeige..."
@@ -412,7 +429,7 @@ export default function CreateSpotlight() {
                 className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted transition-colors text-sm font-medium"
               >
                 <span className="flex items-center gap-2">
-                  🇬🇧 Englische Version
+                  🇬🇧 {t('spotlight.englishVersion', { defaultValue: 'Englische Version' })}
                   <span className="text-xs font-normal text-muted-foreground">(optional)</span>
                 </span>
                 <ChevronDown className={cn('h-4 w-4 transition-transform', showEnglishFields && 'rotate-180')} />
@@ -451,10 +468,10 @@ export default function CreateSpotlight() {
             {/* Bild */}
             <div className="space-y-2">
               <Label>
-                Bild <span className="text-destructive">*</span>
+                {t('spotlight.image', { defaultValue: 'Bild' })} <span className="text-destructive">*</span>
               </Label>
               <p className="text-xs text-muted-foreground">
-                Empfohlen: 1200×628 px · PNG oder JPG · max. 5 MB
+                {t('spotlight.imageRecommended', { defaultValue: 'Empfohlen: 1200×628 px · PNG oder JPG · max. 5 MB' })}
               </p>
               {imagePreview ? (
                 <div className="relative rounded-lg overflow-hidden border aspect-video bg-muted">
@@ -472,7 +489,9 @@ export default function CreateSpotlight() {
               ) : (
                 <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-orange-300 rounded-lg p-8 cursor-pointer hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors">
                   <Upload className="h-8 w-8 text-orange-400" />
-                  <span className="text-sm font-medium">Bild hochladen</span>
+                  <span className="text-sm font-medium">
+                    {t('spotlight.uploadImage', { defaultValue: 'Bild hochladen' })}
+                  </span>
                   <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                 </label>
               )}
@@ -481,7 +500,7 @@ export default function CreateSpotlight() {
             {/* Zielregion */}
             <div className="space-y-2">
               <Label>
-                Zielregion <span className="text-destructive">*</span>
+                {t('spotlight.targetRegion', { defaultValue: 'Zielregion' })} <span className="text-destructive">*</span>
               </Label>
               <div className="flex items-center gap-2">
                 <button
@@ -491,7 +510,7 @@ export default function CreateSpotlight() {
                 >
                   <MapPin className="h-4 w-4 text-primary shrink-0" />
                   <span className="truncate text-sm">
-                    {selectedLocation?.description || 'Standort wählen...'}
+                    {selectedLocation?.description || t('spotlight.chooseRegion', { defaultValue: 'Standort wählen...' })}
                   </span>
                 </button>
                 {selectedPlan && (
@@ -502,7 +521,7 @@ export default function CreateSpotlight() {
               </div>
               {selectedPlan && (
                 <p className="text-xs text-muted-foreground">
-                  Umkreis ist im {selectedPlan === 'free' ? FREE_PLAN.name : PLANS[selectedPlan as PlanId].name}-Plan auf {selectedPlan === 'free' ? FREE_PLAN.radius : PLANS[selectedPlan as PlanId].radius} km festgelegt.
+                  {t('spotlight.freeRadiusNote', { defaultValue: 'Umkreis ist im Plan auf 30 km festgelegt.' })}
                 </p>
               )}
             </div>
@@ -510,7 +529,7 @@ export default function CreateSpotlight() {
             {/* Ziel-URL */}
             <div className="space-y-2">
               <Label htmlFor="targetUrl">
-                Ziel-URL <span className="text-destructive">*</span>
+                {t('spotlight.targetUrl', { defaultValue: 'Ziel-URL' })} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="targetUrl"
@@ -526,7 +545,7 @@ export default function CreateSpotlight() {
         {/* Actions */}
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>
-            Abbrechen
+            {t('common.cancel', { defaultValue: 'Abbrechen' })}
           </Button>
           <Button
             type="submit"
@@ -536,7 +555,7 @@ export default function CreateSpotlight() {
             disabled={!selectedPlan}
           >
             <Megaphone className="h-4 w-4 mr-2" />
-            Weiter zur Zahlung
+            {t('spotlight.proceedToPayment', { defaultValue: 'Weiter zur Zahlung' })}
           </Button>
         </div>
       </form>
@@ -550,4 +569,3 @@ export default function CreateSpotlight() {
     </div>
   )
 }
-
