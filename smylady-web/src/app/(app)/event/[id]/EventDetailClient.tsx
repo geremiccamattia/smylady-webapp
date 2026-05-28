@@ -1218,7 +1218,9 @@ export default function EventDetailClient({ id }: Props) {
                       }
                     >
                       <Ticket className="h-5 w-5" />
-                      {isDoorPayment ? t('tickets.imIn', { defaultValue: 'Bin dabei' }) : Number(event.price) > 0 ? t('tickets.buyTicket') : t('tickets.reserveSpot', { defaultValue: 'Platz reservieren' })}
+                      {isDoorPayment || Number(event.price) === 0
+                        ? t('tickets.imIn', { defaultValue: 'Bin dabei' })
+                        : t('tickets.buyTicket')}
                     </Button>
                   </>
                 )}
