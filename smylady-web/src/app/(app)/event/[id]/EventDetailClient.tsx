@@ -1201,7 +1201,7 @@ export default function EventDetailClient({ id }: Props) {
                         <Info className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-orange-700 dark:text-orange-300">
                           {t('event.doorPaymentInfo', {
-                            defaultValue: 'Die Tickets für dieses Event werden ausschließlich an der Abendkasse verkauft. Du kannst deinen Platz hier kostenlos reservieren und zahlst vor Ort.'
+                            defaultValue: 'Die Tickets für dieses Event werden ausschließlich an der Abendkasse verkauft. Du zahlst das Ticket vor Ort.'
                           })}
                         </p>
                       </div>
