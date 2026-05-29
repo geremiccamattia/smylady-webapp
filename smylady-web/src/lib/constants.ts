@@ -22,7 +22,7 @@ export const EVENT_CATEGORIES = [
   { value: 'Nature', label: 'Outdoor' },
   { value: 'Theme', label: 'Themenparty' },
   { value: 'On the Roof', label: 'Rooftop' },
-  { value: 'Ship', label: 'Schiff' },
+  { value: 'Clubbing', label: 'Clubbing' },
   { value: 'Gastronomy', label: 'Gastronomie' },
   { value: 'Business', label: 'Business' },
   { value: 'Sports', label: 'Sport' },

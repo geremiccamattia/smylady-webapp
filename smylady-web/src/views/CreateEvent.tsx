@@ -41,70 +41,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 // Event visibility types (same as mobile app)
 type EventVisibility = 'public' | 'subscribers' | 'selected'
 
-// Categories matching mobile app exactly
-const EVENT_CATEGORIES = [
-  { value: 'Music', label: 'Music' },
-  { value: 'Gastronomy', label: 'Gastronomy' },
-  { value: 'Nature', label: 'Outdoor' },
-  { value: 'Business', label: 'Business' },
-  { value: 'On the Roof', label: 'On the Roof' },
-  { value: 'Theme', label: 'Theme' },
-  { value: 'Sports', label: 'Sports' },
-  { value: 'Ship', label: 'Ship' },
-  { value: 'Other', label: 'Other' },
-]
 
-// Party types matching mobile app
-const PARTY_TYPES = [
-  { value: 'birthday', label: 'Birthday' },
-  { value: 'wedding', label: 'Wedding' },
-  { value: 'corporate', label: 'Corporate' },
-  { value: 'social', label: 'Social' },
-  { value: 'other', label: 'Other' },
-]
-
-// Music types matching mobile app
-const MUSIC_TYPES = [
-  { value: 'electronic', label: 'Electronic' },
-  { value: 'rock', label: 'Rock' },
-  { value: 'pop', label: 'Pop' },
-  { value: 'hip_hop', label: 'Hip Hop' },
-  { value: 'classical', label: 'Classical' },
-  { value: 'jazz', label: 'Jazz' },
-  { value: 'other', label: 'Other' },
-]
-
-// Offerings matching mobile app
-const OFFERINGS = [
-  { value: 'pool', label: 'Pool' },
-  { value: 'food_drinks', label: 'Food & Drinks' },
-  { value: 'terrasse', label: 'Terrace' },
-  { value: 'grill', label: 'Grill' },
-  { value: 'feuerstelle', label: 'Fireplace' },
-  { value: 'other', label: 'Other' },
-]
-
-// Visibility options matching mobile app
-const VISIBILITY_OPTIONS = [
-  {
-    value: 'public' as EventVisibility,
-    label: 'Public',
-    description: 'Everyone can see this event',
-    icon: Globe,
-  },
-  {
-    value: 'subscribers' as EventVisibility,
-    label: 'Subscribers Only',
-    description: 'Only your subscribers can see this event',
-    icon: Users,
-  },
-  {
-    value: 'selected' as EventVisibility,
-    label: 'Selected People',
-    description: 'Only selected subscribers can see this event',
-    icon: UserPlus,
-  },
-]
 
 interface Subscriber {
   _id?: string
@@ -164,6 +101,68 @@ export default function CreateEvent() {
   const [ticketTiers, setTicketTiers] = useState([
     { name: '', description: '', price: '', quantity: '' },
   ])
+
+  const EVENT_CATEGORIES = [
+    { value: 'Music', label: t('categories.music', { defaultValue: 'Musik' }) },
+    { value: 'Concert', label: t('categories.concert', { defaultValue: 'Konzert' }) },
+    { value: 'Gastronomy', label: t('categories.gastronomy', { defaultValue: 'Gastronomie' }) },
+    { value: 'Nature', label: t('categories.outdoor', { defaultValue: 'Outdoor' }) },
+    { value: 'Business', label: t('categories.business', { defaultValue: 'Business' }) },
+    { value: 'On the Roof', label: t('categories.onTheRoof', { defaultValue: 'Auf dem Dach' }) },
+    { value: 'Theme', label: t('categories.theme', { defaultValue: 'Themen-Event' }) },
+    { value: 'Sports', label: t('categories.sports', { defaultValue: 'Sport' }) },
+    { value: 'Clubbing', label: t('categories.clubbing', { defaultValue: 'Clubbing' }) },
+    { value: 'Other', label: t('categories.other', { defaultValue: 'Sonstiges' }) },
+  ]
+
+  const PARTY_TYPES = [
+    { value: 'birthday', label: t('partyTypes.birthday', { defaultValue: 'Geburtstag' }) },
+    { value: 'wedding', label: t('partyTypes.wedding', { defaultValue: 'Hochzeit' }) },
+    { value: 'corporate', label: t('partyTypes.corporate', { defaultValue: 'Firmenfeier' }) },
+    { value: 'social', label: t('partyTypes.social', { defaultValue: 'Treffen' }) },
+    { value: 'other', label: t('partyTypes.other', { defaultValue: 'Sonstiges' }) },
+  ]
+
+  const MUSIC_TYPES = [
+    { value: 'electronic', label: t('musicTypes.electronic', { defaultValue: 'Electronic' }) },
+    { value: 'rock', label: t('musicTypes.rock', { defaultValue: 'Rock' }) },
+    { value: 'pop', label: t('musicTypes.pop', { defaultValue: 'Pop' }) },
+    { value: 'hip_hop', label: t('musicTypes.hipHop', { defaultValue: 'Hip Hop' }) },
+    { value: 'classical', label: t('musicTypes.classical', { defaultValue: 'Klassik' }) },
+    { value: 'jazz', label: t('musicTypes.jazz', { defaultValue: 'Jazz' }) },
+    { value: 'other', label: t('musicTypes.other', { defaultValue: 'Sonstiges' }) },
+  ]
+
+  const OFFERINGS = [
+    { value: 'none', label: t('offerings.none', { defaultValue: 'Keine' }) },
+    { value: 'pool', label: t('offerings.pool', { defaultValue: 'Pool' }) },
+    { value: 'food_drinks', label: t('offerings.foodDrinks', { defaultValue: 'Essen & Trinken' }) },
+    { value: 'terrasse', label: t('offerings.terrace', { defaultValue: 'Terrasse' }) },
+    { value: 'grill', label: t('offerings.grill', { defaultValue: 'Grill' }) },
+    { value: 'feuerstelle', label: t('offerings.fireplace', { defaultValue: 'Feuerstelle' }) },
+    { value: 'other', label: t('offerings.other', { defaultValue: 'Sonstiges' }) },
+  ]
+
+  const VISIBILITY_OPTIONS = [
+    {
+      value: 'public' as EventVisibility,
+      label: 'Public',
+      description: 'Everyone can see this event',
+      icon: Globe,
+    },
+    {
+      value: 'subscribers' as EventVisibility,
+      label: 'Subscribers Only',
+      description: 'Only your subscribers can see this event',
+      icon: Users,
+    },
+    {
+      value: 'selected' as EventVisibility,
+      label: 'Selected People',
+      description: 'Only selected subscribers can see this event',
+      icon: UserPlus,
+    },
+  ]
 
   const addTier = () => {
     setTicketTiers(prev => [...prev, { name: '', description: '', price: '', quantity: '' }])

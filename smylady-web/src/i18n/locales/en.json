@@ -866,6 +866,43 @@
     "exploreBtn": "Discover more events",
     "previewBtn": "View ticket"
   },
+  "partyTypes": {
+    "birthday": "Birthday",
+    "wedding": "Wedding",
+    "corporate": "Corporate",
+    "social": "Social",
+    "other": "Other"
+  },
+  "musicTypes": {
+    "electronic": "Electronic",
+    "rock": "Rock",
+    "pop": "Pop",
+    "hipHop": "Hip Hop",
+    "classical": "Classical",
+    "jazz": "Jazz",
+    "other": "Other"
+  },
+  "offerings": {
+    "none": "None",
+    "pool": "Pool",
+    "foodDrinks": "Food & Drinks",
+    "terrace": "Terrace",
+    "grill": "Grill",
+    "fireplace": "Fireplace",
+    "other": "Other"
+  },
+  "categories": {
+    "music": "Music",
+    "concert": "Concert",
+    "gastronomy": "Gastronomy",
+    "outdoor": "Outdoor",
+    "business": "Business",
+    "onTheRoof": "On the Roof",
+    "theme": "Theme",
+    "sports": "Sports",
+    "clubbing": "Clubbing",
+    "other": "Other"
+  },
   "createEvent": {
     "add": "Add",
     "addDetails": "Add details",
