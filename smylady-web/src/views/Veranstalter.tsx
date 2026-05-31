@@ -76,14 +76,6 @@ export default function VeranstalterPage() {
         }}>
           {/* LEFT: Text */}
           <div style={{ flex: "1 1 400px", textAlign: "left" }}>
-            <span style={{
-              display: "inline-block", background: PINK_MID, color: PINK,
-              fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.12em",
-              textTransform: "uppercase", padding: "0.4em 1em",
-              borderRadius: "100px", marginBottom: "1.75rem",
-            }}>
-              {isEnglish ? "For clubs & organisers in Austria" : "Für Clubs & Veranstalter in Österreich"}
-            </span>
             <h1 style={{
               fontFamily: "'Unbounded', sans-serif",
               fontSize: "clamp(1.75rem, 4.5vw, 3rem)",
