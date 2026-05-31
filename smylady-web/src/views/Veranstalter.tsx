@@ -61,7 +61,7 @@ export default function VeranstalterPage() {
     if (desc) desc.setAttribute("content", isEnglish
       ? "Share Your Party is more than ticketing. Create events, promote them directly and build your own community around your events."
       : "Share Your Party ist mehr als Ticketing. Erstelle Events, bewirb sie gezielt und baue eine eigene Community rund um deine Veranstaltungen auf.");
-    return () => document.head.removeChild(link);
+    return () => { document.head.removeChild(link); };
   }, [isEnglish]);
 
   return (
