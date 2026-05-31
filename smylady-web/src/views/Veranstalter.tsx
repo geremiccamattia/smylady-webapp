@@ -84,11 +84,6 @@ export default function VeranstalterPage() {
             }}>
               {isEnglish ? "More than a ticketing platform." : "Mehr als eine Ticketing-Plattform."}
             </h1>
-            <p style={{ fontSize: "1.1rem", color: MUTED, maxWidth: "520px", margin: "0 0 1.5rem", lineHeight: 1.75 }}>
-              {isEnglish
-                ? "Share Your Party connects events with community. Create events, promote them strategically and watch your guests create their own content."
-                : "Share Your Party verbindet Events mit Community. Erstelle Events, bewirb sie gezielt und beobachte wie deine Gäste selbst Content erstellen."}
-            </p>
             <ul style={{ listStyle: "none", padding: 0, margin: "0 0 3rem", display: "inline-block" }}>
               {[
                 isEnglish ? { icon: "📈", text: "More reach for your events" } : { icon: "📈", text: "Mehr Reichweite für deine Events" },
