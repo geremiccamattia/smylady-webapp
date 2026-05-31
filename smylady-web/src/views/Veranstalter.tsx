@@ -246,7 +246,7 @@ function FeatureCard({ icon, title, desc, tag, highlight = false }: { icon: stri
   );
 }
 
-function StepRow({ n, title, desc, last }: { n: number; title: string; desc: string; last: boolean }) {
+function StepRow({ n, title, desc, last }: { n: string; title: string; desc: string; last: boolean }) {
   return (
     <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
