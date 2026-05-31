@@ -215,7 +215,7 @@ export default function VeranstalterPage() {
   );
 }
 
-function SectionLabel({ children }) {
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <span style={{ color: PINK, fontSize: "0.7rem", fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase" }}>
       {children}
@@ -223,7 +223,7 @@ function SectionLabel({ children }) {
   );
 }
 
-function AppLink({ href, label }) {
+function AppLink({ href, label }: { href: string; label: string }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: "#fff", color: DARK, border: `1px solid ${BORDER}`, textDecoration: "none", padding: "0.55rem 1.25rem", borderRadius: "100px", fontSize: "0.85rem", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
       {label}
@@ -231,7 +231,7 @@ function AppLink({ href, label }) {
   );
 }
 
-function FeatureCard({ icon, title, desc, tag, highlight }) {
+function FeatureCard({ icon, title, desc, tag, highlight = false }: { icon: string; title: string; desc: string; tag: string; highlight?: boolean }) {
   return (
     <div style={{ background: highlight ? PINK_LIGHT : "#fafafa", border: `1px solid ${highlight ? PINK_MID : BORDER}`, borderRadius: "16px", padding: "1.75rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.5rem" }}>
@@ -246,7 +246,7 @@ function FeatureCard({ icon, title, desc, tag, highlight }) {
   );
 }
 
-function StepRow({ n, title, desc, last }) {
+function StepRow({ n, title, desc, last }: { n: number; title: string; desc: string; last: boolean }) {
   return (
     <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
