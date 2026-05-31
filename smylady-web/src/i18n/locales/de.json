@@ -896,7 +896,8 @@
     "events": "Events",
     "imprint": "Impressum",
     "privacy": "Datenschutz",
-    "terms": "AGB"
+    "terms": "AGB",
+    "organizerInfo": "Infos für Veranstalter"
   },
   "forgotPassword": {
     "error": "Passwort konnte nicht zurückgesetzt werden",

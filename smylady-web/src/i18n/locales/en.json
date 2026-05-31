@@ -1059,7 +1059,8 @@
     "events": "Events",
     "imprint": "Imprint",
     "privacy": "Privacy",
-    "terms": "Terms"
+    "terms": "Terms",
+    "organizerInfo": "Information for organizers"
   },
   "forgotPassword": {
     "error": "Could not reset password",

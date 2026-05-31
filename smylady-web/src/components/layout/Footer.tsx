@@ -35,6 +35,7 @@ export default function Footer() {
               <li><Link href={localePath('/create-event')} className="hover:text-foreground">{t('events.createEvent')}</Link></li>
               <li><Link href={localePath('/my-tickets')} className="hover:text-foreground">{t('tickets.myTickets')}</Link></li>
               <li><Link href={localePath('/favorites')} className="hover:text-foreground">{t('favorites.title')}</Link></li>
+              <li><Link href={localePath('/veranstalter')} className="hover:text-foreground">{t('footer.organizerInfo')}</Link></li>
               <li><Link href={localePath('/events/wien')} className="hover:text-foreground">Events in Wien</Link></li>
               <li><Link href={localePath('/grounding')} className="hover:text-foreground">Über Share Your Party</Link></li>
             </ul>
