@@ -70,7 +70,11 @@ function ExploreContent() {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '')
   const [selectedMusicType, setSelectedMusicType] = useState(searchParams.get('musicType') || '')
   const [showFilters, setShowFilters] = useState(false)
-  const [showTicketmaster, setShowTicketmaster] = useState(isTicketmasterEnabled())
+  const [showTicketmaster, setShowTicketmaster] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const saved = localStorage.getItem('syp_ticketmaster_enabled')
+    return saved === null ? true : saved === 'true'
+  })
 
   // Location state
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null)
