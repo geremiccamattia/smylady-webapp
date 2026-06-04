@@ -140,6 +140,7 @@ export default function CreateEvent() {
     { value: 'terrasse', label: t('offerings.terrace', { defaultValue: 'Terrasse' }) },
     { value: 'grill', label: t('offerings.grill', { defaultValue: 'Grill' }) },
     { value: 'feuerstelle', label: t('offerings.fireplace', { defaultValue: 'Feuerstelle' }) },
+    { value: 'drinks', label: t('offerings.drinks', { defaultValue: 'Getränke' }) },
     { value: 'other', label: t('offerings.other', { defaultValue: 'Sonstiges' }) },
   ]
 
