@@ -120,6 +120,9 @@ export default function EventDetail() {
     : null
   const currentUserId = user ? (user._id || user.id) : null
   const isOwner = !!(currentUserId && creatorId && currentUserId === creatorId)
+  const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')
+  console.log('USER EMAIL:', user?.email)
+  console.log('IS ADMIN:', isAdmin)
   const eventHasStarted = event ? new Date(event.eventDate) <= new Date() : false
   const eventId = event?._id || event?.id || id
 
@@ -1255,7 +1258,7 @@ export default function EventDetail() {
                 )}
 
                 {/* Purchase Button */}
-                {isOwner ? (
+                {(isOwner || isAdmin) ? (
                   <div className="space-y-2">
                     <Button variant="outline" className="w-full" asChild>
                       <Link href={`/edit-event/${id}`}>{t('events.editEvent')}</Link>

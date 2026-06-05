@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { useAuth } from '@/contexts/AuthContext'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!)
 
@@ -126,6 +127,8 @@ export default function BoostModal({
 }: BoostModalProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')
   const [budget, setBudget] = useState('')
   const [days, setDays] = useState('7')
   const [radius, setRadius] = useState('25')
@@ -163,12 +166,37 @@ export default function BoostModal({
   const handlePause = async () => {
     setIsLoading(true)
     try {
-      await apiClient.post(`/events/${eventId}/boost/pause`)
-      toast({ title: 'Boost pausiert', description: 'Dein Event wird nicht mehr beworben.' })
+      const endpoint = isAdmin
+        ? `/events/${eventId}/boost/pause/admin`
+        : `/events/${eventId}/boost/pause`
+      await apiClient.post(endpoint)
+      toast({ title: 'Boost pausiert', description: 'Das Event wird nicht mehr beworben.' })
       queryClient.invalidateQueries({ queryKey: ['events', 'my-events'] })
       onClose()
     } catch {
       toast({ variant: 'destructive', title: 'Fehler', description: 'Boost konnte nicht pausiert werden.' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleFreeBoost = async () => {
+    if (budgetNum < 1) {
+      toast({ variant: 'destructive', title: 'Budget angeben', description: 'Bitte ein Budget eingeben.' })
+      return
+    }
+    setIsLoading(true)
+    try {
+      await apiClient.post(`/events/${eventId}/boost/free`, {
+        budget: budgetNum,
+        days: daysNum,
+        radius: parseInt(radius),
+      })
+      toast({ title: 'Free Boost aktiviert! 🚀', description: `Event wird ${daysNum} Tage lang beworben.` })
+      queryClient.invalidateQueries({ queryKey: ['events', 'my-events'] })
+      onClose()
+    } catch {
+      toast({ variant: 'destructive', title: 'Fehler', description: 'Free Boost konnte nicht aktiviert werden.' })
     } finally {
       setIsLoading(false)
     }
@@ -321,6 +349,25 @@ export default function BoostModal({
               <Zap className="h-4 w-4 mr-2" />
               {isLoading ? 'Wird geladen...' : `Boost starten – €${budgetNum > 0 ? budgetNum.toFixed(2) : '0.00'}`}
             </Button>
+
+            {isAdmin && (
+              <div className="border rounded-lg p-3 space-y-2 border-green-200 bg-green-50 dark:bg-green-950/20">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-green-600 uppercase tracking-wide">Admin</span>
+                  <span className="text-sm font-semibold">Free Boost</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Boost direkt aktivieren ohne Zahlung. Budget und Laufzeit wie oben eingestellt.</p>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 text-green-600 border-green-300 hover:bg-green-50"
+                  onClick={handleFreeBoost}
+                  disabled={budgetNum < 1 || isLoading}
+                >
+                  <Zap className="h-4 w-4" />
+                  Kostenlos boosten
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>
