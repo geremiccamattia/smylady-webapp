@@ -1427,8 +1427,7 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
         {/* Event Reference */}
         {post.eventId && (
           <Link
-            href={`/event/${post.eventTitle ? generateEventSlug(post.eventTitle, post.eventId || '') : ''}`}
-            className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80"
+href={`/event/${post.eventTitle ? generateEventSlug(post.eventTitle, typeof post.eventId === 'string' ? post.eventId : post.eventId?._id || '') : ''}`}            className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80"
           >
             <div className="flex items-center gap-3">
               {post.eventId.thumbnailUrl && (
