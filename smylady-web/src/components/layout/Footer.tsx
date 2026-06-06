@@ -11,7 +11,7 @@ export default function Footer() {
   return (
     <footer className="hidden md:block border-t bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -78,6 +78,14 @@ export default function Footer() {
               <li><Link href={localePath('/veranstalter')} className="hover:text-foreground">{t('footer.organizerInfo')}</Link></li>
               <li><Link href={localePath('/events/wien')} className="hover:text-foreground">Events in Wien</Link></li>
               <li><Link href={localePath('/grounding')} className="hover:text-foreground">Über Share Your Party</Link></li>
+            </ul>
+          </div>
+
+          {/* Kategorien */}
+          <div>
+            <h4 className="font-semibold mb-4">Kategorien</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><Link href="/events/konzerte-wien" className="hover:text-foreground">Konzerte in Wien</Link></li>
             </ul>
           </div>
 
