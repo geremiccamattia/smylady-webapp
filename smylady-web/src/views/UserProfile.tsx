@@ -3205,10 +3205,10 @@ function ProfileMemoryViewer({
               </button>
             </div>
 
-            {(memory.url || memory.thumbnailUrl) && (
+            {memory.url && (
               <div className="rounded-lg overflow-hidden h-40 bg-muted">
                 <img
-                  src={resolveImageUrl(memory.url || memory.thumbnailUrl || '')}
+                  src={resolveImageUrl(memory.url)}
                   className="w-full h-full object-cover"
                   alt=""
                 />
