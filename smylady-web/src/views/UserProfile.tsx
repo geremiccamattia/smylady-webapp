@@ -1425,23 +1425,13 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
         )}
 
         {/* Event Reference */}
-        {post.eventId && (
+        {post.eventTitle && post.eventId && (
           <Link
-href={`/event/${post.eventTitle ? generateEventSlug(post.eventTitle, typeof post.eventId === 'string' ? post.eventId : post.eventId?._id || '') : ''}`}            className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80"
+            href={`/event/${generateEventSlug(post.eventTitle, typeof post.eventId === 'string' ? post.eventId : post.eventId?._id || '')}`}
+            className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mb-4 hover:bg-primary/20 transition-colors"
           >
-            <div className="flex items-center gap-3">
-              {post.eventId.thumbnailUrl && (
-                <img
-                  src={resolveImageUrl(post.eventId.thumbnailUrl)}
-                  alt=""
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-              )}
-              <div>
-                <p className="font-medium">{post.eventId.name}</p>
-                <p className="text-sm text-muted-foreground">{t('events.viewEvent')}</p>
-              </div>
-            </div>
+            <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
+            <p className="font-medium text-sm text-primary truncate">{post.eventTitle}</p>
           </Link>
         )}
 
