@@ -2662,7 +2662,7 @@ function ProfileMemoryViewer({
   }
 
   const handleShareSubmit = async (text: string) => {
-    const memoryUrl = memory.url || memory.thumbnailUrl
+    const memoryUrl = memory.url
     if (!memoryUrl) return
     setIsSharing(true)
     try {
