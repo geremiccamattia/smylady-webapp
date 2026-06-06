@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/rea
 import { userService } from '@/services/user'
 import { postsService, Post, Comment, LikedByUser } from '@/services/posts'
 import { memoriesService } from '@/services/memories'
+import { apiClient } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { Card, CardContent } from '@/components/ui/card'
@@ -61,6 +62,7 @@ import {
   Loader2,
   AlertTriangle,
   User,
+  Share2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -1425,7 +1427,7 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
         {/* Event Reference */}
         {post.eventId && (
           <Link
-            href={`/event/${generateEventSlug(post.eventId.name, post.eventId._id || '')}`}
+            href={`/event/${post.eventTitle ? generateEventSlug(post.eventTitle, post.eventId || '') : ''}`}
             className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80"
           >
             <div className="flex items-center gap-3">
@@ -2230,6 +2232,11 @@ function ProfileMemoryViewer({
   // Reactions modal
   const [showReactionsModal, setShowReactionsModal] = useState(false)
 
+  // Share to wall modal
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareText, setShareText] = useState('')
+  const [isSharing, setIsSharing] = useState(false)
+
   const ticketId = memory.ticketId || ''
   const memoryId = memory.memoryId || ''
   const hasApiIds = !!ticketId && !!memoryId
@@ -2665,6 +2672,37 @@ function ProfileMemoryViewer({
     return commentUserId?.toString() === currentUserId?.toString()
   }
 
+  const handleShareSubmit = async (text: string) => {
+    const memoryUrl = memory.url || memory.thumbnailUrl
+    if (!memoryUrl) return
+    setIsSharing(true)
+    try {
+      const taggedUserIds = (memory.photoTags || [])
+        .map((tag: any) => tag.userId?.toString())
+        .filter((id: any): id is string => !!id)
+
+      await apiClient.post('/posts', {
+        text,
+        media: [{ url: resolveImageUrl(memoryUrl), type: memory.type === 'video' ? 'video' : 'image' }],
+        visibility: 'public',
+        eventId: memory.eventId ?? undefined,
+        eventTitle: memory.eventTitle ?? undefined,
+        mentions: taggedUserIds.length > 0 ? taggedUserIds : undefined,
+      })
+
+      setShowShareModal(false)
+      toast({
+        title: 'Auf der Wall geteilt!',
+        description: 'Die Erinnerung wurde gepostet.',
+        action: <a href="/feed" className="underline text-sm font-medium">Zur Wall</a>,
+      })
+    } catch {
+      toast({ title: 'Fehler', description: 'Teilen fehlgeschlagen.', variant: 'destructive' })
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
   const comments = activeComments as any[]
 
   return (
@@ -2783,8 +2821,8 @@ function ProfileMemoryViewer({
               </div>
             </>
           )}
-          <div className="flex items-center gap-1">
-            {/* Highlight button */}
+          <div className="flex items-center gap-1 ml-auto">
+            {/* Highlight */}
             {isOwnProfile && (
               <Button
                 variant="ghost"
@@ -2793,6 +2831,17 @@ function ProfileMemoryViewer({
                 title={memory.isHighlighted ? t('profile.removeFromHighlights') : t('profile.addToHighlights')}
               >
                 <Star className={cn('w-5 h-5', memory.isHighlighted && 'fill-yellow-400 text-yellow-400')} />
+              </Button>
+            )}
+            {/* Share */}
+            {isOwnProfile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => { setShareText(memory.caption || ''); setShowShareModal(true) }}
+                title="Auf der Wall teilen"
+              >
+                <Share2 className="w-5 h-5" />
               </Button>
             )}
           </div>
@@ -3149,6 +3198,60 @@ function ProfileMemoryViewer({
           router.push(`/user/${uid}`)
         }}
       />
+
+      {/* Share to Wall Modal */}
+      {showShareModal && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div
+            className="bg-background rounded-xl w-full max-w-md p-4 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Auf der Wall teilen</h3>
+              <button onClick={() => setShowShareModal(false)}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {(memory.url || memory.thumbnailUrl) && (
+              <div className="rounded-lg overflow-hidden h-40 bg-muted">
+                <img
+                  src={resolveImageUrl(memory.url || memory.thumbnailUrl || '')}
+                  className="w-full h-full object-cover"
+                  alt=""
+                />
+              </div>
+            )}
+
+            <textarea
+              value={shareText}
+              onChange={e => setShareText(e.target.value)}
+              placeholder="Schreib etwas dazu..."
+              className="w-full min-h-[80px] text-sm bg-muted/50 rounded-lg p-3 resize-none focus:outline-none"
+              maxLength={2000}
+            />
+
+            {memory.eventTitle && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-primary">{memory.eventTitle}</span>
+              </div>
+            )}
+
+            <Button
+              variant="gradient"
+              className="w-full"
+              onClick={() => handleShareSubmit(shareText)}
+              disabled={isSharing}
+            >
+              {isSharing ? 'Wird geteilt...' : 'Jetzt teilen'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

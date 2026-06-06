@@ -544,6 +544,7 @@ export default function TicketDetail() {
             <MemoryGallery
               ticketId={(ticket._id || ticket.id)!}
               eventId={(event._id || event.id)!}
+              eventTitle={event.name}
               eventStartDate={event.eventDate}
               canUpload={isValid && !isCancelled}
             />

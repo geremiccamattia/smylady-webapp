@@ -153,6 +153,8 @@ export interface CreatePostPayload {
   media?: Array<{ url: string; type: 'image' | 'video' }>
   visibility?: 'public' | 'subscribers' | 'private'
   mentions?: string[]
+  eventId?: string
+  eventTitle?: string
 }
 
 export interface UpdatePostPayload {
@@ -276,7 +278,13 @@ export const postsService = {
   },
 
   // Create post (with optional media and mentions)
-  create: async (payload: { content: string; images?: File[]; mentions?: string[] }): Promise<Post> => {
+  create: async (payload: {
+    content: string
+    images?: File[]
+    mentions?: string[]
+    eventId?: string
+    eventTitle?: string
+  }): Promise<Post> => {
     // Upload images first if any
     const media: Array<{ url: string; type: 'image' | 'video' }> = []
     if (payload.images && payload.images.length > 0) {
@@ -296,6 +304,12 @@ export const postsService = {
     }
     if (payload.mentions && payload.mentions.length > 0) {
       postData.mentions = payload.mentions
+    }
+    if (payload.eventId) {
+      postData.eventId = payload.eventId
+    }
+    if (payload.eventTitle) {
+      postData.eventTitle = payload.eventTitle
     }
 
     const response = await apiClient.post('/posts', postData)

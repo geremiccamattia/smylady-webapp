@@ -41,6 +41,7 @@ import {
   Loader2,
   Smile,
   AlertTriangle,
+  Calendar,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -837,27 +838,15 @@ function PostCard({ post }: { post: Post }) {
         )}
 
         {/* Event Reference */}
-        {post.eventId && typeof post.eventId === 'object' && post.eventId._id && (
-          <Link
-            href={`/event/${generateEventSlug(post.eventId.name, post.eventId._id)}`}
-            className="block p-3 bg-muted rounded-lg mb-4 hover:bg-muted/80 transition-colors"
+        {post.eventTitle && post.eventId && (
+          <a
+            href={`/event/${generateEventSlug(post.eventTitle, typeof post.eventId === 'string' ? post.eventId : '')}`}
+            className="flex items-center gap-2 mt-2 px-3 py-2 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3">
-              {post.eventId.thumbnailUrl && (
-                <Image
-                  src={resolveImageUrl(post.eventId.thumbnailUrl) || ''}
-                  alt=""
-                  width={64}
-                  height={64}
-                  className="rounded-lg object-cover"
-                />
-              )}
-              <div>
-                <p className="font-medium">{post.eventId.name}</p>
-                <p className="text-sm text-muted-foreground">{t('events.viewEvent')}</p>
-              </div>
-            </div>
-          </Link>
+            <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
+            <p className="font-medium text-sm text-primary truncate">{post.eventTitle}</p>
+          </a>
         )}
 
         {/* Reactions/Likes Summary + Comment Count Row (like Facebook/Mobile) */}
@@ -1323,14 +1312,28 @@ function PostCard({ post }: { post: Post }) {
 }
 
 // Create Post Modal
-function CreatePostModal({ onClose }: { onClose: () => void }) {
+function CreatePostModal({
+  onClose,
+  initialEventId,
+  initialEventTitle,
+  initialImages,
+  initialText,
+}: {
+  onClose: () => void
+  initialEventId?: string
+  initialEventTitle?: string
+  initialImages?: File[]
+  initialText?: string
+}) {
   const { user } = useAuth()
   const { toast } = useToast()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(initialText ?? '')
   const [mentions, setMentions] = useState<string[]>([])
-  const [images, setImages] = useState<File[]>([])
+  const [images, setImages] = useState<File[]>(initialImages ?? [])
+  const [eventId] = useState(initialEventId)
+  const [eventTitle] = useState(initialEventTitle)
   const [previews, setPreviews] = useState<string[]>([])
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
@@ -1340,7 +1343,9 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
     mutationFn: () => postsService.create({
       content,
       images,
-      mentions: mentions.length > 0 ? mentions : undefined
+      mentions: mentions.length > 0 ? mentions : undefined,
+      eventId: eventId ?? undefined,
+      eventTitle: eventTitle ?? undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] })
@@ -1458,6 +1463,13 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
             rows={4}
             autoFocus
           />
+
+          {eventTitle && (
+            <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-muted rounded-lg">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">{eventTitle}</span>
+            </div>
+          )}
 
           {/* Image Previews */}
           {previews.length > 0 && (

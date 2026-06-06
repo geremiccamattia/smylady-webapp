@@ -754,6 +754,7 @@ export default function EventDetailClient({ id }: Props) {
                 <MemoryGallery
                   ticketId={userTicket.ticketId}
                   eventId={eventId!}
+                  eventTitle={event.name}
                   eventStartDate={event.eventDate}
                   canUpload={isOwner || event?.allowGuestMemories !== false}
                   isOrganizer={isOwner}

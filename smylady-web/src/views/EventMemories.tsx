@@ -531,6 +531,7 @@ export default function EventMemories() {
           memory={selectedMemory}
           ticketId={selectedMemory.ticketId || userTicket.ticketId}
           eventId={eventId}
+          eventTitle={event?.name}
           onClose={() => setSelectedMemory(null)}
           onDelete={isOwnMemory(selectedMemory) ? () => handleDelete(getMemoryId(selectedMemory)) : undefined}
           onReaction={(emoji) => handleReaction(getMemoryId(selectedMemory), emoji)}

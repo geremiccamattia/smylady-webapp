@@ -21,6 +21,7 @@ import {
 interface MemoryGalleryProps {
   ticketId: string
   eventId: string
+  eventTitle?: string
   eventStartDate: string
   canUpload?: boolean
   initialMemoryId?: string
@@ -34,6 +35,7 @@ type SortOption = 'newest' | 'popular'
 export default function MemoryGallery({
   ticketId,
   eventId,
+  eventTitle,
   eventStartDate,
   canUpload = true,
   initialMemoryId,
@@ -384,6 +386,7 @@ export default function MemoryGallery({
           memory={selectedMemory}
           ticketId={ticketId}
           eventId={eventId}
+          eventTitle={eventTitle}
           memoryIndex={selectedMemoryIndex}
           onClose={() => setSelectedMemory(null)}
           onDelete={isOwnMemory(selectedMemory) ? () => handleDelete(getMemoryId(selectedMemory)) : undefined}

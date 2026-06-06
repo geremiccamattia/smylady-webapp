@@ -17,7 +17,8 @@ import {
   Tag,
   Users,
   Share2,
-  Loader2
+  Loader2,
+  Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -54,6 +55,7 @@ interface MemoryViewerProps {
   memory: Memory
   ticketId: string
   eventId?: string
+  eventTitle?: string
   memoryIndex?: number
   onClose: () => void
   onDelete?: () => void
@@ -75,6 +77,7 @@ export default function MemoryViewer({
   memory,
   ticketId,
   eventId: _eventId,
+  eventTitle,
   onClose,
   onDelete,
   onReaction: _onReaction,
@@ -126,6 +129,10 @@ export default function MemoryViewer({
 
   // Reactions modal state
   const [showReactionsModal, setShowReactionsModal] = useState(false)
+
+  // Share to wall modal state
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareText, setShareText] = useState('')
 
   // Close on Escape key
   useEffect(() => {
@@ -295,25 +302,35 @@ export default function MemoryViewer({
 
   const [isSharing, setIsSharing] = useState(false)
 
-  const handleShareToWall = async () => {
+  const handleShareToWall = () => {
+    setShareText(memory.caption || '')
+    setShowShareModal(true)
+  }
+
+  const handleShareSubmit = async (text: string) => {
     if (!memoryUrl) return
     setIsSharing(true)
     try {
+      const taggedUserIds = photoTags
+        .map(tag => tag.userId?.toString())
+        .filter((id): id is string => !!id)
+
       const response = await apiClient.post('/posts', {
-        text: memory.caption || '',
+        text,
         media: [{ url: resolveImageUrl(memoryUrl), type: memoryType === 'video' ? 'video' : 'image' }],
         visibility: 'public',
+        eventId: _eventId ?? undefined,
+        eventTitle: eventTitle ?? undefined,
+        mentions: taggedUserIds.length > 0 ? taggedUserIds : undefined,
       })
+
       const postId = response.data.data?._id
+      setShowShareModal(false)
       toast({
         title: 'Auf der Wall geteilt!',
-        description: postId
-          ? 'Die Erinnerung wurde gepostet. Zum Löschen den Post auf der Wall entfernen.'
-          : 'Die Erinnerung wurde erfolgreich gepostet.',
+        description: 'Die Erinnerung wurde gepostet.',
         action: postId ? (
-          <a href="/feed" className="underline text-sm font-medium">
-            Zur Wall
-          </a>
+          <a href="/feed" className="underline text-sm font-medium">Zur Wall</a>
         ) : undefined,
       })
     } catch {
@@ -1144,6 +1161,77 @@ export default function MemoryViewer({
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share to Wall Modal */}
+      {showShareModal && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div
+            className="bg-background rounded-xl w-full max-w-md p-4 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Auf der Wall teilen</h3>
+              <button onClick={() => setShowShareModal(false)}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Vorschau */}
+            <div className="rounded-lg overflow-hidden h-40 bg-muted">
+              <img
+                src={resolveImageUrl(memoryUrl)}
+                className="w-full h-full object-cover"
+                alt=""
+              />
+            </div>
+
+            {/* Text Input */}
+            <textarea
+              value={shareText}
+              onChange={e => setShareText(e.target.value)}
+              placeholder="Schreib etwas dazu..."
+              className="w-full min-h-[80px] text-sm bg-muted/50 rounded-lg p-3 resize-none focus:outline-none"
+              maxLength={2000}
+            />
+
+            {/* Event Badge — nur wenn eventTitle vorhanden */}
+            {eventTitle && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-primary">{eventTitle}</span>
+              </div>
+            )}
+
+            {/* Getaggte User */}
+            {photoTags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {photoTags.map((tag, i) => {
+                  const displayName = tag.user?.name
+                    || (typeof tag.userId === 'object' ? tag.userId.name : null)
+                    || 'User'
+                  return (
+                    <span key={i} className="text-xs bg-muted px-2 py-1 rounded-full">
+                      @{displayName}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+
+            <Button
+              variant="gradient"
+              className="w-full"
+              onClick={() => handleShareSubmit(shareText)}
+              disabled={isSharing}
+            >
+              {isSharing ? 'Wird geteilt...' : 'Jetzt teilen'}
+            </Button>
           </div>
         </div>
       )}
