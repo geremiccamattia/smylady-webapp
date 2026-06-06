@@ -32,11 +32,12 @@ export interface Post {
   content?: string
   media?: Array<{ url: string; type: 'image' | 'video' }>
   images?: string[]
-  eventId?: {
+  eventId?: string | {
     _id: string
     name: string
     thumbnailUrl?: string
   }
+  eventTitle?: string
   likeCount: number
   commentCount: number
   hasLiked: boolean
