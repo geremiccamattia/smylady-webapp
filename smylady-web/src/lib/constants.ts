@@ -18,7 +18,6 @@ export const STORAGE_KEYS = {
 // Event Categories - MUST match backend EventCategory enum (src/types/common.ts)
 export const EVENT_CATEGORIES = [
   { value: 'Music', label: 'Musik' },
-  { value: 'Concert', label: 'Konzert' },
   { value: 'Nature', label: 'Outdoor' },
   { value: 'Theme', label: 'Themenparty' },
   { value: 'On the Roof', label: 'Rooftop' },

@@ -104,7 +104,6 @@ export default function CreateEvent() {
 
   const EVENT_CATEGORIES = [
     { value: 'Music', label: t('categories.music', { defaultValue: 'Musik' }) },
-    { value: 'Concert', label: t('categories.concert', { defaultValue: 'Konzert' }) },
     { value: 'Gastronomy', label: t('categories.gastronomy', { defaultValue: 'Gastronomie' }) },
     { value: 'Nature', label: t('categories.outdoor', { defaultValue: 'Outdoor' }) },
     { value: 'Business', label: t('categories.business', { defaultValue: 'Business' }) },
