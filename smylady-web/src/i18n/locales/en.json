@@ -1063,7 +1063,8 @@
     "terms": "Terms",
     "organizerInfo": "Information for organizers",
     "categories": "Categories",
-    "concertsVienna": "Concerts in Vienna"
+    "concertsVienna": "Concerts in Vienna",
+    "clubbingVienna": "Clubbing in Vienna"
   },
   "forgotPassword": {
     "error": "Could not reset password",

@@ -90,6 +90,11 @@ export default function Footer() {
                   {t('footer.concertsVienna', { defaultValue: 'Konzerte in Wien' })}
                 </Link>
               </li>
+              <li>
+                <Link href={localePath('/events/clubbing-wien')} className="hover:text-foreground">
+                  {t('footer.clubbingVienna', { defaultValue: 'Clubbing in Wien' })}
+                </Link>
+              </li>
             </ul>
           </div>
 

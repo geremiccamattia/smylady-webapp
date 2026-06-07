@@ -897,7 +897,10 @@
     "imprint": "Impressum",
     "privacy": "Datenschutz",
     "terms": "AGB",
-    "organizerInfo": "Infos für Veranstalter"
+    "organizerInfo": "Infos für Veranstalter",
+    "categories": "Kategorien",
+    "concertsVienna": "Konzerte in Wien",
+    "clubbingVienna": "Clubbing in Wien"
   },
   "forgotPassword": {
     "error": "Passwort konnte nicht zurückgesetzt werden",
