@@ -45,7 +45,7 @@ const faqsDe = [
   },
   {
     q: 'Kann ich Tickets für Clubbings in Wien direkt kaufen?',
-    a: 'Ja – über Share Your Party kaufst du Tickets für Club-Events in Wien direkt beim Veranstalter, ohne Umwege und ohne versteckte Gebühren. Dein Ticket kommt per E-Mail und ist direkt am Eingang gültig. ',
+    a: 'Ja – über Share Your Party kaufst du Tickets für Club-Events in Wien direkt beim Veranstalter, ohne Umwege und ohne versteckte Gebühren. Dein Ticket ist per QR Code in der App verfügbar und ist direkt am Eingang gültig. ',
   },
   {
     q: 'Wie kann ich mein Clubbing in Wien auf Share Your Party eintragen?',
@@ -72,7 +72,7 @@ const faqsEn = [
   },
   {
     q: 'Can I buy tickets for club events in Vienna directly?',
-    a: 'Yes—through Share Your Party, you can buy tickets for club events in Vienna directly from the organizer, with no middlemen and no hidden fees. Your ticket will be sent via email and is valid right at the entrance.',
+    a: 'Yes—through Share Your Party, you can buy tickets for club events in Vienna directly from the organizer, with no middlemen and no hidden fees. Your ticket will be available via QR Code in the app and is valid right at the entrance.',
   },
   {
     q: 'How can I list my club event in Vienna on Share Your Party?',
