@@ -1061,7 +1061,9 @@
     "imprint": "Imprint",
     "privacy": "Privacy",
     "terms": "Terms",
-    "organizerInfo": "Information for organizers"
+    "organizerInfo": "Information for organizers",
+    "categories": "Categories",
+    "concertsVienna": "Concerts in Vienna"
   },
   "forgotPassword": {
     "error": "Could not reset password",

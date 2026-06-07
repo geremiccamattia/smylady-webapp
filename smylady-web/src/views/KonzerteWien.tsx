@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { eventsService } from '@/services/events'
 import EventCard from '@/components/events/EventCard'
 import { injectJsonLd, removeJsonLd } from '@/lib/utils'
@@ -29,7 +30,64 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   )
 }
 
+const faqsDe = [
+  {
+    q: 'Wo finde ich aktuelle Konzerte in Wien?',
+    a: 'Auf Share Your Party findest du aktuelle Konzerte in Wien 2026 – von kleinen Club-Shows bis hin zu großen Arena-Konzerten. Alle Events werden direkt von Veranstaltern eingetragen und sind stets aktuell.',
+  },
+  {
+    q: 'Wie kaufe ich Tickets für Konzerte in Wien?',
+    a: 'Über Share Your Party kannst du Tickets für Konzerte in Wien direkt beim Veranstalter kaufen – ohne Umwege und ohne versteckte Gebühren. Nach der Buchung erhältst du dein Ticket per E-Mail und kannst es direkt am Eingang vorzeigen. Dabei können in Share Your Party auch Events angelegt werden, die an der Abendkasse zahlbar sind.',
+  },
+  {
+    q: 'Gibt es kostenlose Konzerte in Wien?',
+    a: 'Ja – Wien bietet regelmäßig kostenlose Open-Air-Konzerte und Gratis-Events, etwa am Donaukanal, im Stadtpark oder bei Stadtfesten. Auf Share Your Party kannst du gezielt nach kostenlosen Konzerten in Wien filtern.',
+  },
+  {
+    q: 'Welche sind die bekanntesten Konzert-Locations in Wien?',
+    a: 'Zu den bekanntesten Konzert-Venues in Wien zählen die Wiener Stadthalle, die Arena Wien, der Gasometer, das WUK sowie Clubs wie das U4 und der Volksgarten. Share Your Party-Partner wie das U4 und der Volksgarten sind direkt über die Plattform buchbar.',
+  },
+  {
+    q: 'Wie kann ich mein Konzert in Wien auf Share Your Party eintragen?',
+    a: 'Als Veranstalter kannst du dein Konzert kostenlos auf Share Your Party eintragen und direkt Tickets verkaufen. Die Registrierung dauert wenige Minuten – danach erreichst du tausende Musikfans in Wien.',
+  },
+  {
+    q: 'Warum sollte ich mein Konzert auf Share Your Party anbieten?',
+    a: 'Share Your Party ist mehr als eine klassische Eventplattform. Neben dem kostenlosen Event-Eintrag und transparenten Ticketing-Konditionen bietet Share Your Party einzigartige Community-Features: Besucher können Events mit Vibes bewerten, Erinnerungen im Memories-Feature festhalten und ihre Konzerterlebnisse teilen. So entsteht rund um dein Konzert echtes Engagement – vor, während und nach dem Event. Für mehr Sichtbarkeit stehen zusätzlich Spotlight-Platzierungen direkt in der App und auf der Website zur Verfügung.',
+  },
+]
+
+const faqsEn = [
+  {
+    q: 'Where can I find current concerts in Vienna?',
+    a: 'On Share Your Party you can find current concerts in Vienna 2026 – from small club shows to large arena concerts. All events are entered directly by organizers and are always up to date.',
+  },
+  {
+    q: 'How do I buy tickets for concerts in Vienna?',
+    a: 'Through Share Your Party you can buy tickets for concerts in Vienna directly from the organizer – without detours and without hidden fees.',
+  },
+  {
+    q: 'Are there free concerts in Vienna?',
+    a: 'Yes – Vienna regularly offers free open-air concerts and free events, such as at the Donaukanal, Stadtpark or city festivals.',
+  },
+  {
+    q: 'Which are the most famous concert locations in Vienna?',
+    a: 'The most famous concert venues in Vienna include the Wiener Stadthalle, Arena Wien, Gasometer, WUK and clubs like U4 and Volksgarten.',
+  },
+  {
+    q: 'How can I list my concert in Vienna on Share Your Party?',
+    a: 'As an organizer you can list your concert on Share Your Party for free and sell tickets directly. Registration takes just a few minutes.',
+  },
+  {
+    q: 'Why should I offer my concert on Share Your Party?',
+    a: 'Share Your Party offers free event listing, transparent ticketing, and unique community features: Vibes ratings, Memories feature and concert experience sharing.',
+  },
+]
+
 export default function KonzerteWien() {
+  const { i18n } = useTranslation()
+  const isEnglish = i18n.language.startsWith('en')
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events', 'konzerte-wien'],
     queryFn: () => eventsService.getPublicEvents({
@@ -47,9 +105,9 @@ export default function KonzerteWien() {
       metaDesc.setAttribute('name', 'description')
       document.head.appendChild(metaDesc)
     }
-    metaDesc.setAttribute(
-      'content',
-      'Alle Konzerte in Wien 2026 auf einen Blick – Tickets direkt kaufen, Events entdecken und Erlebnisse teilen ► Jetzt auf Share Your Party!',
+    metaDesc.setAttribute('content', isEnglish
+      ? 'All concerts in Vienna 2026 at a glance – buy tickets directly, discover events and share experiences ► Now on Share Your Party!'
+      : 'Alle Konzerte in Wien 2026 auf einen Blick – Tickets direkt kaufen, Events entdecken und Erlebnisse teilen ► Jetzt auf Share Your Party!',
     )
 
     let canonical = document.querySelector('link[rel="canonical"]')
@@ -58,12 +116,15 @@ export default function KonzerteWien() {
       canonical.setAttribute('rel', 'canonical')
       document.head.appendChild(canonical)
     }
-    canonical.setAttribute('href', 'https://shareyourparty.de/events/konzerte-wien')
+    canonical.setAttribute('href', isEnglish
+      ? 'https://shareyourparty.de/en/events/konzerte-wien'
+      : 'https://shareyourparty.de/events/konzerte-wien',
+    )
 
     return () => {
       document.querySelector('link[rel="canonical"]')?.remove()
     }
-  }, [])
+  }, [isEnglish])
 
   useEffect(() => {
     if (!events.length) return
@@ -118,22 +179,32 @@ export default function KonzerteWien() {
           <MapPin className="h-4 w-4" />
           <span className="text-sm">Österreich · Wien</span>
         </div>
-        <h1 className="text-3xl font-bold mb-4">Konzerte in Wien</h1>
+        <h1 className="text-3xl font-bold mb-4">
+          {isEnglish ? 'Concerts in Vienna' : 'Konzerte in Wien'}
+        </h1>
         <p className="text-muted-foreground text-lg max-w-2xl">
-Wien ist eine großartige Stadt für Konzerte. Jeden Abend finden in den verschiedenen Locations Konzerte statt. Ob Rock und Pop in der Stadthalle, alternative Acts in der Arena Wien oder Live-Musik im Gasometer - auf Share Your Party findest du alle Konzerte in Wien 2026.        </p>
+          {isEnglish
+            ? 'Vienna is a great city for concerts. Every evening, concerts take place at various venues. Whether rock and pop at the Stadthalle, alternative acts at Arena Wien or live music at the Gasometer – find all concerts in Vienna 2026 on Share Your Party.'
+            : 'Wien ist eine großartige Stadt für Konzerte. Jeden Abend finden in den verschiedenen Locations Konzerte statt. Ob Rock und Pop in der Stadthalle, alternative Acts in der Arena Wien oder Live-Musik im Gasometer - auf Share Your Party findest du alle Konzerte in Wien 2026.'}
+        </p>
       </div>
 
       {/* Redaktioneller Textblock */}
       <div className="bg-muted/40 rounded-xl p-6 mb-10 prose prose-sm max-w-none">
-        <h2 className="text-xl font-semibold mb-3">Die Wiener Konzertszene</h2>
+        <h2 className="text-xl font-semibold mb-3">
+          {isEnglish ? 'The Vienna Concert Scene' : 'Die Wiener Konzertszene'}
+        </h2>
         <p className="text-muted-foreground mb-3">
-Die Wiener Konzertszene ist sehr vielfältig. Von Klassik im Musikverein bis zu Underground-Konzerten im Keller - Wien bietet für jeden Musikgeschmack das passende Live-Erlebnis. Die Stadt hat viele bekannte Konzertsäle und eine lebendige alternative Szene, die in kleinen Clubs und Kulturzentren pulsiert. Share Your Party bringt Konzertveranstalter und Musikfans in Wien direkt zusammen: Tickets kaufen, Events teilen, Abende planen.        </p>
+          {isEnglish
+            ? 'The Vienna concert scene is very diverse. From classical music at the Musikverein to underground concerts – Vienna offers the perfect live experience for every taste. Share Your Party connects concert organizers and music fans in Vienna directly: buy tickets, share events, plan evenings.'
+            : 'Die Wiener Konzertszene ist sehr vielfältig. Von Klassik im Musikverein bis zu Underground-Konzerten im Keller - Wien bietet für jeden Musikgeschmack das passende Live-Erlebnis. Die Stadt hat viele bekannte Konzertsäle und eine lebendige alternative Szene, die in kleinen Clubs und Kulturzentren pulsiert. Share Your Party bringt Konzertveranstalter und Musikfans in Wien direkt zusammen: Tickets kaufen, Events teilen, Abende planen.'}
+        </p>
       </div>
 
       {/* Event Grid */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-4">
-          Aktuelle Konzerte in Wien{' '}
+          {isEnglish ? 'Current Concerts in Vienna' : 'Aktuelle Konzerte in Wien'}{' '}
           {!isLoading && (
             <span className="text-muted-foreground font-normal text-base">
               ({events.length})
@@ -149,7 +220,7 @@ Die Wiener Konzertszene ist sehr vielfältig. Von Klassik im Musikverein bis zu 
           </div>
         ) : events.length === 0 ? (
           <p className="text-muted-foreground">
-            Aktuell keine Konzerte in Wien gefunden.
+            {isEnglish ? 'No concerts in Vienna found.' : 'Aktuell keine Konzerte in Wien gefunden.'}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -162,63 +233,58 @@ Die Wiener Konzertszene ist sehr vielfältig. Von Klassik im Musikverein bis zu 
 
       {/* SEO Footer Text */}
       <div className="border-t pt-8 mt-8">
-        <h2 className="text-xl font-semibold mb-4">Konzert-Locations in Wien</h2>
-        <div className="text-muted-foreground text-md">Es gibt viele tolle Locations in Wien, in denen Konzerte stattfinden. Einige der bekanntesten sind:</div>
+        <h2 className="text-xl font-semibold mb-4">
+          {isEnglish ? 'Concert Locations in Vienna' : 'Konzert-Locations in Wien'}
+        </h2>
+        <div className="text-muted-foreground text-md">
+          {isEnglish
+            ? 'There are many great venues in Vienna where concerts take place. Some of the most famous are:'
+            : 'Es gibt viele tolle Locations in Wien, in denen Konzerte stattfinden. Einige der bekanntesten sind:'}
+        </div>
         <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">U4</h3>
         <div className="text-muted-foreground text-md">
-          Der legendäre Konzert- und Clubklub im 12. Bezirk ist seit den 1970ern eine feste Institution der Wiener Musikszene. Das U4 steht für ein eklektisches Programm – von Rock und Punk über Electronic bis zu Indie-Nights. Die intime Atmosphäre und die ikonische Bühne machen jeden Konzertabend besonders. <br></br><br></br><a href="/user/69ef650917c15ccc7b72ffa8/events"><button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gradient-bg text-white hover:opacity-90 h-9 rounded-md px-3">Events des U4 entdecken!</button><br></br></a>
+          {isEnglish
+            ? 'The legendary concert and club venue in the 12th district has been a fixture of the Vienna music scene since the 1970s. U4 stands for an eclectic program – from rock and punk to electronic and indie nights. The intimate atmosphere and iconic stage make every concert evening special.'
+            : 'Der legendäre Konzert- und Clubklub im 12. Bezirk ist seit den 1970ern eine feste Institution der Wiener Musikszene. Das U4 steht für ein eklektisches Programm – von Rock und Punk über Electronic bis zu Indie-Nights. Die intime Atmosphäre und die ikonische Bühne machen jeden Konzertabend besonders.'} <br></br><br></br><a href="/user/69ef650917c15ccc7b72ffa8/events"><button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gradient-bg text-white hover:opacity-90 h-9 rounded-md px-3">{isEnglish ? 'Discover U4 Events!' : 'Events des U4 entdecken!'}</button><br></br></a>
           <br></br>
         </div>
         <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">Volksgarten</h3>
         <div className="text-muted-foreground text-md">
-          Direkt am Ring, zwischen Burgtheater und Heldenplatz, vereint der Volksgarten Club-Kultur mit Live-Events in einer der stimmungsvollsten Locations Wiens. Bekannt für elektronische Musik, aber auch für besondere Konzertabende und Clubkonzerte. Im Sommer verwandelt sich der Außenbereich in einen der schönsten Open-Air-Spots der Stadt. <br></br><br></br><a href="/user/69f273ec345cc2e363456388/events"><button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gradient-bg text-white hover:opacity-90 h-9 rounded-md px-3">Events des Volksgarten entdecken!</button><br></br></a>
-          <br></br>        
+          {isEnglish
+            ? 'Right on the Ring, between the Burgtheater and Heldenplatz, Volksgarten combines club culture with live events in one of Vienna\'s most atmospheric locations. Known for electronic music, but also for special concert evenings and club concerts. In summer, the outdoor area transforms into one of the most beautiful open-air spots in the city.'
+            : 'Direkt am Ring, zwischen Burgtheater und Heldenplatz, vereint der Volksgarten Club-Kultur mit Live-Events in einer der stimmungsvollsten Locations Wiens. Bekannt für elektronische Musik, aber auch für besondere Konzertabende und Clubkonzerte. Im Sommer verwandelt sich der Außenbereich in einen der schönsten Open-Air-Spots der Stadt.'} <br></br><br></br><a href="/user/69f273ec345cc2e363456388/events"><button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gradient-bg text-white hover:opacity-90 h-9 rounded-md px-3">{isEnglish ? 'Discover Volksgarten Events!' : 'Events des Volksgarten entdecken!'}</button><br></br></a>
+          <br></br>
         </div>
         <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">Arena Wien</h3>
         <div className="text-muted-foreground text-md">
-         Österreichs größtes alternatives Kulturzentrum im 3. Bezirk bietet auf mehreren Bühnen Platz für ein breites Konzertspektrum – von Independent und Alternative über Metal bis zu Elektronik. Die Arena ist bekannt für ihre besondere Atmosphäre: ein ehemaliges Schlachthof-Areal, das seit den 70ern zur Kulturstätte wurde.<br></br>
+          {isEnglish
+            ? "Austria's largest alternative cultural centre in the 3rd district offers space on multiple stages for a broad concert spectrum – from independent and alternative to metal and electronic. Arena is known for its unique atmosphere: a former slaughterhouse complex that became a cultural venue in the 1970s."
+            : 'Österreichs größtes alternatives Kulturzentrum im 3. Bezirk bietet auf mehreren Bühnen Platz für ein breites Konzertspektrum – von Independent und Alternative über Metal bis zu Elektronik. Die Arena ist bekannt für ihre besondere Atmosphäre: ein ehemaliges Schlachthof-Areal, das seit den 70ern zur Kulturstätte wurde.'}<br></br>
           <br></br>
         </div>
-         <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">Gasometer</h3>
+        <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">Gasometer</h3>
         <div className="text-muted-foreground text-md">
-          Die Raiffeisen Halle im Gasometer im 11. Bezirk fasst mehrere tausend Besucher und zieht regelmäßig nationale und internationale Acts an. Ideal für mittelgroße Konzerte mit professioneller Bühnen- und Soundtechnik in einem architektonisch markanten Industriebau.<br></br>
-          <br></br>  
+          {isEnglish
+            ? 'The Raiffeisen Halle in the Gasometer in the 11th district holds several thousand visitors and regularly attracts national and international acts. Ideal for medium-sized concerts with professional stage and sound technology in an architecturally striking industrial building.'
+            : 'Die Raiffeisen Halle im Gasometer im 11. Bezirk fasst mehrere tausend Besucher und zieht regelmäßig nationale und internationale Acts an. Ideal für mittelgroße Konzerte mit professioneller Bühnen- und Soundtechnik in einem architektonisch markanten Industriebau.'}<br></br>
+          <br></br>
         </div>
         <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">Wiener Stadthalle</h3>
         <div className="text-muted-foreground text-md">
-          Mit einer Kapazität von bis zu 16.000 Personen ist die Wiener Stadthalle im 15. Bezirk die größte Konzerthalle Österreichs. Hier gastieren die größten internationalen Acts – von Pop-Superstars bis zu Rock-Legenden.
+          {isEnglish
+            ? 'With a capacity of up to 16,000 people, the Wiener Stadthalle in the 15th district is the largest concert hall in Austria. The biggest international acts perform here – from pop superstars to rock legends.'
+            : 'Mit einer Kapazität von bis zu 16.000 Personen ist die Wiener Stadthalle im 15. Bezirk die größte Konzerthalle Österreichs. Hier gastieren die größten internationalen Acts – von Pop-Superstars bis zu Rock-Legenden.'}
         </div>
       </div>
       {/* FAQ */}
       <div className="pt-8 mt-8">
-        <h2 className="text-xl font-semibold mb-6">Häufige Fragen zu Konzerten in Wien</h2>
+        <h2 className="text-xl font-semibold mb-6">
+          {isEnglish ? 'Frequently Asked Questions about Concerts in Vienna' : 'Häufige Fragen zu Konzerten in Wien'}
+        </h2>
         <div className="space-y-3">
-          {[
-            {
-              q: 'Wo finde ich aktuelle Konzerte in Wien?',
-              a: 'Auf Share Your Party findest du aktuelle Konzerte in Wien 2026 – von kleinen Club-Shows bis hin zu großen Arena-Konzerten. Alle Events werden direkt von Veranstaltern eingetragen und sind stets aktuell.',
-            },
-            {
-              q: 'Wie kaufe ich Tickets für Konzerte in Wien?',
-              a: 'Über Share Your Party kannst du Tickets für Konzerte in Wien direkt beim Veranstalter kaufen – ohne Umwege und ohne versteckte Gebühren. Nach der Buchung erhältst du dein Ticket per E-Mail und kannst es direkt am Eingang vorzeigen. Dabei können in Share Your Party auch Events angelegt werden, die an der Abendkasse zahlbar sind.',
-            },
-            {
-              q: 'Gibt es kostenlose Konzerte in Wien?',
-              a: 'Ja – Wien bietet regelmäßig kostenlose Open-Air-Konzerte und Gratis-Events, etwa am Donaukanal, im Stadtpark oder bei Stadtfesten. Auf Share Your Party kannst du gezielt nach kostenlosen Konzerten in Wien filtern.',
-            },
-            {
-              q: 'Welche sind die bekanntesten Konzert-Locations in Wien?',
-              a: 'Zu den bekanntesten Konzert-Venues in Wien zählen die Wiener Stadthalle, die Arena Wien, der Gasometer, das WUK sowie Clubs wie das U4 und der Volksgarten. Share Your Party-Partner wie das U4 und der Volksgarten sind direkt über die Plattform buchbar.',
-            },
-            {
-              q: 'Wie kann ich mein Konzert in Wien auf Share Your Party eintragen?',
-              a: 'Als Veranstalter kannst du dein Konzert kostenlos auf Share Your Party eintragen und direkt Tickets verkaufen. Die Registrierung dauert wenige Minuten – danach erreichst du tausende Musikfans in Wien.',
-            },
-            {
-              q: 'Warum sollte ich mein Konzert auf Share Your Party anbieten?',
-              a: 'Share Your Party ist mehr als eine klassische Eventplattform. Neben dem kostenlosen Event-Eintrag und transparenten Ticketing-Konditionen bietet Share Your Party einzigartige Community-Features: Besucher können Events mit Vibes bewerten, Erinnerungen im Memories-Feature festhalten und ihre Konzerterlebnisse teilen. So entsteht rund um dein Konzert echtes Engagement – vor, während und nach dem Event. Für mehr Sichtbarkeit stehen zusätzlich Spotlight-Platzierungen direkt in der App und auf der Website zur Verfügung.',
-            },
-          ].map((faq, i) => <FaqItem key={i} question={faq.q} answer={faq.a} />)}
+          {(isEnglish ? faqsEn : faqsDe).map((faq, i) => (
+            <FaqItem key={i} question={faq.q} answer={faq.a} />
+          ))}
         </div>
       </div>
     </div>

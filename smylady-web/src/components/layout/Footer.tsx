@@ -83,9 +83,13 @@ export default function Footer() {
 
           {/* Kategorien */}
           <div>
-            <h4 className="font-semibold mb-4">Kategorien</h4>
+            <h4 className="font-semibold mb-4">{t('footer.categories', { defaultValue: 'Kategorien' })}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/events/konzerte-wien" className="hover:text-foreground">Konzerte in Wien</Link></li>
+              <li>
+                <Link href={localePath('/events/konzerte-wien')} className="hover:text-foreground">
+                  {t('footer.concertsVienna', { defaultValue: 'Konzerte in Wien' })}
+                </Link>
+              </li>
             </ul>
           </div>
 
