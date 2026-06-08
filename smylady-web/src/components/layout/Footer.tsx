@@ -78,6 +78,7 @@ export default function Footer() {
               <li><Link href={localePath('/veranstalter')} className="hover:text-foreground">{t('footer.organizerInfo')}</Link></li>
               <li><Link href={localePath('/events/wien')} className="hover:text-foreground">Events in Wien</Link></li>
               <li><Link href={localePath('/grounding')} className="hover:text-foreground">Über Share Your Party</Link></li>
+              <li><a href="https://blog.shareyourparty.de" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Blog</a></li>
             </ul>
           </div>
 
