@@ -112,6 +112,7 @@ export default function CreateEvent() {
     { value: 'Sports', label: t('categories.sports', { defaultValue: 'Sport' }) },
     { value: 'Clubbing', label: t('categories.clubbing', { defaultValue: 'Clubbing' }) },
     { value: 'Other', label: t('categories.other', { defaultValue: 'Sonstiges' }) },
+    { value: 'Workshop', label: t('categories.workshop', { defaultValue: 'Workshop' }) },
   ]
 
   const PARTY_TYPES = [

@@ -26,6 +26,7 @@ export const EVENT_CATEGORIES = [
   { value: 'Business', label: 'Business' },
   { value: 'Sports', label: 'Sport' },
   { value: 'Other', label: 'Sonstiges' },
+  { value: 'Workshop', label: 'Workshop' },
 ] as const
 
 // Music Types
