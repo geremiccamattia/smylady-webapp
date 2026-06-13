@@ -98,12 +98,12 @@ export default function Footer() {
               </li>
               <li>
                 <Link href={localePath('/events/business-events-wien')} className="hover:text-foreground">
-                  {t('footer.businessEventsVienna', { defaultValue: 'Business Events Wien' })}
+                  {t('footer.businessEventsVienna', { defaultValue: 'Business Events in Wien' })}
                 </Link>
               </li>
               <li>
                 <Link href={localePath('/events/workshops-wien')} className="hover:text-foreground">
-                  {t('footer.workshopsVienna', { defaultValue: 'Workshops Wien' })}
+                  {t('footer.workshopsVienna', { defaultValue: 'Workshops in Wien' })}
                 </Link>
               </li>
             </ul>
