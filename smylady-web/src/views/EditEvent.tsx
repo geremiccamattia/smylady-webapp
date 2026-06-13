@@ -17,6 +17,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { Upload, X, Calendar, MapPin, Ticket, Music, Info, ArrowLeft, Loader2 } from 'lucide-react'
+import RecurringEventModal from '@/components/events/RecurringEventModal'
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>()
@@ -57,6 +58,14 @@ export default function EditEvent() {
       setTicketTiers([{ name: '', description: '', price: '', quantity: '' }])
     }
   }
+
+  const [showRecurringModal, setShowRecurringModal] = useState(false)
+  const [seriesConfig, setSeriesConfig] = useState<{
+    recurrence: string
+    occurrences: number
+    customDates?: string[]
+    customLabel?: string
+  } | null>(null)
 
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
   const [payAtDoor, setPayAtDoor] = useState(false)
@@ -240,6 +249,20 @@ export default function EditEvent() {
     return parseFloat(formData.price) > 0
   }
 
+  const isDST = (date: Date): boolean => {
+    const month = date.getMonth() + 1
+    if (month > 3 && month < 10) return true
+    if (month < 3 || month > 10) return false
+    const lastSunday = (m: number) => {
+      const d = new Date(date.getFullYear(), m, 0)
+      d.setDate(d.getDate() - d.getDay())
+      return d.getDate()
+    }
+    if (month === 3) return date.getDate() >= lastSunday(3)
+    if (month === 10) return date.getDate() < lastSunday(10)
+    return false
+  }
+
   const buildEventFormData = () => {
     const eventFormData = new FormData()
 
@@ -254,7 +277,9 @@ export default function EditEvent() {
 
     if (eventDate && eventStartTime) {
       const startDateTime = new Date(`${eventDate}T${eventStartTime}:00`)
-      eventFormData.append('eventStartTime', startDateTime.toISOString())
+      const offsetMinutes = isDST(startDateTime) ? 120 : 60
+      const utcStart = new Date(startDateTime.getTime() - offsetMinutes * 60 * 1000)
+      eventFormData.append('eventStartTime', utcStart.toISOString())
     }
 
     if (eventDate && eventEndTime) {
@@ -327,6 +352,27 @@ export default function EditEvent() {
     setIsLoading(true)
     try {
       const eventFormData = buildEventFormData()
+
+      if (seriesConfig) {
+        eventFormData.append('series', JSON.stringify(seriesConfig))
+
+        for (const imageUrl of existingImages) {
+          try {
+            const res = await fetch(imageUrl)
+            const blob = await res.blob()
+            const fileName = imageUrl.split('/').pop() || 'image.jpg'
+            const file = new File([blob], fileName, { type: blob.type })
+            eventFormData.append('files', file)
+          } catch {
+            // Bild konnte nicht geladen werden — überspringen
+          }
+        }
+
+        await eventsService.createEventSeries(eventFormData)
+        toast({ title: 'Serie erstellt!' })
+        router.push('/my-events')
+        return
+      }
 
       if ((event as any)?.eventSeriesId) {
         if (!seriesScope) {
@@ -807,6 +853,48 @@ export default function EditEvent() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Recurring — nur für einmalige Events */}
+        {!(event as any)?.eventSeriesId && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                {t('createEvent.recurringEvent', { defaultValue: 'Wiederkehrendes Event' })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {seriesConfig
+                    ? seriesConfig.recurrence === 'weekly'
+                      ? `Wöchentlich · ${seriesConfig.occurrences}x`
+                      : seriesConfig.recurrence === 'monthly'
+                      ? `Monatlich · ${seriesConfig.occurrences}x`
+                      : seriesConfig.customLabel
+                    : 'Einmalig'}
+                </p>
+                <div className="flex gap-2">
+                  {seriesConfig && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setSeriesConfig(null)}>
+                      Entfernen
+                    </Button>
+                  )}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowRecurringModal(true)}>
+                    {seriesConfig ? 'Ändern' : 'Einrichten'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <RecurringEventModal
+          open={showRecurringModal}
+          onClose={() => setShowRecurringModal(false)}
+          onConfirm={(s) => setSeriesConfig({ ...s, occurrences: s.occurrences ?? 1 })}
+          baseDate={formData.eventDate}
+        />
 
         {/* Submit */}
         <div className="space-y-4">

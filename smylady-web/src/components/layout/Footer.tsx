@@ -96,6 +96,16 @@ export default function Footer() {
                   {t('footer.clubbingVienna', { defaultValue: 'Clubbing in Wien' })}
                 </Link>
               </li>
+              <li>
+                <Link href={localePath('/events/business-events-wien')} className="hover:text-foreground">
+                  {t('footer.businessEventsVienna', { defaultValue: 'Business Events Wien' })}
+                </Link>
+              </li>
+              <li>
+                <Link href={localePath('/events/workshops-wien')} className="hover:text-foreground">
+                  {t('footer.workshopsVienna', { defaultValue: 'Workshops Wien' })}
+                </Link>
+              </li>
             </ul>
           </div>
 

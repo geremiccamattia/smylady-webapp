@@ -1064,7 +1064,9 @@
     "organizerInfo": "Information for organizers",
     "categories": "Categories",
     "concertsVienna": "Concerts in Vienna",
-    "clubbingVienna": "Clubbing in Vienna"
+    "clubbingVienna": "Clubbing in Vienna",
+    "businessEventsVienna": "Business Events Vienna",
+    "workshopsVienna": "Workshops Vienna"
   },
   "forgotPassword": {
     "error": "Could not reset password",
