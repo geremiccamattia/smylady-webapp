@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
@@ -25,10 +25,8 @@ export default function Register() {
   const [step, setStep] = useState<'register' | 'verify'>('register')
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [otp, setOtp] = useState('')
-  const { register } = useAuth()
+  const { register, login } = useAuth()
   const router = useRouter()
-  const location = usePathname()
-  const from = '/explore'
   const { toast } = useToast()
   const { t } = useTranslation()
 
@@ -80,16 +78,25 @@ export default function Register() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      await apiClient.post('/auth/verify-otp', {
+      const response = await apiClient.post('/auth/verify-otp', {
         email: registeredEmail,
         otp,
         type: 'sign-up',
       })
+      const data = response.data?.data
+      if (data?.token) {
+        await login({ token: data.token, user: {
+          id: data.userId,
+          email: data.email,
+          role: data.role,
+          name: '',
+          username: '',
+        } as any })
+      }
       toast({
         title: t('auth.emailConfirmed', { defaultValue: 'Email confirmed!' }),
-        description: t('auth.canLogin', { defaultValue: 'You can now sign in.' }),
       })
-      router.replace(from)
+      router.replace('/interests')
     } catch (error: any) {
       toast({
         variant: 'destructive',
