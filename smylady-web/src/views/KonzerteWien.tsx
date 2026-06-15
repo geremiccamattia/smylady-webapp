@@ -182,7 +182,7 @@ export default function KonzerteWien() {
         <h1 className="text-3xl font-bold mb-4">
           {isEnglish ? 'Concerts in Vienna' : 'Konzerte in Wien'}
         </h1>
-        <p className="text-muted-foreground text-lg max-w-2xl">
+        <p className="text-muted-foreground text-lg">
           {isEnglish
             ? 'Vienna is a great city for concerts. Every evening, concerts take place at various venues. Whether rock and pop at the Stadthalle, alternative acts at Arena Wien or live music at the Gasometer – find all concerts in Vienna 2026 on Share Your Party.'
             : 'Wien ist eine großartige Stadt für Konzerte. Jeden Abend finden in den verschiedenen Locations Konzerte statt. Ob Rock und Pop in der Stadthalle, alternative Acts in der Arena Wien oder Live-Musik im Gasometer - auf Share Your Party findest du alle Konzerte in Wien 2026.'}

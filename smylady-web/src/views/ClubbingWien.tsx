@@ -182,7 +182,7 @@ export default function KonzerteWien() {
         <h1 className="text-3xl font-bold mb-4">
           {isEnglish ? 'Clubbings in Vienna' : 'Clubbings in Wien'}
         </h1>
-        <p className="text-muted-foreground text-lg max-w-2xl">
+        <p className="text-muted-foreground text-lg">
           {isEnglish
             ? 'Vienna is one of Europe’s most exciting clubbing destinations. Whether it’s techno nights along the Danube, hip-hop parties in the city’s districts, or legendary club nights at famous venues—Vienna’s nightlife has something for everyone.  You can see all club events and parties in Vienna in 2026 at a glance on Share Your Party—and buy your tickets directly from the organizer.'
             : 'Wien ist eine der aufregendsten Clubbing-Metropolen Europas. Ob es sich um Techno-Nächte an der Donau, Hip-Hop-Partys in den Bezirken oder legendäre Clubbings in berühmten Locations handelt – das Nachtleben in Wien hat für jeden etwas zu bieten.  Alle Club-Events und Partys in Wien 2026 siehst du auf Share Your Party auf einen Blick – und kannst deine Tickets direkt beim Veranstalter kaufen.'}

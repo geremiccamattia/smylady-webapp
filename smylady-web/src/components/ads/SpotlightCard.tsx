@@ -1,8 +1,11 @@
 'use client'
 
+import { useEffect } from 'react'
 import { ExternalLink, MapPin } from 'lucide-react'
 import { resolveImageUrl } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import axios from 'axios'
+import { CONFIG } from '@/lib/constants'
 
 interface SpotlightAd {
   _id: string
@@ -23,6 +26,10 @@ interface SpotlightCardProps {
 export function SpotlightCard({ ad }: SpotlightCardProps) {
   const { t, i18n } = useTranslation()
   const isEnglish = i18n.language.startsWith('en')
+
+  useEffect(() => {
+    axios.post(`${CONFIG.API_URL}/spotlight/${ad._id}/impression`).catch(() => {})
+  }, [ad._id])
 
   const headline = (isEnglish && ad.headlineEn) ? ad.headlineEn : ad.headline
   const description = (isEnglish && ad.descriptionEn) ? ad.descriptionEn : ad.description
