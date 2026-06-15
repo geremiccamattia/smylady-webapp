@@ -277,7 +277,13 @@ export default function CreateEvent() {
         maxWidthOrHeight: 1920,
         useWebWorker: true,
       })
-      fileToUse = new File([compressed], croppedFile.name, { type: compressed.type })
+      const safeName = croppedFile.name && croppedFile.name !== ''
+        ? croppedFile.name.replace(/\.(heic|heif)$/i, '.jpg')
+        : `image_${Date.now()}.jpg`
+      const safeType = compressed.type === 'image/heic' || compressed.type === 'image/heif'
+        ? 'image/jpeg'
+        : compressed.type
+      fileToUse = new File([compressed], safeName, { type: safeType })
     } catch {
       console.warn('Image compression failed, using original')
     }
@@ -444,7 +450,7 @@ export default function CreateEvent() {
       const eventFormData = new FormData()
 
       // Build event date/time like mobile app
-      const eventDate = new Date(formData.eventDate)
+      const eventDate = new Date(formData.eventDate + 'T00:00:00')
       const [startHours, startMinutes] = formData.eventStartTime.split(':').map(Number)
       const eventStartTime = new Date(eventDate)
       eventStartTime.setHours(startHours, startMinutes, 0, 0)
@@ -1209,7 +1215,7 @@ export default function CreateEvent() {
                   </span>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,image/heic,image/heif"
                     className="hidden"
                     onChange={handleImageUpload}
                   />
