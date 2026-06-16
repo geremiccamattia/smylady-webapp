@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -61,12 +61,15 @@ const FALLBACK_LOCATION: LocationResult = {
 }
 
 function ExploreContent() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
+  const [submittedSearch, setSubmittedSearch] = useState(searchParams.get('search') || '')
+  const [searchTrigger, setSearchTrigger] = useState(0)
+  const searchRef = useRef(submittedSearch)
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '')
   const [selectedMusicType, setSelectedMusicType] = useState(searchParams.get('musicType') || '')
   const [showFilters, setShowFilters] = useState(false)
@@ -81,6 +84,16 @@ function ExploreContent() {
   const [locationModalOpen, setLocationModalOpen] = useState(false)
   const [radius, setRadius] = useState('25')
   const [locationLoaded, setLocationLoaded] = useState(false)
+
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || ''
+    if (urlSearch !== submittedSearch) {
+      searchRef.current = urlSearch
+      setSearchQuery(urlSearch)
+      setSubmittedSearch(urlSearch)
+      setSearchTrigger(prev => prev + 1)
+    }
+  }, [searchParams])
 
   // Load saved location on mount - prioritize: saved > live geolocation > auto-detect > fallback
   useEffect(() => {
@@ -127,23 +140,25 @@ function ExploreContent() {
   }, [])
 
   // Fetch platform events with location
-  const { data: events, isLoading, refetch } = useQuery({
+  const { data: events, isLoading } = useQuery({
     queryKey: [
       'events',
       'explore',
       isAuthenticated,
-      searchQuery,
+      searchTrigger,
+      submittedSearch,
       selectedCategory,
       selectedMusicType,
       selectedLocation?.lat,
       selectedLocation?.lng,
       radius,
     ],
-    queryFn: () =>
-      isAuthenticated
+    queryFn: () => {
+      console.log('QUERY FIRED with search:', searchRef.current)
+      return isAuthenticated
         ? eventsService.getEvents(
             {
-              search: searchQuery,
+              search: searchRef.current,
               category: selectedCategory,
               musicType: selectedMusicType,
               latitude: selectedLocation?.lat?.toString() || '',
@@ -154,7 +169,7 @@ function ExploreContent() {
           )
         : eventsService.getPublicEvents(
             {
-              search: searchQuery,
+              search: searchRef.current,
               category: selectedCategory,
               musicType: selectedMusicType,
               latitude: selectedLocation?.lat?.toString() || '',
@@ -162,15 +177,18 @@ function ExploreContent() {
               radius: radius,
             },
             true
-          ),
+          )
+    },
     enabled: locationLoaded,
+    staleTime: 0,
+    gcTime: 0,
   })
 
   // Fetch Ticketmaster events if enabled
   const { data: ticketmasterEvents, isLoading: loadingTicketmaster } = useQuery({
     queryKey: [
       'ticketmaster-events',
-      searchQuery,
+      submittedSearch,
       selectedCategory,
       showTicketmaster,
       selectedLocation?.lat,
@@ -180,7 +198,7 @@ function ExploreContent() {
     queryFn: () =>
       ticketmasterService.getEvents(
         {
-          search: searchQuery,
+          search: submittedSearch,
           category: selectedCategory,
           latitude: selectedLocation?.lat?.toString() || '',
           longitude: selectedLocation?.lng?.toString() || '',
@@ -189,7 +207,7 @@ function ExploreContent() {
         true,
         false // Don't auto-detect location, we pass it explicitly
       ),
-    enabled: showTicketmaster && locationLoaded && !!selectedLocation,
+    enabled: showTicketmaster && locationLoaded && !!selectedLocation && !submittedSearch,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   })
@@ -239,11 +257,12 @@ function ExploreContent() {
 
   useEffect(() => {
     const params = new URLSearchParams()
-    if (searchQuery) params.set('search', searchQuery)
+    if (submittedSearch) params.set('search', submittedSearch)
     if (selectedCategory) params.set('category', selectedCategory)
     if (selectedMusicType) params.set('musicType', selectedMusicType)
-    router.push(pathname + '?' + params.toString())
-  }, [searchQuery, selectedCategory, selectedMusicType])
+    const newUrl = pathname + (params.toString() ? '?' + params.toString() : '')
+    window.history.replaceState(null, '', newUrl)
+  }, [submittedSearch, selectedCategory, selectedMusicType])
 
   useEffect(() => {
     return () => {
@@ -252,17 +271,22 @@ function ExploreContent() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('HANDLE SEARCH - searchQuery:', searchQuery)
+    console.log('HANDLE SEARCH - searchRef:', searchRef.current)
     window.dataLayer = window.dataLayer || []
     window.dataLayer.push({
       event: 'explore_search',
       has_category: !!selectedCategory,
       has_music_type: !!selectedMusicType,
     })
-    refetch()
+    searchRef.current = searchQuery
+    setSubmittedSearch(searchQuery)
+    setSearchTrigger(prev => prev + 1)
   }
 
   const clearFilters = () => {
     setSearchQuery('')
+    setSubmittedSearch('')
     setSelectedCategory('')
     setSelectedMusicType('')
   }
@@ -481,6 +505,29 @@ function ExploreContent() {
               </span>
             )}
           </p>
+          {/* Veranstalter-Hinweis bei Namenssuche */}
+          {submittedSearch && events && events.length > 0 && (() => {
+            const organizerIds = [...new Set(events.map((e: any) => e.userId))]
+            if (organizerIds.length === 1) {
+              const organizerId = organizerIds[0]
+              return (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm">
+                  <span className="text-muted-foreground">
+                    {i18n.language.startsWith('en')
+                      ? 'More events from this organizer may be available outside your search area.'
+                      : 'Weitere Events dieses Veranstalters können außerhalb deines Suchbereichs verfügbar sein.'}
+                  </span>
+                  <a
+                    href={`/user/${organizerId}/events`}
+                    className="text-primary hover:underline font-medium whitespace-nowrap"
+                  >
+                    {i18n.language.startsWith('en') ? 'View all events →' : 'Alle Events ansehen →'}
+                  </a>
+                </div>
+              )
+            }
+            return null
+          })()}
           <div className="space-y-6">
             {/* Gesponserte Events */}
             {boostedEvents.length > 0 && (
