@@ -49,6 +49,12 @@ export default function Profile() {
   const [profileImageViewerOpen, setProfileImageViewerOpen] = useState(false)
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
+  const [emailEditing, setEmailEditing] = useState(false)
+  const [emailStep, setEmailStep] = useState<'input' | 'otp'>('input')
+  const [newEmail, setNewEmail] = useState('')
+  const [emailPassword, setEmailPassword] = useState('')
+  const [emailOtp, setEmailOtp] = useState('')
+  const [emailLoading, setEmailLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: user?.name || '',
     bio: user?.bio || '',
@@ -171,6 +177,59 @@ export default function Profile() {
         <p>Bitte melde dich an.</p>
       </div>
     )
+  }
+
+  const handleRequestEmailChange = async () => {
+    if (!newEmail || !emailPassword) return
+    setEmailLoading(true)
+    try {
+      await userService.requestEmailChange(newEmail, emailPassword)
+      setEmailStep('otp')
+      toast({
+        title: t('profile.emailOtpSent', {
+          defaultValue: 'Bestätigungscode an neue E-Mail gesendet',
+        }),
+      })
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Fehler' }),
+        description:
+          err?.response?.data?.message ||
+          'Fehler beim Anfordern der E-Mail-Änderung',
+      })
+    } finally {
+      setEmailLoading(false)
+    }
+  }
+
+  const handleVerifyEmailChange = async () => {
+    if (!emailOtp) return
+    setEmailLoading(true)
+    try {
+      await userService.verifyEmailChange(newEmail, emailOtp)
+      const freshUser = await authService.getCurrentUser()
+      updateUser(freshUser)
+      toast({
+        title: t('profile.emailChanged', {
+          defaultValue: 'E-Mail erfolgreich geändert',
+        }),
+      })
+      setEmailEditing(false)
+      setEmailStep('input')
+      setNewEmail('')
+      setEmailPassword('')
+      setEmailOtp('')
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Fehler' }),
+        description:
+          err?.response?.data?.message || 'Ungültiger oder abgelaufener Code',
+      })
+    } finally {
+      setEmailLoading(false)
+    }
   }
 
   return (
@@ -558,12 +617,108 @@ export default function Profile() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-            <Mail className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">E-Mail</p>
-              <p className="font-medium">{user.email}</p>
+          <div className="p-3 bg-muted rounded-lg">
+            <div className="flex items-center gap-3">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">E-Mail</p>
+                <p className="font-medium">{user.email}</p>
+              </div>
+              {!emailEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEmailEditing(true)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              )}
             </div>
+
+            {emailEditing && (
+              <div className="mt-3 space-y-3">
+                {emailStep === 'input' ? (
+                  <>
+                    <Input
+                      type="email"
+                      placeholder={t('profile.newEmail', {
+                        defaultValue: 'Neue E-Mail-Adresse',
+                      })}
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                    />
+                    <Input
+                      type="password"
+                      placeholder={t('profile.currentPassword', {
+                        defaultValue: 'Aktuelles Passwort',
+                      })}
+                      value={emailPassword}
+                      onChange={(e) => setEmailPassword(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleRequestEmailChange}
+                        disabled={emailLoading}
+                      >
+                        {t('profile.sendCode', { defaultValue: 'Code senden' })}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEmailEditing(false)
+                          setEmailStep('input')
+                          setNewEmail('')
+                          setEmailPassword('')
+                        }}
+                      >
+                        {t('common.cancel', { defaultValue: 'Abbrechen' })}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {t('profile.enterOtp', {
+                        defaultValue: 'Gib den Code ein, den wir an',
+                      })}{' '}
+                      {newEmail}{' '}
+                      {t('profile.enterOtpSuffix', {
+                        defaultValue: 'gesendet haben.',
+                      })}
+                    </p>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={emailOtp}
+                      onChange={(e) => setEmailOtp(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleVerifyEmailChange}
+                        disabled={emailLoading}
+                      >
+                        {t('profile.confirm', { defaultValue: 'Bestätigen' })}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEmailStep('input')
+                          setEmailOtp('')
+                        }}
+                      >
+                        {t('common.back', { defaultValue: 'Zurück' })}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
             <Settings className="h-5 w-5 text-muted-foreground" />

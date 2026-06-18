@@ -319,6 +319,38 @@ export const userService = {
     }
   },
 
+  async requestEmailChange(
+    newEmail: string,
+    currentPassword: string,
+  ): Promise<{ message: string }> {
+    try {
+      const response = await apiClient.post('/users/request-email-change', {
+        newEmail,
+        currentPassword,
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error requesting email change:', error)
+      throw error
+    }
+  },
+
+  async verifyEmailChange(
+    newEmail: string,
+    otp: string,
+  ): Promise<User | null> {
+    try {
+      const response = await apiClient.post('/users/verify-email-change', {
+        newEmail,
+        otp,
+      })
+      return response.data.data || null
+    } catch (error) {
+      console.error('Error verifying email change:', error)
+      throw error
+    }
+  },
+
   // Get friends events (events that friends are attending) - like mobile app
   async getFriendsEvents(page = 1, limit = 20): Promise<{
     events: Array<{
