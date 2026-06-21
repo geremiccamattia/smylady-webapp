@@ -33,52 +33,49 @@ export interface AccountLinkResponse {
   expiresAt: string
 }
 
+export interface PurchaseAnswer {
+  questionId: string
+  label: string
+  type: 'text' | 'select' | 'checkbox' | 'multiselect'
+  value: string | string[]
+}
+
 export const stripeService = {
   /**
    * Create a payment intent for ticket purchase
    */
-  async createPaymentIntent(eventId: string, tierId?: string): Promise<PaymentIntent> {
+  async createPaymentIntent(eventId: string, tierId?: string, answers?: PurchaseAnswer[]): Promise<PaymentIntent> {
     const response = await apiClient.post('/stripe/create-payment-intent', {
       eventId,
       ...(tierId ? { tierId } : {}),
+      ...(answers && answers.length > 0 ? { answers } : {}),
     })
-
-    // Handle error responses from backend (e.g., 403 Forbidden for private events)
     if (response.data?.status >= 400) {
       const error = new Error(response.data?.message || 'Failed to create payment') as Error & {
         response?: { status: number; data: unknown }
       }
-      error.response = {
-        status: response.data.status,
-        data: response.data,
-      }
+      error.response = { status: response.data.status, data: response.data }
       throw error
     }
-
     return response.data.data
   },
 
   /**
    * Purchase a free event ticket
    */
-  async buyFreeEvent(eventId: string, tierId?: string) {
+  async buyFreeEvent(eventId: string, tierId?: string, answers?: PurchaseAnswer[]) {
     const response = await apiClient.post('/stripe/purchase-free-ticket', {
       eventId,
       ...(tierId ? { tierId } : {}),
+      ...(answers && answers.length > 0 ? { answers } : {}),
     })
-
-    // Handle error responses from backend (e.g., 403 Forbidden for private events)
     if (response.data?.status >= 400) {
       const error = new Error(response.data?.message || 'Failed to claim ticket') as Error & {
         response?: { status: number; data: unknown }
       }
-      error.response = {
-        status: response.data.status,
-        data: response.data,
-      }
+      error.response = { status: response.data.status, data: response.data }
       throw error
     }
-
     return response.data.data?.ticket
   },
 

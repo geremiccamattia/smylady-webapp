@@ -150,4 +150,12 @@ export const ticketsService = {
     const response = await apiClient.post(`/tickets/${ticketId}/cancel`, { reason })
     return response.data
   },
+
+  async submitTicketAnswers(
+    ticketId: string,
+    answers: Array<{ questionId: string; label: string; type: string; value: string | string[] }>,
+  ): Promise<any> {
+    const response = await apiClient.patch(`/tickets/${ticketId}/answers`, { answers })
+    return response.data
+  },
 }

@@ -18,6 +18,8 @@ import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
 import { PaymentWrapper, usePaymentModal } from '@/components/payment'
 import { useCreatePaymentIntent, useBuyFreeEvent } from '@/hooks/useStripe'
+import { PurchaseQuestionsDialog } from '@/components/PurchaseQuestionsDialog'
+import type { PurchaseAnswer } from '@/services/stripe'
 import { MemoryGallery } from '@/components/memories'
 import BoostModal from '@/components/events/BoostModal'
 import { ticketsService } from '@/services/tickets'
@@ -86,6 +88,8 @@ export default function EventDetail() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showBoostModal, setShowBoostModal] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
+  const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false)
+  const [pendingAnswers, setPendingAnswers] = useState<PurchaseAnswer[] | undefined>(undefined)
   const queryClient = useQueryClient()
 
   const { data: event, isLoading, error } = useQuery({
@@ -390,24 +394,14 @@ export default function EventDetail() {
     !isPastEvent &&
     (!eventStartTime || eventStartTime > new Date())
 
-  const handlePurchaseTicket = () => requireAuth(async () => {
+  const executePurchase = (answers?: PurchaseAnswer[]) => {
     if (!id || !event) return
-
-    // If event has tiers, require a selection
-    if (event.ticketTiers && event.ticketTiers?.length > 0 && !selectedTierId) {
-      toast({
-        variant: 'destructive',
-        title: t('common.error'),
-        description: t('events.selectTicketType', { defaultValue: 'Bitte wähle einen Tickettyp aus.' }),
-      })
-      return
-    }
 
     // Abendkasse: reserve like a free ticket, payment happens at the door
     if (isDoorPayment) {
       setIsPurchasing(true)
       buyFreeEvent(
-        { eventId: eventId!, tierId: selectedTierId || undefined },
+        { eventId: eventId!, tierId: selectedTierId || undefined, answers },
         {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
@@ -437,7 +431,7 @@ export default function EventDetail() {
     const isFree = !numericPrice || numericPrice <= 0
 
     if (isFree) {
-      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined }, {
+      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined, answers }, {
         onSuccess: (ticket) => {
           toast({ title: t('common.success'), description: t('tickets.freeCreated') })
           router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
@@ -452,7 +446,7 @@ export default function EventDetail() {
         onSettled: () => setIsPurchasing(false),
       })
     } else {
-      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined }, {
+      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers }, {
         onSuccess: (data) => {
           const paymentIntentId = data.paymentIntentId || data.clientSecret?.split('_secret_')[0] || ''
           openPayment({
@@ -473,6 +467,30 @@ export default function EventDetail() {
         },
       })
     }
+  }
+
+  const handlePurchaseTicket = () => requireAuth(async () => {
+    if (!id || !event) return
+
+    if (event.ticketTiers && event.ticketTiers?.length > 0 && !selectedTierId) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: t('events.selectTicketType', { defaultValue: 'Bitte wähle einen Tickettyp aus.' }),
+      })
+      return
+    }
+
+    console.log('=== PURCHASE QUESTIONS CHECK ===')
+    console.log('event.questions:', event?.questions)
+    console.log('event keys:', Object.keys(event || {}))
+    const requiredQuestions = (event.questions || []).filter((q: any) => q.required)
+    if (requiredQuestions.length > 0) {
+      setQuestionsDialogOpen(true)
+      return
+    }
+
+    executePurchase()
   })
 
   const handleFavoriteClick = () => requireAuth(async () => {
@@ -1518,6 +1536,18 @@ export default function EventDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PurchaseQuestionsDialog
+        open={questionsDialogOpen}
+        onOpenChange={setQuestionsDialogOpen}
+        questions={(event?.questions as any) || []}
+        submitting={isPurchasing}
+        onSubmit={(answers) => {
+          setPendingAnswers(answers)
+          setQuestionsDialogOpen(false)
+          executePurchase(answers)
+        }}
+      />
     </div>
   )
 }

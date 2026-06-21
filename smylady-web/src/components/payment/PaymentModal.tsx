@@ -24,6 +24,7 @@ interface PaymentModalProps {
   paymentIntentId: string
   eventName: string
   amount: number
+  eventId?: string | null
 }
 
 export function PaymentModal({
@@ -32,6 +33,7 @@ export function PaymentModal({
   paymentIntentId,
   eventName,
   amount,
+  eventId,
 }: PaymentModalProps) {
   const { t } = useTranslation()
   const stripe = useStripe()
@@ -84,7 +86,7 @@ export function PaymentModal({
             })
             setTimeout(() => {
               onClose()
-              router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}`)
+              router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}${eventId ? `&eventId=${eventId}` : ''}`)
             }, 1500)
           },
           onError: () => {
@@ -96,7 +98,7 @@ export function PaymentModal({
             })
             setTimeout(() => {
               onClose()
-              router.push('/payment-complete')
+              router.push(`/payment-complete${eventId ? `?eventId=${eventId}` : ''}`)
             }, 1500)
           },
         })

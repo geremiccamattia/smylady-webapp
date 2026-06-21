@@ -11,6 +11,7 @@ interface PaymentWrapperProps {
   paymentIntentId: string | null
   eventName: string
   amount: number
+  eventId?: string | null
 }
 
 export function PaymentWrapper({
@@ -20,6 +21,7 @@ export function PaymentWrapper({
   paymentIntentId,
   eventName,
   amount,
+  eventId,
 }: PaymentWrapperProps) {
   if (!clientSecret) {
     return null
@@ -37,6 +39,7 @@ export function PaymentWrapper({
         paymentIntentId={resolvedPaymentIntentId}
         eventName={eventName}
         amount={amount}
+        eventId={eventId}
       />
     </StripeElementsWrapper>
   )
@@ -50,11 +53,13 @@ export function usePaymentModal() {
     paymentIntentId: string | null
     eventName: string
     amount: number
+    eventId?: string | null
   }>({
     clientSecret: null,
     paymentIntentId: null,
     eventName: '',
     amount: 0,
+    eventId: null,
   })
 
   const openPayment = useCallback(
@@ -63,6 +68,7 @@ export function usePaymentModal() {
       paymentIntentId: string
       eventName: string
       amount: number
+      eventId?: string | null
     }) => {
       setPaymentData(data)
       setIsOpen(true)
@@ -79,6 +85,7 @@ export function usePaymentModal() {
         paymentIntentId: null,
         eventName: '',
         amount: 0,
+        eventId: null,
       })
     }, 300)
   }, [])

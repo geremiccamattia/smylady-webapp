@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, Users, Download, User, BarChart3 } from 'lucide-react'
+import { ChevronLeft, Users, Download, User } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -18,23 +18,23 @@ import { resolveImageUrl } from '@/lib/utils'
 
 export default function ManageGuest() {
   const { t } = useTranslation()
-  const { eventId } = useParams<{ eventId: string }>()
+  const { id } = useParams<{ id: string }>()
 
   // Fetch guest list
   const {
     data: guestList = [],
     isLoading,
   } = useQuery({
-    queryKey: ['guestList', eventId],
-    queryFn: () => manageGuestService.getGuestList(eventId!),
-    enabled: !!eventId,
+    queryKey: ['guestList', id],
+    queryFn: () => manageGuestService.getGuestList(id!),
+    enabled: !!id,
   })
 
   // Fetch event details
   const { data: event } = useQuery({
-    queryKey: ['event', eventId],
-    queryFn: () => eventsService.getEventById(eventId!),
-    enabled: !!eventId,
+    queryKey: ['event', id],
+    queryFn: () => eventsService.getEventById(id!),
+    enabled: !!id,
   })
 
   const hasGuests = guestList.length > 0
@@ -44,13 +44,13 @@ export default function ManageGuest() {
   const remainingPercent = 100 - bookedPercent
 
   const handleExportCSV = async () => {
-    if (!eventId) return
+    if (!id) return
     try {
-      const blob = await manageGuestService.exportGuestListCSV(eventId)
+      const blob = await manageGuestService.exportGuestListCSV(id)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `guest-list-${eventId}.csv`
+      a.download = `guest-list-${id}.csv`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -64,7 +64,7 @@ export default function ManageGuest() {
     return (
       <div className="container max-w-3xl mx-auto py-6 px-4">
         <div className="flex items-center gap-4 mb-6">
-          <Link href={eventId ? `/event/${eventId}` : '/my-events'}>
+          <Link href={id ? `/event/${id}` : '/my-events'}>
             <Button variant="ghost" size="icon">
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -87,7 +87,7 @@ export default function ManageGuest() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link href={eventId ? `/event/${eventId}` : '/my-events'}>
+          <Link href={id ? `/event/${id}` : '/my-events'}>
             <Button variant="ghost" size="icon">
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -98,13 +98,7 @@ export default function ManageGuest() {
         </div>
         {hasGuests && (
           <div className="flex gap-2">
-            <Link href={`/scan/${eventId}/statistics`}>
-              <Button variant="outline" size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                {t('manageGuests.statistics', { defaultValue: 'Statistik' })}
-              </Button>
-            </Link>
-            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+<Button variant="outline" size="sm" onClick={handleExportCSV}>
               <Download className="h-4 w-4 mr-2" />
               CSV
             </Button>
@@ -178,7 +172,7 @@ export default function ManageGuest() {
           {guestList.map((guest) => (
             <div
               key={guest._id}
-              className="bg-card border rounded-lg p-4 flex items-center gap-4"
+              className="bg-card border rounded-lg p-4 flex flex-wrap items-center gap-4"
             >
               <Avatar className="h-12 w-12">
                 <AvatarImage src={resolveImageUrl(guest.userId?.profileImage)} />
@@ -210,6 +204,27 @@ export default function ManageGuest() {
                     : t('manageGuests.active', { defaultValue: 'Aktiv' })}
                 </span>
               </div>
+              {guest.answers && guest.answers.length > 0 && (
+                <details className="w-full mt-3 pt-3 border-t overflow-hidden">
+                  <summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground">
+                    {guest.answers.length} {guest.answers.length === 1 ? 'Antwort' : 'Antworten'}
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    {guest.answers.map((a: any, idx: number) => (
+                      <div key={idx} className="text-sm overflow-hidden">
+                        <p className="text-muted-foreground text-xs truncate">
+                          {a.label}
+                        </p>
+                        <p className="font-medium break-words line-clamp-2">
+                          {a.type === 'checkbox'
+                            ? (a.value === 'true' ? '✓ Ja' : '✗ Nein')
+                            : Array.isArray(a.value) ? a.value.join(', ') : String(a.value)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           ))}
         </div>

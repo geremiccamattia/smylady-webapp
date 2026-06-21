@@ -96,6 +96,13 @@ export interface Event {
     quantity?: number
     soldCount: number
   }[]
+  questions?: {
+    questionId: string
+    label: string
+    type: 'text' | 'select' | 'checkbox' | 'multiselect'
+    required: boolean
+    options?: string[]
+  }[]
   allowGuestMemories?: boolean
   paymentType?: 'online' | 'door'
   status: 'draft' | 'published' | 'cancelled' | 'completed' | 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'
@@ -168,6 +175,12 @@ export interface Ticket {
   tierId?: string
   createdAt: string
   updatedAt?: string
+  answers?: {
+    questionId: string
+    label: string
+    type: 'text' | 'select' | 'checkbox' | 'multiselect'
+    value: string | string[]
+  }[]
 }
 
 // Chat Types

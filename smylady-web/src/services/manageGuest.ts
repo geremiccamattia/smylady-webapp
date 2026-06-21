@@ -10,10 +10,17 @@ export interface GuestListItem {
     name: string
     username?: string
     profileImage?: string
+    email?: string
   }
   status: 'active' | 'cancelled' | 'used'
   purchasedAt: string
   usedAt?: string
+  answers?: Array<{
+    questionId: string
+    label: string
+    type: string
+    value: string | string[]
+  }>
 }
 
 export const manageGuestService = {

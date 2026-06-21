@@ -28,6 +28,8 @@ import {
   Loader2,
   Check,
   Repeat,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 import {
@@ -101,6 +103,32 @@ export default function CreateEvent() {
   const [ticketTiers, setTicketTiers] = useState([
     { name: '', description: '', price: '', quantity: '' },
   ])
+
+  const [questions, setQuestions] = useState<Array<{
+    questionId: string
+    label: string
+    type: 'text' | 'select' | 'checkbox' | 'multiselect'
+    required: boolean
+    options: string[]
+  }>>([])
+
+  const addQuestion = () => {
+    setQuestions(prev => [
+      ...prev,
+      { questionId: `q_${Date.now()}_${prev.length}`, label: '', type: 'text', required: true, options: [] },
+    ])
+  }
+
+  const removeQuestion = (idx: number) => {
+    setQuestions(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const updateQuestion = (
+    idx: number,
+    patch: Partial<{ label: string; type: 'text' | 'select' | 'checkbox' | 'multiselect'; required: boolean; options: string[] }>,
+  ) => {
+    setQuestions(prev => prev.map((q, i) => (i === idx ? { ...q, ...patch } : q)))
+  }
 
   const EVENT_CATEGORIES = [
     { value: 'Music', label: t('categories.music', { defaultValue: 'Musik' }) },
@@ -501,6 +529,21 @@ export default function CreateEvent() {
       } else {
         eventFormData.append('price', String(parseFloat(formData.price) || 0))
         eventFormData.append('totalTickets', String(parseInt(formData.totalTickets) || 0))
+      }
+
+      const validQuestions = questions
+        .filter(q => q.label.trim() !== '')
+        .map(q => ({
+          questionId: q.questionId,
+          label: q.label.trim(),
+          type: q.type,
+          required: q.required,
+          options: (q.type === 'select' || q.type === 'multiselect')
+            ? q.options.map(o => o.trim()).filter(o => o !== '')
+            : [],
+        }))
+      if (validQuestions.length > 0) {
+        eventFormData.append('questions', JSON.stringify(validQuestions))
       }
 
       // Add visibility settings (matching mobile app)
@@ -1196,6 +1239,98 @@ export default function CreateEvent() {
                   )}
                 </>
               )}
+
+              {/* Questions for ticket buyers */}
+              <div className="space-y-4 pt-4 border-t mt-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">
+                      {t('createEvent.questionsTitle', { defaultValue: 'Fragen an Teilnehmer' })}
+                    </Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('createEvent.addQuestion', { defaultValue: 'Frage hinzufügen' })}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t('createEvent.questionsHint', { defaultValue: 'Pflichtfragen werden vor dem Ticketkauf gestellt. Optionale Fragen werden nach dem Kauf gestellt (höhere Abschlussrate, aber nicht jeder antwortet).' })}
+                  </p>
+                </div>
+
+                {questions.map((q, idx) => (
+                  <div key={q.questionId} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <Input
+                        placeholder={t('createEvent.questionLabel', { defaultValue: 'Deine Frage' })}
+                        value={q.label}
+                        onChange={(e) => updateQuestion(idx, { label: e.target.value })}
+                        className="flex-1"
+                      />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeQuestion(idx)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 items-center">
+                      <select
+                        value={q.type}
+                        onChange={(e) => updateQuestion(idx, { type: e.target.value as 'text' | 'select' | 'checkbox' | 'multiselect' })}
+                        className="border rounded-md px-3 py-2 text-sm bg-background"
+                      >
+                        <option value="text">{t('createEvent.qTypeText', { defaultValue: 'Textantwort' })}</option>
+                        <option value="select">{t('createEvent.qTypeSelect', { defaultValue: 'Einzelauswahl' })}</option>
+                        <option value="multiselect">{t('createEvent.qTypeMulti', { defaultValue: 'Mehrfachauswahl' })}</option>
+                        <option value="checkbox">{t('createEvent.qTypeCheckbox', { defaultValue: 'Ja/Nein (Checkbox)' })}</option>
+                      </select>
+
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={q.required}
+                          onChange={(e) => updateQuestion(idx, { required: e.target.checked })}
+                        />
+                        {t('createEvent.qRequired', { defaultValue: 'Pflichtfrage (vor dem Kauf)' })}
+                      </label>
+                    </div>
+
+                    {(q.type === 'select' || q.type === 'multiselect') && (
+                      <div className="space-y-2">
+                        <Label className="text-sm">{t('createEvent.qOptions', { defaultValue: 'Antwortoptionen' })}</Label>
+                        {q.options.map((opt, optIdx) => (
+                          <div key={optIdx} className="flex items-center gap-2">
+                            <Input
+                              placeholder={`${t('createEvent.qOption', { defaultValue: 'Option' })} ${optIdx + 1}`}
+                              value={opt}
+                              onChange={(e) => {
+                                const next = [...q.options]
+                                next[optIdx] = e.target.value
+                                updateQuestion(idx, { options: next })
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => updateQuestion(idx, { options: q.options.filter((_, i) => i !== optIdx) })}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateQuestion(idx, { options: [...q.options, ''] })}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          {t('createEvent.qAddOption', { defaultValue: 'Option hinzufügen' })}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

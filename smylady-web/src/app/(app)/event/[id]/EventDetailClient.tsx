@@ -17,6 +17,8 @@ import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
 import { PaymentWrapper, usePaymentModal } from '@/components/payment'
 import { useCreatePaymentIntent, useBuyFreeEvent } from '@/hooks/useStripe'
+import { PurchaseQuestionsDialog } from '@/components/PurchaseQuestionsDialog'
+import type { PurchaseAnswer } from '@/services/stripe'
 import { MemoryGallery } from '@/components/memories'
 import BoostModal from '@/components/events/BoostModal'
 import { ticketsService } from '@/services/tickets'
@@ -87,6 +89,8 @@ export default function EventDetailClient({ id }: Props) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showBoostModal, setShowBoostModal] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
+  const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false)
+  const [pendingAnswers, setPendingAnswers] = useState<PurchaseAnswer[] | undefined>(undefined)
   const queryClient = useQueryClient()
 
   const { data: event, isLoading, error } = useQuery({
@@ -268,24 +272,14 @@ export default function EventDetailClient({ id }: Props) {
     !isPastEvent &&
     (!eventStartTime || eventStartTime > new Date())
 
-  const handlePurchaseTicket = () => requireAuth(async () => {
+  const executePurchase = (answers?: PurchaseAnswer[]) => {
     if (!id || !event) return
-
-    // If event has tiers, require a selection
-    if (event.ticketTiers && event.ticketTiers?.length > 0 && !selectedTierId) {
-      toast({
-        variant: 'destructive',
-        title: t('common.error'),
-        description: t('events.selectTicketType', { defaultValue: 'Bitte wähle einen Tickettyp aus.' }),
-      })
-      return
-    }
 
     // Abendkasse: reserve like a free ticket, payment happens at the door
     if (isDoorPayment) {
       setIsPurchasing(true)
       buyFreeEvent(
-        { eventId: eventId!, tierId: selectedTierId || undefined },
+        { eventId: eventId!, tierId: selectedTierId || undefined, answers },
         {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
@@ -293,7 +287,7 @@ export default function EventDetailClient({ id }: Props) {
               title: t('paymentComplete.headingDoor', { defaultValue: 'Du bist dabei!' }),
               description: t('paymentComplete.descriptionDoor', { defaultValue: 'Wir erinnern dich rechtzeitig per Benachrichtigung an das Event.' }),
             })
-            router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&type=door`)
+            router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&eventId=${eventId}&type=door`)
           },
           onError: (error: any) => {
             toast({
@@ -318,10 +312,10 @@ export default function EventDetailClient({ id }: Props) {
     const isFree = !numericPrice || numericPrice <= 0
 
     if (isFree) {
-      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined }, {
+      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined, answers }, {
         onSuccess: (ticket) => {
           toast({ title: t('common.success'), description: t('tickets.freeCreated') })
-          router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&type=free`)
+          router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&eventId=${eventId}&type=free`)
         },
         onError: (error: any) => {
           toast({
@@ -333,7 +327,7 @@ export default function EventDetailClient({ id }: Props) {
         onSettled: () => setIsPurchasing(false),
       })
     } else {
-      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined }, {
+      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers }, {
         onSuccess: (data) => {
           const paymentIntentId = data.paymentIntentId || data.clientSecret?.split('_secret_')[0] || ''
           openPayment({
@@ -341,6 +335,7 @@ export default function EventDetailClient({ id }: Props) {
             paymentIntentId,
             eventName: event.name || 'Event',
             amount: data.amount || numericPrice || 0,
+            eventId: eventId,
           })
           setIsPurchasing(false)
         },
@@ -354,6 +349,27 @@ export default function EventDetailClient({ id }: Props) {
         },
       })
     }
+  }
+
+  const handlePurchaseTicket = () => requireAuth(async () => {
+    if (!id || !event) return
+
+    if (event.ticketTiers && event.ticketTiers?.length > 0 && !selectedTierId) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: t('events.selectTicketType', { defaultValue: 'Bitte wähle einen Tickettyp aus.' }),
+      })
+      return
+    }
+
+    const requiredQuestions = (event.questions || []).filter((q: any) => q.required)
+    if (requiredQuestions.length > 0) {
+      setQuestionsDialogOpen(true)
+      return
+    }
+
+    executePurchase()
   })
 
   const handleFavoriteClick = () => requireAuth(async () => {
@@ -1158,6 +1174,12 @@ export default function EventDetailClient({ id }: Props) {
                         {t('tickets.scanStatistics')}
                       </Link>
                     </Button>
+                    <Button variant="outline" className="w-full gap-2" asChild>
+                      <Link href={`/event/${id}/guests`}>
+                        <Users className="h-4 w-4" />
+                        {t('manageGuests.title', { defaultValue: 'Gästeliste' })}
+                      </Link>
+                    </Button>
                     {new Date(event.eventStartTime || event.eventDate) > new Date() && (
                       <Button
                         variant="outline"
@@ -1348,6 +1370,7 @@ export default function EventDetailClient({ id }: Props) {
         paymentIntentId={paymentData.paymentIntentId}
         eventName={paymentData.eventName}
         amount={paymentData.amount}
+        eventId={paymentData.eventId}
       />
 
       {/* Delete Event Confirmation Dialog */}
@@ -1400,6 +1423,18 @@ export default function EventDetailClient({ id }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PurchaseQuestionsDialog
+        open={questionsDialogOpen}
+        onOpenChange={setQuestionsDialogOpen}
+        questions={(event?.questions as any) || []}
+        submitting={isPurchasing}
+        onSubmit={(answers) => {
+          setPendingAnswers(answers)
+          setQuestionsDialogOpen(false)
+          executePurchase(answers)
+        }}
+      />
     </div>
   )
 }

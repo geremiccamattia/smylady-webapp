@@ -1,15 +1,15 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { stripeService } from '@/services/stripe'
+import { stripeService, PurchaseAnswer } from '@/services/stripe'
 
 /**
  * Hook to create a payment intent for event ticket purchase
  */
 export const useCreatePaymentIntent = () => {
   return useMutation({
-    mutationFn: ({ eventId, tierId }: { eventId: string; tierId?: string }) =>
-      stripeService.createPaymentIntent(eventId, tierId),
+    mutationFn: ({ eventId, tierId, answers }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[] }) =>
+      stripeService.createPaymentIntent(eventId, tierId, answers),
   })
 }
 
@@ -42,8 +42,8 @@ export const useBuyFreeEvent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ eventId, tierId }: { eventId: string; tierId?: string }) =>
-      stripeService.buyFreeEvent(eventId, tierId),
+    mutationFn: ({ eventId, tierId, answers }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[] }) =>
+      stripeService.buyFreeEvent(eventId, tierId, answers),
     onSuccess: () => {
       // Invalidate all ticket-related queries to reflect new purchase
       queryClient.invalidateQueries({
