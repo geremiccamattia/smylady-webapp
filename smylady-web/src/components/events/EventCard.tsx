@@ -6,7 +6,7 @@ import { Heart, MapPin, Calendar, Clock, Users, ExternalLink, Zap } from 'lucide
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Event } from '@/types'
-import { formatDate, formatPrice, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
+import { formatDate, formatPrice, cn, resolveImageUrl, generateEventSlug, shortenAddress } from '@/lib/utils'
 import { useState } from 'react'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { favoritesService } from '@/services/favorites'
@@ -217,7 +217,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false }:
         {/* Location */}
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4 flex-shrink-0" />
-          <span className="line-clamp-1">{event.locationName || event.venue?.name}</span>
+          <span className="line-clamp-1">{shortenAddress(event.locationName || event.venue?.name || '')}</span>
         </div>
 
         {/* Tickets - hide for external/Ticketmaster events */}

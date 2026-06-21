@@ -202,3 +202,32 @@ export function removeJsonLd(id: string): void {
   document.getElementById(id)?.remove()
 }
 
+export function shortenAddress(fullAddress: string): string {
+  if (!fullAddress) return ''
+  const parts = fullAddress.split(',').map((p) => p.trim())
+  if (parts.length <= 3) return fullAddress
+
+  const venue = parts[0]
+  const street = parts[1]
+
+  const knownCities = [
+    'Wien', 'Vienna', 'Graz', 'Linz', 'Salzburg',
+    'Innsbruck', 'Klagenfurt', 'Villach', 'Wels', 'St. Pölten',
+    'Berlin', 'München', 'Hamburg', 'Köln', 'Frankfurt',
+  ]
+  let city = ''
+  for (const part of parts) {
+    const cleaned = part.replace(/\d{4,5}/g, '').trim()
+    if (knownCities.some((c) => cleaned.includes(c))) {
+      city = cleaned
+      break
+    }
+  }
+  if (!city && parts.length >= 3) {
+    city = parts[parts.length - 3]?.replace(/\d{4,5}/g, '').trim() || ''
+  }
+
+  const result = [venue, street, city].filter(Boolean).join(', ')
+  return result || fullAddress
+}
+
