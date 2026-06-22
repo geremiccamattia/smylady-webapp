@@ -244,7 +244,7 @@ export default function CreateEvent() {
   const locationSearchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!locationQuery.trim()) {
+    if (!locationQuery.trim() || locationQuery.trim().length < 3) {
       setLocationResults([])
       setShowLocationDropdown(false)
       return
@@ -252,7 +252,7 @@ export default function CreateEvent() {
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5&addressdetails=1&countrycodes=at,de`
         )
         const data = await res.json()
         setLocationResults(data)
