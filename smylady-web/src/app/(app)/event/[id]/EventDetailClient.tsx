@@ -18,6 +18,7 @@ import { ImageViewer } from '@/components/ImageViewer'
 import { PaymentWrapper, usePaymentModal } from '@/components/payment'
 import { useCreatePaymentIntent, useBuyFreeEvent } from '@/hooks/useStripe'
 import { PurchaseQuestionsDialog } from '@/components/PurchaseQuestionsDialog'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import type { PurchaseAnswer } from '@/services/stripe'
 import { MemoryGallery } from '@/components/memories'
 import BoostModal from '@/components/events/BoostModal'
@@ -656,9 +657,7 @@ export default function EventDetailClient({ id }: Props) {
               <Info className="h-5 w-5" />
               {t('events.aboutEvent')}
             </h2>
-            <p className="text-muted-foreground whitespace-pre-line">
-              {event.description}
-            </p>
+            <MarkdownContent content={event.description} className="text-muted-foreground" />
           </div>
 
           {/* Additional Info */}

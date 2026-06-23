@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { useGetConnectedAccount } from '@/hooks/useStripe'
@@ -513,13 +514,10 @@ export default function EditEvent() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">{t('events.description')} *</Label>
-              <textarea
-                id="description"
-                className="w-full min-h-[120px] px-3 py-2 border rounded-md bg-background resize-y"
+              <MarkdownEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, description: val })}
                 placeholder={t('editEvent.descriptionPlaceholder')}
-                required
               />
             </div>
             <div className="grid md:grid-cols-2 gap-4">
