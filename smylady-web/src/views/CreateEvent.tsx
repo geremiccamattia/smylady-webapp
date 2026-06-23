@@ -242,6 +242,7 @@ export default function CreateEvent() {
   >([])
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const locationSearchRef = useRef<HTMLDivElement>(null)
+  const [addressDetail, setAddressDetail] = useState('')
 
   useEffect(() => {
     if (!locationQuery.trim() || locationQuery.trim().length < 3) {
@@ -502,7 +503,10 @@ export default function CreateEvent() {
       eventFormData.append('eventDate', eventDate.toISOString())
       eventFormData.append('eventStartTime', eventStartTime.toISOString())
       eventFormData.append('eventEndTime', eventEndTime.toISOString())
-      eventFormData.append('locationName', formData.locationName)
+      const fullLocationName = addressDetail.trim()
+        ? `${formData.locationName} Top ${addressDetail.trim()}`
+        : formData.locationName
+      eventFormData.append('locationName', fullLocationName)
       eventFormData.append('partyType', formData.partyType)
       eventFormData.append('category', formData.category)
       eventFormData.append('musicType', formData.musicType)
@@ -821,6 +825,14 @@ export default function CreateEvent() {
                       </div>
                     )}
                   </div>
+                  <Input
+                    placeholder={t('createEvent.addressDetail', {
+                      defaultValue: 'Adresszusatz (z.B. Stiege 2, Top 5) — optional',
+                    })}
+                    value={addressDetail}
+                    onChange={(e) => setAddressDetail(e.target.value)}
+                    className="mt-2"
+                  />
                 </div>
               </CardContent>
             </Card>

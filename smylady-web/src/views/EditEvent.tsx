@@ -95,6 +95,7 @@ export default function EditEvent() {
 
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
   const [payAtDoor, setPayAtDoor] = useState(false)
+  const [addressDetail, setAddressDetail] = useState('')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -159,7 +160,15 @@ export default function EditEvent() {
         eventEndTime: event.eventEndTime
           ? `${String(new Date(event.eventEndTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventEndTime).getMinutes()).padStart(2, '0')}`
           : '',
-        locationName: event.locationName || '',
+        locationName: (() => {
+          const existingLocation = event.locationName || ''
+          const detailMatch = existingLocation.match(/\s*Top\s+(.+)$/)
+          if (detailMatch) {
+            setAddressDetail(detailMatch[1])
+            return existingLocation.replace(/\s*Top\s+.+$/, '')
+          }
+          return existingLocation
+        })(),
         minimumAge: event.minimumAge?.toString() || '0',
         offerings: parseStringField(event.offerings),
         restrictions: parseStringField(event.restrictions),
@@ -304,7 +313,10 @@ export default function EditEvent() {
     const eventFormData = new FormData()
 
     const { offerings, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, ...restFormData } = formData
-    Object.entries(restFormData).forEach(([key, value]) => {
+    const fullLocationName = addressDetail.trim()
+      ? `${restFormData.locationName} Top ${addressDetail.trim()}`
+      : restFormData.locationName
+    Object.entries({ ...restFormData, locationName: fullLocationName }).forEach(([key, value]) => {
       eventFormData.append(key, value)
     })
 
@@ -599,6 +611,14 @@ export default function EditEvent() {
                 onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
                 placeholder={t('editEvent.locationPlaceholder')}
                 required
+              />
+              <Input
+                placeholder={t('createEvent.addressDetail', {
+                  defaultValue: 'Adresszusatz (z.B. Stiege 2, Top 5) — optional',
+                })}
+                value={addressDetail}
+                onChange={(e) => setAddressDetail(e.target.value)}
+                className="mt-2"
               />
             </div>
           </CardContent>

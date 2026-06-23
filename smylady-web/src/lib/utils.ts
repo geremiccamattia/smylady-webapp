@@ -204,7 +204,11 @@ export function removeJsonLd(id: string): void {
 
 export function shortenAddress(fullAddress: string): string {
   if (!fullAddress) return ''
-  const parts = fullAddress.split(',').map((p) => p.trim())
+
+  const detail = fullAddress.match(/\s*Top\s+(.+)$/)
+  const base = fullAddress.replace(/\s*Top\s+.+$/, '')
+
+  const parts = base.split(',').map((p) => p.trim())
   if (parts.length <= 3) return fullAddress
 
   const venue = parts[0]
@@ -227,7 +231,13 @@ export function shortenAddress(fullAddress: string): string {
     city = parts[parts.length - 3]?.replace(/\d{4,5}/g, '').trim() || ''
   }
 
-  const result = [venue, street, city].filter(Boolean).join(', ')
-  return result || fullAddress
+  const short = [venue, street, city].filter(Boolean).join(', ') || base
+  return detail ? `${short} Top ${detail[1]}` : short
+}
+
+export function getMapsSearchUrl(locationName: string): string {
+  const short = shortenAddress(locationName)
+  const withoutDetail = short.replace(/\s*Top\s+.+$/, '')
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(withoutDetail)}`
 }
 

@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl } from '@/lib/utils'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -1038,7 +1038,7 @@ export default function EventDetailClient({ id }: Props) {
                   <p className="text-sm text-muted-foreground">{t('events.location')}</p>
                   {event.location?.coordinates?.[0] && event.location?.coordinates?.[1] ? (
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shortenAddress(event.locationName))}`}
+                      href={getMapsSearchUrl(event.locationName)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-semibold text-primary hover:underline"
