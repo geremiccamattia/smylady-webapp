@@ -193,6 +193,17 @@ export const eventsService = {
     }
   },
 
+  async getTopPicks(lat: number, lng: number): Promise<Event[]> {
+    try {
+      const response = await apiClient.get('/events/top-picks', {
+        params: { lat, lng },
+      })
+      return response.data.data || []
+    } catch {
+      return []
+    }
+  },
+
   async translateText(
     data: { name: string; description: string; restrictions: string },
     targetLang: 'DE' | 'EN',
@@ -230,6 +241,17 @@ export const eventsService = {
       }
       console.error('Error getting public event by ID:', error)
       return null
+    }
+  },
+
+  async getAttendeePreviews(eventIds: string[]): Promise<
+    Record<string, Array<{ _id: string; name: string; profileImage?: string }>>
+  > {
+    try {
+      const response = await apiClient.post('/events/attendee-previews', { eventIds })
+      return response.data.data || {}
+    } catch {
+      return {}
     }
   },
 }

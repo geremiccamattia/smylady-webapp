@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { eventsService } from '@/services/events'
+import { userService } from '@/services/user'
 import { publicClient } from '@/services/api'
 import { ticketmasterService } from '@/services/ticketmaster'
 import {
@@ -15,12 +16,14 @@ import {
   getCurrentLocation,
   isLiveLocationEnabled,
 } from '@/services/location'
+import Link from 'next/link'
 import EventCard from '@/components/events/EventCard'
-import { SpotlightCard } from '@/components/ads/SpotlightCard'
 import LocationModal, { LocationResult } from '@/components/LocationModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Card, CardContent } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Select,
   SelectContent,
@@ -30,16 +33,18 @@ import {
 } from '@/components/ui/select'
 import {
   Search,
-  Filter,
-  X,
-  SlidersHorizontal,
   Ticket,
   MapPin,
   Navigation,
-  Zap,
+  ChevronRight,
+  Heart,
+  MessageCircle,
 } from 'lucide-react'
-import { EVENT_CATEGORIES, MUSIC_TYPES } from '@/lib/constants'
-import { cn } from '@/lib/utils'
+import { EVENT_CATEGORIES } from '@/lib/constants'
+import { resolveImageUrl } from '@/lib/utils'
+import { postsService } from '@/services/posts'
+import { formatDistanceToNow } from 'date-fns'
+import { de } from 'date-fns/locale'
 import { Event } from '@/types'
 
 interface SpotlightAd {
@@ -70,9 +75,11 @@ function ExploreContent() {
   const [submittedSearch, setSubmittedSearch] = useState(searchParams.get('search') || '')
   const [searchTrigger, setSearchTrigger] = useState(0)
   const searchRef = useRef(submittedSearch)
+  const allEventsRef = useRef<HTMLDivElement>(null)
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '')
-  const [selectedMusicType, setSelectedMusicType] = useState(searchParams.get('musicType') || '')
-  const [showFilters, setShowFilters] = useState(false)
+  const [dateFilter, setDateFilter] = useState(searchParams.get('date') || '')
+  const [priceFilter, setPriceFilter] = useState(searchParams.get('price') || '')
+  const [scrollToAll, setScrollToAll] = useState(0)
   const [showTicketmaster, setShowTicketmaster] = useState(() => {
     if (typeof window === 'undefined') return true
     const saved = localStorage.getItem('syp_ticketmaster_enabled')
@@ -148,19 +155,19 @@ function ExploreContent() {
       searchTrigger,
       submittedSearch,
       selectedCategory,
-      selectedMusicType,
+      dateFilter,
       selectedLocation?.lat,
       selectedLocation?.lng,
       radius,
     ],
     queryFn: () => {
       console.log('QUERY FIRED with search:', searchRef.current)
+      const catParam = selectedCategory === 'all' ? '' : selectedCategory
       return isAuthenticated
         ? eventsService.getEvents(
             {
               search: searchRef.current,
-              category: selectedCategory,
-              musicType: selectedMusicType,
+              category: catParam,
               latitude: selectedLocation?.lat?.toString() || '',
               longitude: selectedLocation?.lng?.toString() || '',
               radius: radius,
@@ -170,8 +177,7 @@ function ExploreContent() {
         : eventsService.getPublicEvents(
             {
               search: searchRef.current,
-              category: selectedCategory,
-              musicType: selectedMusicType,
+              category: catParam,
               latitude: selectedLocation?.lat?.toString() || '',
               longitude: selectedLocation?.lng?.toString() || '',
               radius: radius,
@@ -212,6 +218,38 @@ function ExploreContent() {
     retry: 2,
   })
 
+  const allEventIds = useMemo(() => {
+    if (!events) return []
+    return (events as any[])
+      .filter((e) => !e.isTicketmaster && !e.isExternalEvent)
+      .map((e) => e._id || e.id)
+      .filter(Boolean)
+  }, [events])
+
+  const { data: attendeePreviews = {} } = useQuery({
+    queryKey: ['attendeePreviews', allEventIds],
+    queryFn: () => eventsService.getAttendeePreviews(allEventIds),
+    enabled: allEventIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: latestPostsData } = useQuery({
+    queryKey: ['latestPosts'],
+    queryFn: () => postsService.getPublicFeed(1),
+    staleTime: 5 * 60 * 1000,
+  })
+  const latestPosts = (latestPostsData?.posts || latestPostsData?.data || []).slice(0, 10)
+
+  const { data: topPicks = [] } = useQuery({
+    queryKey: ['topPicks', selectedLocation?.lat, selectedLocation?.lng],
+    queryFn: () => eventsService.getTopPicks(
+      selectedLocation?.lat || 0,
+      selectedLocation?.lng || 0,
+    ),
+    enabled: locationLoaded && !!selectedLocation,
+    staleTime: 10 * 60 * 1000,
+  })
+
   // Combine events
   const allEvents: Event[] = [
     ...(events || []),
@@ -220,54 +258,176 @@ function ExploreContent() {
       : []),
   ]
 
-  const boostedEvents = allEvents.filter(
-    (e) => e.boostStatus === 'active' && e.boostEndDate && new Date(e.boostEndDate) > new Date()
-  )
-  const organicEvents = allEvents.filter(
-    (e) => e.boostStatus !== 'active' || !e.boostEndDate || new Date(e.boostEndDate) <= new Date()
-  )
+  const filteredEvents = useMemo(() => {
+    const topPickIds = new Set(topPicks.map((e: any) => e._id))
+    let result: Event[] = (allEvents || []).filter((e: any) => !topPickIds.has(e._id))
 
-  const { data: ads = [] } = useQuery<SpotlightAd[]>({
-    queryKey: ['spotlight-ads', selectedLocation?.lat, selectedLocation?.lng, radius],
-    queryFn: () =>
-      publicClient
-        .get('/spotlight/active', {
-          params: {
-            latitude: selectedLocation?.lat,
-            longitude: selectedLocation?.lng,
-            radius,
-          },
-        })
-        .then((r) => r.data.data),
-    enabled: locationLoaded && !!selectedLocation,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const feedItems = useMemo(() => {
-    const items: (Event | SpotlightAd)[] = []
-    let adIndex = 0
-    organicEvents.forEach((event, i) => {
-      if (i > 0 && i % 3 === 2 && adIndex < ads.length) {
-        items.push(ads[adIndex++])
+    if (dateFilter && dateFilter !== 'all') {
+      const now = new Date()
+      const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59)
+      let from: Date | null = null
+      let to: Date | null = null
+      switch (dateFilter) {
+        case 'today':
+          from = startOfDay(now); to = endOfDay(now); break
+        case 'tomorrow': {
+          const tomorrow = new Date(now)
+          tomorrow.setDate(now.getDate() + 1)
+          from = startOfDay(tomorrow); to = endOfDay(tomorrow); break
+        }
+        case 'weekend': {
+          const day = now.getDay()
+          let saturday: Date, sunday: Date
+          if (day === 0) {
+            saturday = new Date(now); saturday.setDate(now.getDate() - 1)
+            sunday = new Date(now)
+          } else if (day === 6) {
+            saturday = new Date(now)
+            sunday = new Date(now); sunday.setDate(now.getDate() + 1)
+          } else {
+            saturday = new Date(now); saturday.setDate(now.getDate() + (6 - day))
+            sunday = new Date(saturday); sunday.setDate(saturday.getDate() + 1)
+          }
+          from = startOfDay(saturday); to = endOfDay(sunday); break
+        }
+        case 'this_week': {
+          const day = now.getDay()
+          const monday = new Date(now); monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
+          const sundayEnd = new Date(monday); sundayEnd.setDate(monday.getDate() + 6)
+          from = startOfDay(now); to = endOfDay(sundayEnd); break
+        }
+        case 'next_week': {
+          const day = now.getDay()
+          const nextMonday = new Date(now); nextMonday.setDate(now.getDate() + (day === 0 ? 1 : 8 - day))
+          const nextSunday = new Date(nextMonday); nextSunday.setDate(nextMonday.getDate() + 6)
+          from = startOfDay(nextMonday); to = endOfDay(nextSunday); break
+        }
+        case 'this_month':
+          from = startOfDay(now)
+          to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+          break
       }
-      items.push(event)
+      if (from && to) {
+        result = result.filter((e: any) => {
+          const eventDate = new Date(e.eventStartTime || e.eventDate)
+          return eventDate >= from! && eventDate <= to!
+        })
+      }
+    }
+
+    if (priceFilter && priceFilter !== 'all') {
+      result = result.filter((e: any) => {
+        if (e.isTicketmaster || e.isExternalEvent) return true
+        switch (priceFilter) {
+          case 'free': return (e.price === 0 || !e.price) && e.paymentType !== 'door'
+          case 'paid': return e.price > 0 && e.paymentType !== 'door'
+          case 'door': return e.paymentType === 'door'
+          default: return true
+        }
+      })
+    }
+
+    return result
+  }, [allEvents, dateFilter, priceFilter])
+
+  // === SECTION-BASED FEED ===
+
+  const feedStats = useMemo(() => {
+    const upcoming = filteredEvents || []
+    const freeCount = upcoming.filter((e: any) =>
+      !e.isTicketmaster && !e.isExternalEvent && (e.price === 0 || !e.price) && e.paymentType !== 'door'
+    ).length
+    const withAttendees = upcoming.filter((e: any) => (e.soldTickets || 0) > 0).length
+    return { total: upcoming.length, free: freeCount, withAttendees }
+  }, [filteredEvents])
+
+  const doorEvents = useMemo(() => {
+    const topPickIds = new Set(topPicks.map((e: any) => e._id))
+    return (filteredEvents || [])
+      .filter((e: any) => {
+        const eid = e._id || e.id
+        return !e.isTicketmaster && !topPickIds.has(eid) && e.paymentType === 'door'
+      })
+      .sort((a: any, b: any) =>
+        new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
+      )
+      .slice(0, 3)
+  }, [filteredEvents, topPicks])
+
+  const freeEvents = useMemo(() => {
+    const usedIds = new Set([
+      ...topPicks.map((e: any) => e._id),
+      ...doorEvents.map((e: any) => e._id || e.id),
+    ])
+    return (filteredEvents || [])
+      .filter((e: any) => {
+        const eid = e._id || e.id
+        return !e.isTicketmaster && !usedIds.has(eid) &&
+          (e.price === 0 || !e.price) && e.paymentType !== 'door'
+      })
+      .sort((a: any, b: any) =>
+        new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
+      )
+      .slice(0, 3)
+  }, [filteredEvents, topPicks, doorEvents])
+
+  const categoriesWithEvents = useMemo(() => {
+    const usedIds = new Set([
+      ...topPicks.map((e: any) => e._id),
+      ...doorEvents.map((e: any) => e._id || e.id),
+      ...freeEvents.map((e: any) => e._id || e.id),
+    ])
+    const remaining = (filteredEvents || []).filter((e: any) => !usedIds.has(e._id || e.id))
+    const categoryMap = new Map<string, any[]>()
+    remaining.forEach((e: any) => {
+      const cat = e.category || 'Other'
+      if (!categoryMap.has(cat)) categoryMap.set(cat, [])
+      const arr = categoryMap.get(cat)!
+      if (arr.length < 3) arr.push(e)
     })
-    return items
-  }, [organicEvents, ads])
+    return Array.from(categoryMap.entries())
+      .filter(([_, evs]) => evs.length > 0)
+      .sort((a, b) => b[1].length - a[1].length)
+  }, [filteredEvents, topPicks, doorEvents, freeEvents])
+
+  const remainingEvents = useMemo(() => {
+    const usedIds = new Set([
+      ...topPicks.map((e: any) => e._id),
+      ...doorEvents.map((e: any) => e._id || e.id),
+      ...freeEvents.map((e: any) => e._id || e.id),
+      ...categoriesWithEvents.flatMap(([_, evs]) => evs.map((e: any) => e._id || e.id)),
+    ])
+    return (filteredEvents || [])
+      .filter((e: any) => !usedIds.has(e._id || e.id))
+      .sort((a: any, b: any) =>
+        new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
+      )
+  }, [filteredEvents, topPicks, doorEvents, freeEvents, categoriesWithEvents])
 
   useEffect(() => {
     const params = new URLSearchParams()
     if (submittedSearch) params.set('search', submittedSearch)
-    if (selectedCategory) params.set('category', selectedCategory)
-    if (selectedMusicType) params.set('musicType', selectedMusicType)
+    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory)
+    if (dateFilter && dateFilter !== 'all') params.set('date', dateFilter)
+    if (priceFilter && priceFilter !== 'all') params.set('price', priceFilter)
     const newUrl = pathname + (params.toString() ? '?' + params.toString() : '')
     window.history.replaceState(null, '', newUrl)
-  }, [submittedSearch, selectedCategory, selectedMusicType])
+  }, [submittedSearch, selectedCategory, dateFilter, priceFilter])
 
   useEffect(() => {
     return () => {
     }
   }, [])
+
+  useEffect(() => {
+    if (scrollToAll > 0) {
+      const timer = setTimeout(() => {
+        allEventsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [scrollToAll, filteredEvents])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -277,7 +437,6 @@ function ExploreContent() {
     window.dataLayer.push({
       event: 'explore_search',
       has_category: !!selectedCategory,
-      has_music_type: !!selectedMusicType,
     })
     searchRef.current = searchQuery
     setSubmittedSearch(searchQuery)
@@ -288,7 +447,15 @@ function ExploreContent() {
     setSearchQuery('')
     setSubmittedSearch('')
     setSelectedCategory('')
-    setSelectedMusicType('')
+    setDateFilter('')
+    setPriceFilter('')
+  }
+
+  const scrollToAllEvents = (filters: { priceFilter?: string; dateFilter?: string; selectedCategory?: string }) => {
+    setPriceFilter(filters.priceFilter || 'all')
+    setDateFilter(filters.dateFilter || 'all')
+    setSelectedCategory(filters.selectedCategory || 'all')
+    setScrollToAll(prev => prev + 1)
   }
 
   const handleLocationSelect = (location: LocationResult | null) => {
@@ -300,23 +467,125 @@ function ExploreContent() {
     setTicketmasterEnabled(enabled)
   }
 
-  const hasActiveFilters = searchQuery || selectedCategory || selectedMusicType
+  const hasActiveFilters = submittedSearch ||
+    (selectedCategory && selectedCategory !== 'all') ||
+    (dateFilter && dateFilter !== 'all') ||
+    (priceFilter && priceFilter !== 'all')
+
+  const getCategoryLink = (category: string) => {
+    const categoryPageMap: Record<string, string> = {
+      'Clubbing': '/events/clubbing-wien',
+      'Music': '/events/konzerte-wien',
+      'Business': '/events/business-events-wien',
+      'Workshop': '/events/workshops-wien',
+    }
+    return categoryPageMap[category] || `/explore?category=${encodeURIComponent(category)}`
+  }
+
+  const EventSection = ({ title, events, onShowAll }: {
+    title: string
+    events: any[]
+    onShowAll?: () => void
+  }) => {
+    if (events.length === 0) return null
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          {onShowAll && (
+            <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={onShowAll}>
+              {t('explore.viewAll', { defaultValue: 'Alle anzeigen' })}
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {events.slice(0, 3).map((event: any) => (
+            <EventCard
+              key={event._id || event.id}
+              event={event}
+              attendees={attendeePreviews?.[(event._id || event.id) as string] || []}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const PostCard = ({ post }: { post: any }) => {
+    const author = post.userId || post.user || {}
+    const postImage = post.images?.[0]?.url || post.images?.[0]
+    const postText = post.text || post.content || ''
+    const postId = post._id || post.id
+    return (
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">
+          💭 {t('explore.yourVibes', { defaultValue: 'Deine Vibes' })}
+        </h2>
+        <Link href={`/post/${postId}`}>
+          <Card className="overflow-hidden hover:shadow-md transition-shadow">
+            {postImage && (
+              <div className="aspect-[21/9] relative overflow-hidden">
+                <img
+                  src={resolveImageUrl(postImage)}
+                  alt=""
+                  className="object-cover w-full h-full"
+                />
+              </div>
+            )}
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-10 w-10 flex-shrink-0">
+                  <AvatarImage src={resolveImageUrl(author.profileImage)} />
+                  <AvatarFallback className="text-xs">
+                    {author.name?.charAt(0) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm truncate">{author.name || 'User'}</p>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                      {post.createdAt
+                        ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: de })
+                        : ''}
+                    </span>
+                  </div>
+                  {postText && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{postText}</p>
+                  )}
+                  <div className="flex items-center gap-4 pt-1">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Heart className="h-3 w-3" /> {post.likeCount || post.likes?.length || 0}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <MessageCircle className="h-3 w-3" /> {post.commentCount || post.comments?.length || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">
-          {t('explore.title', { defaultValue: 'Events entdecken' })}
+        <h1 className="text-2xl font-bold">
+          {t('explore.weekTitle', { defaultValue: 'Diese Woche in Wien' })}
         </h1>
-        <p className="text-muted-foreground mt-1">
-          {t('explore.subtitle', { defaultValue: 'Finde das perfekte Event für dich' })}
-        </p>
+        {!isLoading && (
+          <p className="text-muted-foreground mt-1">
+            {feedStats.total} Events · {feedStats.free} {t('explore.freeEvents', { defaultValue: 'Gratis-Eintritte' })}
+          </p>
+        )}
       </div>
 
-      {/* Location Selector Bar */}
+      {/* Location Bar */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-card rounded-xl border">
-        {/* Location Button */}
         <button
           onClick={() => setLocationModalOpen(true)}
           className="flex items-center gap-2 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors flex-1 min-w-[200px]"
@@ -326,8 +595,6 @@ function ExploreContent() {
             {selectedLocation?.description || t('explore.selectLocation', { defaultValue: 'Standort wählen' })}
           </span>
         </button>
-
-        {/* Radius Dropdown */}
         <Select value={radius} onValueChange={setRadius}>
           <SelectTrigger className="w-[100px]">
             <SelectValue />
@@ -339,8 +606,6 @@ function ExploreContent() {
             <SelectItem value="100">100 km</SelectItem>
           </SelectContent>
         </Select>
-
-        {/* Live Location Indicator */}
         {isLiveLocationEnabled() && (
           <div className="flex items-center gap-1 text-xs text-primary">
             <Navigation className="h-3 w-3" />
@@ -349,234 +614,226 @@ function ExploreContent() {
         )}
       </div>
 
+      <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm py-3 -mx-4 px-4 space-y-2 border-b">
+        {/* Date Filter Chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {[
+            { value: 'today', label: t('explore.dateToday', { defaultValue: 'Heute' }) },
+            { value: 'tomorrow', label: t('explore.dateTomorrow', { defaultValue: 'Morgen' }) },
+            { value: 'weekend', label: t('explore.dateWeekend', { defaultValue: 'Wochenende' }) },
+            { value: 'this_week', label: t('explore.dateThisWeek', { defaultValue: 'Diese Woche' }) },
+            { value: 'next_week', label: t('explore.dateNextWeek', { defaultValue: 'Nächste Woche' }) },
+          ].map((d) => (
+            <button
+              key={d.value}
+              onClick={() => setDateFilter(dateFilter === d.value ? 'all' : d.value)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                dateFilter === d.value
+                  ? 'bg-primary text-white'
+                  : 'bg-muted hover:bg-muted/80 text-foreground'
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Category + Price Filter Chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <button
+            onClick={() => setPriceFilter(priceFilter === 'free' ? 'all' : 'free')}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              priceFilter === 'free' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
+            }`}
+          >
+            {t('explore.priceFree', { defaultValue: 'Gratis' })}
+          </button>
+          {EVENT_CATEGORIES.filter(c => c.value !== 'Other').map((cat) => (
+            <button
+              key={cat.value}
+              onClick={() => setSelectedCategory(selectedCategory === cat.value ? 'all' : cat.value)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                selectedCategory === cat.value
+                  ? 'bg-primary text-white'
+                  : 'bg-muted hover:bg-muted/80 text-foreground'
+              }`}
+            >
+              {t(`categories.${cat.value}`, { defaultValue: cat.label })}
+            </button>
+          ))}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 whitespace-nowrap"
+            >
+              ✕ {t('common.clear', { defaultValue: 'Löschen' })}
+            </button>
+          )}
+        </div>
+
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder={t('explore.searchPlaceholder', { defaultValue: 'Events suchen...' })}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(e) }}
+            className="pl-10 h-9"
+          />
+        </form>
+      </div>
+
       {/* Ticketmaster Toggle */}
       <div className="flex items-center justify-between p-3 bg-card rounded-xl border">
         <div className="flex items-center gap-3">
           <Ticket className={`h-5 w-5 ${showTicketmaster ? 'text-primary' : 'text-muted-foreground'}`} />
-          <div>
-            <span className="font-medium text-sm">
-              {t('explore.ticketmasterEvents', { defaultValue: 'Ticketmaster Events' })}
-            </span>
-            <p className="text-xs text-muted-foreground">
-              {t('explore.ticketmasterDesc', { defaultValue: 'Zeige zusätzliche Events von Ticketmaster' })}
-            </p>
-          </div>
+          <span className="font-medium text-sm">
+            {t('explore.ticketmasterEvents', { defaultValue: 'Ticketmaster Events' })}
+          </span>
         </div>
         <Switch checked={showTicketmaster} onCheckedChange={handleTicketmasterToggle} />
       </div>
 
-      {/* Search & Filters */}
-      <div className="space-y-4">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={t('explore.searchPlaceholder', { defaultValue: 'Events suchen...' })}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button type="submit">{t('common.search', { defaultValue: 'Suchen' })}</Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(showFilters && 'bg-accent')}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-          </Button>
-        </form>
-
-        {/* Filter Panel */}
-        {showFilters && (
-          <div className="p-4 bg-card rounded-xl border space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{t('explore.filters', { defaultValue: 'Filter' })}</h3>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-                  <X className="h-4 w-4" />
-                  {t('common.reset')}
-                </Button>
-              )}
-            </div>
-
-            {/* Categories */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                {t('explore.category', { defaultValue: 'Kategorie' })}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {EVENT_CATEGORIES.map((cat) => (
-                  <Button
-                    key={cat.value}
-                    variant={selectedCategory === cat.value ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() =>
-                      setSelectedCategory(selectedCategory === cat.value ? '' : cat.value)
-                    }
-                  >
-                    {cat.label}
-                  </Button>
+      {/* Loading */}
+      {(!locationLoaded || isLoading || (showTicketmaster && loadingTicketmaster)) ? (
+        <div className="space-y-8">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-3">
+              <div className="h-6 w-48 bg-muted animate-pulse rounded" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, j) => (
+                  <div key={j} className="rounded-xl bg-muted animate-pulse aspect-[4/3]" />
                 ))}
               </div>
             </div>
-
-            {/* Music Types */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                {t('explore.musicType', { defaultValue: 'Musikrichtung' })}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {MUSIC_TYPES.map((music) => (
-                  <Button
-                    key={music.value}
-                    variant={selectedMusicType === music.value ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() =>
-                      setSelectedMusicType(selectedMusicType === music.value ? '' : music.value)
-                    }
-                  >
-                    {music.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Active Filters */}
-        {hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              {t('explore.activeFilters', { defaultValue: 'Aktive Filter:' })}
-            </span>
-            {searchQuery && (
-              <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-sm flex items-center gap-1">
-                "{searchQuery}"
-                <button onClick={() => setSearchQuery('')}>
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {selectedCategory && (
-              <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-sm flex items-center gap-1">
-                {EVENT_CATEGORIES.find((c) => c.value === selectedCategory)?.label}
-                <button onClick={() => setSelectedCategory('')}>
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {selectedMusicType && (
-              <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-sm flex items-center gap-1">
-                {MUSIC_TYPES.find((m) => m.value === selectedMusicType)?.label}
-                <button onClick={() => setSelectedMusicType('')}>
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Results */}
-      {!locationLoaded || isLoading || (showTicketmaster && loadingTicketmaster) ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(9)].map((_, i) => (
-            <div key={i} className="rounded-xl bg-muted animate-pulse aspect-[4/3]" />
           ))}
         </div>
-      ) : allEvents && allEvents.length > 0 ? (
-        <>
-          <p className="text-sm text-muted-foreground">
-            {allEvents.length} Event{allEvents.length !== 1 ? 's' : ''}{' '}
-            {t('explore.found', { defaultValue: 'gefunden' })}
-            {selectedLocation?.description && (
-              <span className="ml-1">
-                {t('explore.nearLocation', { defaultValue: 'in der Nähe von' })}{' '}
-                {selectedLocation.description.split(',')[0]}
-              </span>
-            )}
-            {showTicketmaster && ticketmasterEvents && ticketmasterEvents.length > 0 && (
-              <span className="ml-1">
-                ({t('explore.includingTicketmaster', { defaultValue: 'inkl.' })}{' '}
-                {ticketmasterEvents.length} {t('explore.fromTicketmaster', { defaultValue: 'von Ticketmaster' })})
-              </span>
-            )}
-          </p>
-          {/* Veranstalter-Hinweis bei Namenssuche */}
-          {submittedSearch && events && events.length > 0 && (() => {
-            const organizerIds = [...new Set(events.map((e: any) => e.userId))]
+      ) : filteredEvents && filteredEvents.length > 0 ? (
+        <div className="space-y-10">
+          {/* Veranstalter-Hinweis bei Suche */}
+          {submittedSearch && events && (events as any[]).length > 0 && (() => {
+            const organizerIds = [...new Set((events as any[]).map((e: any) => e.userId))]
             if (organizerIds.length === 1) {
               const organizerId = organizerIds[0]
               return (
                 <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm">
-                  <span className="text-muted-foreground">
-                    {i18n.language.startsWith('en')
-                      ? 'More events from this organizer may be available outside your search area.'
-                      : 'Weitere Events dieses Veranstalters können außerhalb deines Suchbereichs verfügbar sein.'}
-                  </span>
-                  <a
-                    href={`/user/${organizerId}/events`}
-                    className="text-primary hover:underline font-medium whitespace-nowrap"
-                  >
-                    {i18n.language.startsWith('en') ? 'View all events →' : 'Alle Events ansehen →'}
-                  </a>
+                  <span>{t('explore.organizerHint', { defaultValue: 'Alle Ergebnisse sind von einem Veranstalter.' })}</span>
+                  <Link href={`/user/${organizerId}`} className="text-primary font-medium hover:underline">
+                    {t('explore.viewProfile', { defaultValue: 'Profil ansehen' })}
+                  </Link>
                 </div>
               )
             }
             return null
           })()}
-          <div className="space-y-6">
-            {/* Gesponserte Events */}
-            {boostedEvents.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-500">Gesponserte Events</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {boostedEvents.map((event, index) => (
-                    <EventCard key={event.id || event._id} event={event} priority={index < 3} />
+
+          {/* 🔥 Top Pick */}
+          {topPicks.length > 0 && (
+            <EventSection
+              title={`🔥 ${t('explore.topPick', { defaultValue: 'Top Pick' })}`}
+              events={topPicks}
+            />
+          )}
+
+          {/* Post 1 — nur nach Top Picks wenn vorhanden */}
+          {topPicks.length > 0 && latestPosts[0] && <PostCard post={latestPosts[0]} />}
+
+          {/* 🎟 Abendkasse */}
+          <EventSection
+            title={`🎟 ${t('explore.doorEvents', { defaultValue: 'Mit Gästeliste (Abendkasse)' })}`}
+            events={doorEvents}
+            onShowAll={() => scrollToAllEvents({ priceFilter: 'door' })}
+          />
+
+          {/* Post 2 — nur nach Abendkasse wenn vorhanden */}
+          {doorEvents.length > 0 && latestPosts[1] && <PostCard post={latestPosts[1]} />}
+
+          {/* 🎉 Kostenlos starten */}
+          <EventSection
+            title={`🎉 ${t('explore.freeToStart', { defaultValue: 'Kostenlos starten' })}`}
+            events={freeEvents}
+            onShowAll={() => scrollToAllEvents({ priceFilter: 'free' })}
+          />
+
+          {/* Post 3 — nur nach Kostenlos wenn vorhanden */}
+          {freeEvents.length > 0 && latestPosts[2] && <PostCard post={latestPosts[2]} />}
+
+          {/* Kategorie-Sektionen mit Posts dazwischen */}
+          {categoriesWithEvents.map(([category, evs], idx) => {
+            const catInfo = EVENT_CATEGORIES.find((c) => c.value === category)
+            const catLabel = catInfo?.label || category
+            const post = latestPosts[3 + idx]
+            return (
+              <React.Fragment key={category}>
+                <EventSection
+                  title={catLabel}
+                  events={evs}
+                  onShowAll={() => scrollToAllEvents({ selectedCategory: category })}
+                />
+                {evs.length > 0 && post && <PostCard post={post} />}
+              </React.Fragment>
+            )
+          })}
+
+          {/* 📋 Alle Events */}
+          {(() => {
+            const isFilterActive = (priceFilter && priceFilter !== 'all') ||
+              (dateFilter && dateFilter !== 'all') ||
+              (selectedCategory && selectedCategory !== 'all')
+            const eventsToShow = isFilterActive
+              ? (filteredEvents || [])
+              : remainingEvents.filter((e: any) => !e.isTicketmaster && !e.isExternalEvent)
+
+            return eventsToShow.length > 0 ? (
+              <div ref={allEventsRef} className="space-y-3">
+                <h2 className="text-lg font-semibold">
+                  📋 {t('explore.allEvents', { defaultValue: 'Alle Events' })}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {eventsToShow.map((event: any) => (
+                    <EventCard
+                      key={event._id || event.id}
+                      event={event}
+                      attendees={attendeePreviews?.[(event._id || event.id) as string] || []}
+                    />
                   ))}
                 </div>
-                <div className="border-t my-4" />
               </div>
-            )}
+            ) : (
+              <div ref={allEventsRef} />
+            )
+          })()}
 
-            {/* Organische Events + Spotlight Ads */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {feedItems.map((item, index) =>
-                'targetUrl' in item ? (
-                  <SpotlightCard key={`ad-${item._id}`} ad={item} />
-                ) : (
-                  <EventCard key={item.id || item._id} event={item} priority={index < 3} />
-                )
-              )}
-            </div>
+          {/* Feed CTA */}
+          <div className="text-center py-4">
+            <Link href="/feed">
+              <Button variant="outline" className="gap-2">
+                <MessageCircle className="h-4 w-4" />
+                {t('explore.goToFeed', { defaultValue: 'Mehr aus der Community' })}
+              </Button>
+            </Link>
           </div>
-        </>
+        </div>
       ) : (
         <div className="text-center py-16">
-          <Filter className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">
-            {t('events.noEvents')}
+            {submittedSearch
+              ? t('explore.noSearchResults', { defaultValue: 'Keine Ergebnisse' })
+              : t('explore.noEvents', { defaultValue: 'Keine Events gefunden' })}
           </h3>
-          <p className="text-muted-foreground mb-4">
-            {t('events.noEventsHint')}
+          <p className="text-muted-foreground">
+            {submittedSearch
+              ? t('explore.tryOtherSearch', { defaultValue: 'Versuche einen anderen Suchbegriff.' })
+              : t('explore.noEventsDesc', { defaultValue: 'Aktuell keine Events in deiner Nähe.' })}
           </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {hasActiveFilters && (
-              <Button variant="outline" onClick={clearFilters}>
-                {t('explore.clearFilters', { defaultValue: 'Filter zurücksetzen' })}
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setLocationModalOpen(true)}>
-              <MapPin className="h-4 w-4 mr-2" />
-              {t('events.changeLocation')}
+          {hasActiveFilters && (
+            <Button variant="outline" className="mt-4" onClick={clearFilters}>
+              {t('common.resetFilters', { defaultValue: 'Filter zurücksetzen' })}
             </Button>
-          </div>
+          )}
         </div>
       )}
 

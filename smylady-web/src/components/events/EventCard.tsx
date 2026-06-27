@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Heart, MapPin, Calendar, Clock, Users, ExternalLink, Zap } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
 import { formatDate, formatPrice, cn, resolveImageUrl, generateEventSlug, shortenAddress } from '@/lib/utils'
 import { useState } from 'react'
@@ -19,9 +20,10 @@ interface EventCardProps {
   event: Event
   onFavoriteChange?: (eventId: string, isFavorite: boolean) => void
   priority?: boolean
+  attendees?: Array<{ _id: string; name: string; profileImage?: string }>
 }
 
-export default function EventCard({ event, onFavoriteChange, priority = false }: EventCardProps) {
+export default function EventCard({ event, onFavoriteChange, priority = false, attendees = [] }: EventCardProps) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language?.substring(0, 2) || 'de'
   const tr = (event as any)?.translations?.[lang]
@@ -235,6 +237,27 @@ export default function EventCard({ event, onFavoriteChange, priority = false }:
           <div className="flex items-center gap-1 text-sm text-blue-600">
             <ExternalLink className="h-4 w-4" />
             <span>{t('event.externalEventInfo', { defaultValue: 'Tickets auf Ticketmaster.de' })}</span>
+          </div>
+        )}
+
+        {/* Attendee previews */}
+        {attendees.length > 0 && (
+          <div className="flex items-center gap-3 pt-1">
+            <div className="flex -space-x-3">
+              {attendees.slice(0, 4).map((user) => (
+                <Avatar key={user._id} className="h-8 w-8 border-2 border-background">
+                  <AvatarImage src={resolveImageUrl(user.profileImage)} />
+                  <AvatarFallback className="text-xs">
+                    {user.name?.charAt(0) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            <span className="text-sm text-muted-foreground font-medium">
+              {attendees.length === 1
+                ? `${attendees[0].name} nimmt teil`
+                : `${attendees[0].name} + ${attendees.length - 1} weitere`}
+            </span>
           </div>
         )}
 
