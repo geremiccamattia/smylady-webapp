@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Image as ImageIcon,
   ExternalLink,
+  Phone,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -217,10 +218,11 @@ function ConversationContent() {
             <a
               key={`p-${m.index}`}
               href={`tel:${matched.replace(/[\s()-]/g, '')}`}
-              className="underline hover:opacity-80 text-blue-500"
+              className="underline text-blue-500 inline-flex items-center gap-1"
               onClick={(e) => e.stopPropagation()}
             >
-              📞 {matched}
+              <Phone className="h-3 w-3 inline" />
+              {matched}
             </a>,
           )
         } else {
