@@ -238,7 +238,7 @@ function ExploreContent() {
     queryFn: () => postsService.getPublicFeed(1),
     staleTime: 5 * 60 * 1000,
   })
-  const latestPosts = ((latestPostsData as any)?.posts || (latestPostsData as any)?.data || []).slice(0, 10)
+  const latestPosts = ((latestPostsData as any)?.posts || (latestPostsData as any)?.data?.posts || []).slice(0, 10)
 
   const { data: topPicks = [] } = useQuery({
     queryKey: ['topPicks', selectedLocation?.lat, selectedLocation?.lng],
@@ -514,7 +514,7 @@ function ExploreContent() {
 
   const PostCard = ({ post }: { post: any }) => {
     const author = post.userId || post.user || {}
-    const postImage = post.images?.[0]?.url || post.images?.[0]
+    const postImage = post.media?.[0]?.url || post.images?.[0]?.url || post.images?.[0]
     const postText = post.text || post.content || ''
     const postId = post._id || post.id
     return (
