@@ -238,7 +238,7 @@ function ExploreContent() {
     queryFn: () => postsService.getPublicFeed(1),
     staleTime: 5 * 60 * 1000,
   })
-  const latestPosts = (latestPostsData?.posts || latestPostsData?.data || []).slice(0, 10)
+  const latestPosts = ((latestPostsData as any)?.posts || (latestPostsData as any)?.data || []).slice(0, 10)
 
   const { data: topPicks = [] } = useQuery({
     queryKey: ['topPicks', selectedLocation?.lat, selectedLocation?.lng],
