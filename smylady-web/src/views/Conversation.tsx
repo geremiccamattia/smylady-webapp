@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -47,6 +47,7 @@ function ConversationContent() {
   const { user: currentUser } = useAuth()
   const { toast } = useToast()
 
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -171,28 +172,30 @@ function ConversationContent() {
   const otherUserId = recipientId || chat?.otherUser?.id || chat?.otherUser?._id
   const currentUserId = currentUser?._id || currentUser?.id
 
-  // Function to render message content with clickable links
+  // Function to render message content with clickable links and phone numbers
   const renderMessageContent = (content: string, isOwn: boolean) => {
-    // Regex to match URLs
-    const urlRegex = /(https?:\/\/[^\s]+)/g
-    const parts = content.split(urlRegex)
+    const COMBINED =
+      /(https?:\/\/[^\s<]+[^\s<.,;:!?"')\]])|(\+?[\d][\d\s\-().]{6,18}\d)/g
+    const parts: React.ReactNode[] = []
+    let lastIdx = 0
+    let m: RegExpExecArray | null
+    COMBINED.lastIndex = 0
 
-    return parts.map((part, index) => {
-      if (urlRegex.test(part)) {
-        // Reset regex lastIndex
-        urlRegex.lastIndex = 0
-        // Check if it's a Google Maps link
-        const isMapLink = part.includes('google.com/maps') || part.includes('maps.google')
-
-        return (
+    while ((m = COMBINED.exec(content)) !== null) {
+      if (m.index > lastIdx) {
+        parts.push(<span key={`t-${lastIdx}`}>{content.slice(lastIdx, m.index)}</span>)
+      }
+      const matched = m[0]
+      if (m[1]) {
+        const isMapLink = matched.includes('google.com/maps') || matched.includes('maps.google')
+        parts.push(
           <a
-            key={index}
-            href={part}
+            key={`l-${m.index}`}
+            href={matched}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1 underline hover:opacity-80 ${
-              isOwn ? 'text-white' : 'text-primary'
-            }`}
+            className={`inline-flex items-center gap-1 underline hover:opacity-80 break-all ${isOwn ? 'text-white' : 'text-primary'}`}
+            onClick={(e) => e.stopPropagation()}
           >
             {isMapLink ? (
               <>
@@ -200,14 +203,38 @@ function ConversationContent() {
                 {t('chat.openInMaps')}
                 <ExternalLink className="h-3 w-3 inline" />
               </>
+            ) : matched.length > 40 ? (
+              matched.substring(0, 37) + '...'
             ) : (
-              part
+              matched
             )}
-          </a>
+          </a>,
         )
+      } else if (m[2]) {
+        const digitCount = matched.replace(/\D/g, '').length
+        if (digitCount >= 7) {
+          parts.push(
+            <a
+              key={`p-${m.index}`}
+              href={`tel:${matched.replace(/[\s()-]/g, '')}`}
+              className="underline hover:opacity-80 text-blue-500"
+              onClick={(e) => e.stopPropagation()}
+            >
+              📞 {matched}
+            </a>,
+          )
+        } else {
+          parts.push(<span key={`t-${m.index}`}>{matched}</span>)
+        }
       }
-      return <span key={index}>{part}</span>
-    })
+      lastIdx = m.index + matched.length
+    }
+
+    if (lastIdx < content.length) {
+      parts.push(<span key={`t-${lastIdx}`}>{content.slice(lastIdx)}</span>)
+    }
+
+    return parts.length > 0 ? parts : [<span key="full">{content}</span>]
   }
 
   if (isChatLoading) {
@@ -295,11 +322,15 @@ function ConversationContent() {
                       : 'bg-muted'
                   }`}
                 >
-                  {msg.file && (
+                  {(msg.file || (msg as any).media?.url) && (
                     <img
-                      src={resolveImageUrl(msg.file)}
+                      src={resolveImageUrl(msg.file || (msg as any).media?.url)}
                       alt="Attachment"
-                      className="rounded-lg max-w-full mb-2"
+                      className="rounded-lg max-w-full max-h-64 object-cover mb-2 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setFullscreenImage(resolveImageUrl(msg.file || (msg as any).media?.url))
+                      }}
                     />
                   )}
                   <p className="whitespace-pre-wrap break-words">
@@ -411,6 +442,25 @@ function ConversationContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {fullscreenImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center cursor-pointer"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <img
+            src={fullscreenImage}
+            alt="Vollbild"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white text-3xl"
+            onClick={() => setFullscreenImage(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   )
 }

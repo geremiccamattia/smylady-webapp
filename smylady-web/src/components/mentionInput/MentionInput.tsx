@@ -350,6 +350,70 @@ interface RenderMentionsProps {
   className?: string
 }
 
+function linkifyString(text: string, keyPrefix: number): React.ReactNode[] {
+  const COMBINED =
+    /(https?:\/\/[^\s<]+[^\s<.,;:!?"')\]])|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(\+?[\d][\d\s\-().]{6,18}\d)/g
+  const nodes: React.ReactNode[] = []
+  let lastIdx = 0
+  let m: RegExpExecArray | null
+  COMBINED.lastIndex = 0
+
+  while ((m = COMBINED.exec(text)) !== null) {
+    if (m.index > lastIdx) {
+      nodes.push(text.slice(lastIdx, m.index))
+    }
+    const matched = m[0]
+    if (m[1]) {
+      nodes.push(
+        <a
+          key={`link-${keyPrefix}-${m.index}`}
+          href={matched}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline hover:text-primary/80 break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {matched.length > 60 ? matched.substring(0, 57) + '...' : matched}
+        </a>,
+      )
+    } else if (m[2]) {
+      nodes.push(
+        <a
+          key={`email-${keyPrefix}-${m.index}`}
+          href={`mailto:${matched}`}
+          className="text-primary underline hover:text-primary/80"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {matched}
+        </a>,
+      )
+    } else if (m[3]) {
+      const digitCount = matched.replace(/\D/g, '').length
+      if (digitCount >= 7) {
+        nodes.push(
+          <a
+            key={`phone-${keyPrefix}-${m.index}`}
+            href={`tel:${matched.replace(/[\s()-]/g, '')}`}
+            className="text-primary underline hover:text-primary/80"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {matched}
+          </a>,
+        )
+      } else {
+        nodes.push(matched)
+      }
+    }
+    lastIdx = m.index + matched.length
+  }
+
+  if (lastIdx < text.length) {
+    nodes.push(text.slice(lastIdx))
+  }
+
+  return nodes.length > 0 ? nodes : [text]
+}
+
 export function RenderTextWithMentions({
   text,
   mentionedUsers,
@@ -474,7 +538,7 @@ export function RenderTextWithMentions({
     <span className={className}>
       {renderedParts.map((part, index) => {
         if (typeof part === 'string') {
-          return <React.Fragment key={index}>{part}</React.Fragment>
+          return <React.Fragment key={index}>{linkifyString(part, index)}</React.Fragment>
         }
 
         if (part.userId && onMentionPress) {

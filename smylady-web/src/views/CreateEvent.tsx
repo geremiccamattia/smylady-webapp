@@ -31,6 +31,7 @@ import {
   Repeat,
   Plus,
   Trash2,
+  Languages,
 } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 import {
@@ -56,7 +57,7 @@ interface Subscriber {
 
 export default function CreateEvent() {
   const router = useRouter()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()
   const { user } = useAuth()
@@ -236,6 +237,10 @@ export default function CreateEvent() {
   })
 
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
+  const [translating, setTranslating] = useState(false)
+  const [translatedPreview, setTranslatedPreview] = useState<{
+    lang: string; name: string; description: string; restrictions: string
+  } | null>(null)
 
   const [locationQuery, setLocationQuery] = useState('')
   const [locationResults, setLocationResults] = useState<
@@ -447,6 +452,40 @@ export default function CreateEvent() {
     }
   }
 
+  const handleTranslate = async () => {
+    if (!formData.name && !formData.description) return
+    setTranslating(true)
+    try {
+      const currentLang = i18n.language?.substring(0, 2) || 'de'
+      const targetLang = currentLang === 'de' ? 'EN' : 'DE'
+      const result = await eventsService.translateText(
+        {
+          name: formData.name,
+          description: formData.description,
+          restrictions: formData.restrictions || '',
+        },
+        targetLang as 'DE' | 'EN',
+      )
+      setTranslatedPreview({
+        lang: targetLang.toLowerCase(),
+        name: result.translated.name,
+        description: result.translated.description,
+        restrictions: result.translated.restrictions,
+      })
+      toast({
+        title: targetLang === 'EN' ? 'Auf Englisch übersetzt' : 'Auf Deutsch übersetzt',
+      })
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Fehler' }),
+        description: error?.response?.data?.message || 'Übersetzung fehlgeschlagen',
+      })
+    } finally {
+      setTranslating(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -549,6 +588,22 @@ export default function CreateEvent() {
         }))
       if (validQuestions.length > 0) {
         eventFormData.append('questions', JSON.stringify(validQuestions))
+      }
+
+      if (translatedPreview) {
+        const sourceLang = i18n.language?.substring(0, 2) || 'de'
+        const translations: any = {}
+        translations[translatedPreview.lang] = {
+          name: translatedPreview.name,
+          description: translatedPreview.description,
+          restrictions: translatedPreview.restrictions,
+        }
+        translations[sourceLang] = {
+          name: formData.name,
+          description: formData.description,
+          restrictions: formData.restrictions || '',
+        }
+        eventFormData.append('translations', JSON.stringify(translations))
       }
 
       // Add visibility settings (matching mobile app)
@@ -985,6 +1040,64 @@ export default function CreateEvent() {
                   onChange={(val) => setFormData({ ...formData, description: val })}
                   placeholder={t('createEvent.addDetails')}
                 />
+              </div>
+
+              {/* Translation */}
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleTranslate}
+                  disabled={translating || (!formData.name && !formData.description)}
+                >
+                  <Languages className="h-4 w-4" />
+                  {translating
+                    ? t('createEvent.translating', { defaultValue: 'Übersetze...' })
+                    : t('createEvent.translateBtn', { defaultValue: 'Automatisch übersetzen (DE ↔ EN)' })}
+                </Button>
+
+                {translatedPreview && (
+                  <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+                    <p className="text-sm font-medium">
+                      {translatedPreview.lang === 'en' ? '🇬🇧 English' : '🇩🇪 Deutsch'}
+                    </p>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        {t('events.name', { defaultValue: 'Eventname' })}
+                      </Label>
+                      <Input
+                        value={translatedPreview.name}
+                        onChange={(e) => setTranslatedPreview({ ...translatedPreview, name: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        {t('events.description', { defaultValue: 'Beschreibung' })}
+                      </Label>
+                      <textarea
+                        className="w-full min-h-[100px] px-3 py-2 border rounded-md bg-background resize-y text-sm"
+                        value={translatedPreview.description}
+                        onChange={(e) => setTranslatedPreview({ ...translatedPreview, description: e.target.value })}
+                      />
+                    </div>
+
+                    {translatedPreview.restrictions && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          {t('createEvent.restrictions', { defaultValue: 'Einschränkungen' })}
+                        </Label>
+                        <Input
+                          value={translatedPreview.restrictions}
+                          onChange={(e) => setTranslatedPreview({ ...translatedPreview, restrictions: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Restrictions */}

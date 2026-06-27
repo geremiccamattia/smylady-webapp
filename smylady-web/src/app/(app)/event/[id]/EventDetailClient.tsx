@@ -69,7 +69,7 @@ interface Props { id: string }
 export default function EventDetailClient({ id }: Props) {
   const router = useRouter()
   const localePath = useLocalePath()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const { isAuthenticated, user } = useAuth()
   const { requireAuth } = useRequireAuth()
@@ -113,6 +113,10 @@ export default function EventDetailClient({ id }: Props) {
 
   // Check if the error is a 403 (visibility restricted - subscriber only / invited only)
   const isAccessDenied = (error as any)?.response?.status === 403
+
+  // Translation helper — falls back to original fields when no translation exists
+  const lang = i18n.language?.substring(0, 2) || 'de'
+  const tr = (event as any)?.translations?.[lang]
 
   // Calculate derived values that depend on event
   // Backend returns userId (not creator), so check both for compatibility
@@ -601,7 +605,7 @@ export default function EventDetailClient({ id }: Props) {
                 </span>
               )}
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold">{event.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">{tr?.name || event.name}</h1>
           </div>
 
           {/* Organizer - hide for external events */}
@@ -657,7 +661,7 @@ export default function EventDetailClient({ id }: Props) {
               <Info className="h-5 w-5" />
               {t('events.aboutEvent')}
             </h2>
-            <MarkdownContent content={event.description} className="text-muted-foreground" />
+            <MarkdownContent content={tr?.description || event.description} className="text-muted-foreground" />
           </div>
 
           {/* Additional Info */}
@@ -676,7 +680,7 @@ export default function EventDetailClient({ id }: Props) {
               return [String(value)]
             }
             const offeringsArray = unwrapField(event.offerings)
-            const restrictionsArray = unwrapField(event.restrictions)
+            const restrictionsArray = unwrapField(tr?.restrictions || event.restrictions)
 
             if (offeringsArray.length === 0 && restrictionsArray.length === 0) return null
 

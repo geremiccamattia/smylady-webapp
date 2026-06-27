@@ -17,13 +17,13 @@ import { useTranslation } from 'react-i18next'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Upload, X, Calendar, MapPin, Ticket, Music, Info, ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Upload, X, Calendar, MapPin, Ticket, Music, Info, ArrowLeft, Loader2, Plus, Trash2, Languages } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()
   const [isLoading, setIsLoading] = useState(false)
@@ -97,6 +97,10 @@ export default function EditEvent() {
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
   const [payAtDoor, setPayAtDoor] = useState(false)
   const [addressDetail, setAddressDetail] = useState('')
+  const [translating, setTranslating] = useState(false)
+  const [translatedPreview, setTranslatedPreview] = useState<{
+    lang: string; name: string; description: string; restrictions: string
+  } | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -198,6 +202,22 @@ export default function EditEvent() {
           required: q.required ?? false,
           options: q.options || [],
         })))
+      }
+
+      // Load existing translation into editable preview
+      const eventTranslations = (event as any)?.translations
+      if (eventTranslations) {
+        const hasGerman = /[äöüßÄÖÜ]/.test(event.description || '')
+        const otherLang = hasGerman ? 'en' : 'de'
+        const existing = eventTranslations[otherLang]
+        if (existing && (existing.name || existing.description)) {
+          setTranslatedPreview({
+            lang: otherLang,
+            name: existing.name || '',
+            description: existing.description || '',
+            restrictions: existing.restrictions || '',
+          })
+        }
       }
 
       // Set existing images
@@ -308,6 +328,62 @@ export default function EditEvent() {
     if (month === 3) return date.getDate() >= lastSunday(3)
     if (month === 10) return date.getDate() < lastSunday(10)
     return false
+  }
+
+  const handleSaveTranslation = async () => {
+    if (!id || !translatedPreview) return
+    setTranslating(true)
+    try {
+      await eventsService.saveEventTranslation((event as any)?._id || (event as any)?.id || id, translatedPreview.lang, {
+        name: translatedPreview.name,
+        description: translatedPreview.description,
+        restrictions: translatedPreview.restrictions,
+      })
+      toast({
+        title: t('editEvent.translationSaved', { defaultValue: 'Übersetzung gespeichert' }),
+      })
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Fehler' }),
+        description: error?.response?.data?.message || 'Speichern fehlgeschlagen',
+      })
+    } finally {
+      setTranslating(false)
+    }
+  }
+
+  const handleTranslate = async () => {
+    if (!id) return
+    setTranslating(true)
+    try {
+      const currentLang = i18n.language?.substring(0, 2) === 'de' ? 'EN' : 'DE'
+      const result = await eventsService.translateEvent((event as any)?._id || (event as any)?.id || id, currentLang as 'DE' | 'EN')
+      const translated = result.translations[currentLang.toLowerCase()]
+      if (translated) {
+        setTranslatedPreview({
+          lang: currentLang.toLowerCase(),
+          name: translated.name,
+          description: translated.description,
+          restrictions: translated.restrictions,
+        })
+      }
+      toast({
+        title: t('editEvent.translated', {
+          defaultValue: currentLang === 'DE'
+            ? 'Auf Deutsch übersetzt'
+            : 'Translated to English',
+        }),
+      })
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Fehler' }),
+        description: error?.response?.data?.message || 'Übersetzung fehlgeschlagen',
+      })
+    } finally {
+      setTranslating(false)
+    }
   }
 
   const buildEventFormData = () => {
@@ -520,6 +596,76 @@ export default function EditEvent() {
                 placeholder={t('editEvent.descriptionPlaceholder')}
               />
             </div>
+
+            {id && (
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleTranslate}
+                  disabled={translating || !formData.description}
+                >
+                  <Languages className="h-4 w-4" />
+                  {translating
+                    ? t('editEvent.translating', { defaultValue: 'Übersetze...' })
+                    : t('editEvent.translateBtn', { defaultValue: 'Automatisch übersetzen (DE ↔ EN)' })}
+                </Button>
+
+                {translatedPreview && (
+                  <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">
+                        {translatedPreview.lang === 'en' ? '🇬🇧 English' : '🇩🇪 Deutsch'}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleSaveTranslation}
+                        disabled={translating}
+                      >
+                        {t('editEvent.saveTranslation', { defaultValue: 'Übersetzung speichern' })}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        {t('events.name', { defaultValue: 'Eventname' })}
+                      </Label>
+                      <Input
+                        value={translatedPreview.name}
+                        onChange={(e) => setTranslatedPreview({ ...translatedPreview, name: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        {t('events.description', { defaultValue: 'Beschreibung' })}
+                      </Label>
+                      <textarea
+                        className="w-full min-h-[100px] px-3 py-2 border rounded-md bg-background resize-y text-sm"
+                        value={translatedPreview.description}
+                        onChange={(e) => setTranslatedPreview({ ...translatedPreview, description: e.target.value })}
+                      />
+                    </div>
+
+                    {translatedPreview.restrictions && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          {t('createEvent.restrictions', { defaultValue: 'Einschränkungen' })}
+                        </Label>
+                        <Input
+                          value={translatedPreview.restrictions}
+                          onChange={(e) => setTranslatedPreview({ ...translatedPreview, restrictions: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">{t('events.category')} *</Label>

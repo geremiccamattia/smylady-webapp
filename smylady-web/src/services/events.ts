@@ -193,6 +193,32 @@ export const eventsService = {
     }
   },
 
+  async translateText(
+    data: { name: string; description: string; restrictions: string },
+    targetLang: 'DE' | 'EN',
+  ): Promise<{
+    translated: { name: string; description: string; restrictions: string; detectedSourceLang: string };
+  }> {
+    const response = await apiClient.post('/events/translate-text', { ...data, targetLang })
+    return response.data.data
+  },
+
+  async saveEventTranslation(
+    eventId: string,
+    lang: string,
+    data: { name: string; description: string; restrictions: string },
+  ): Promise<void> {
+    await apiClient.patch(`/events/${eventId}/translation`, { lang, ...data })
+  },
+
+  async translateEvent(eventId: string, targetLang: 'DE' | 'EN'): Promise<{
+    translations: Record<string, { name: string; description: string; restrictions: string }>;
+    detectedSourceLang: string;
+  }> {
+    const response = await apiClient.post(`/events/${eventId}/translate?targetLang=${targetLang}`)
+    return response.data.data
+  },
+
   // Get a single public event by ID without authentication
   async getPublicEventById(id: string, populateCreator: boolean = true): Promise<Event | null> {
     try {

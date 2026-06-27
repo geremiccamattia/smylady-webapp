@@ -22,7 +22,9 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onFavoriteChange, priority = false }: EventCardProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language?.substring(0, 2) || 'de'
+  const tr = (event as any)?.translations?.[lang]
   const { isAuthenticated } = useAuth()
   const localePath = useLocalePath()
   const { toast } = useToast()
@@ -36,7 +38,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false }:
   const rawImageUrl = event.locationImages?.[0]?.url || event.thumbnailUrl || event.images?.[0]
 
   // Generate a unique placeholder based on event ID to avoid all events showing the same fallback
-  const uniquePlaceholder = `https://via.placeholder.com/400x225/6366f1/ffffff?text=${encodeURIComponent(event.name?.substring(0, 15) || 'Event')}`
+  const uniquePlaceholder = `https://via.placeholder.com/400x225/6366f1/ffffff?text=${encodeURIComponent((tr?.name || event.name)?.substring(0, 15) || 'Event')}`
   const imageUrl = resolveImageUrl(rawImageUrl) || uniquePlaceholder
 
   // Check if this is a Ticketmaster/external event
@@ -135,7 +137,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false }:
       <div className="relative aspect-[16/9] overflow-hidden bg-muted">
         <Image
           src={imageUrl}
-          alt={event.name}
+          alt={tr?.name || event.name}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           priority={priority}
@@ -193,7 +195,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false }:
       <CardContent className="p-4 space-y-3">
         {/* Title */}
         <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
-          {event.name}
+          {tr?.name || event.name}
         </h3>
 
         {/* Date & Time */}
