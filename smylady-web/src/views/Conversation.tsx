@@ -329,7 +329,7 @@ function ConversationContent() {
                       className="rounded-lg max-w-full max-h-64 object-cover mb-2 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        setFullscreenImage(resolveImageUrl(msg.file || (msg as any).media?.url))
+                        setFullscreenImage(resolveImageUrl(msg.file || (msg as any).media?.url) || null)
                       }}
                     />
                   )}
