@@ -514,7 +514,9 @@ function ExploreContent() {
 
   const PostCard = ({ post }: { post: any }) => {
     const author = post.userId || post.user || {}
-    const postImage = post.media?.[0]?.url || post.images?.[0]?.url || post.images?.[0]
+    const firstImage = post.media?.find((m: any) => m.type === 'image')
+    const firstVideo = post.media?.find((m: any) => m.type === 'video')
+    const postImage = firstImage?.url || post.images?.[0]?.url || post.images?.[0]
     const postText = post.text || post.content || ''
     const postId = post._id || post.id
     return (
@@ -524,13 +526,25 @@ function ExploreContent() {
         </h2>
         <Link href={`/post/${postId}`}>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
-            {postImage && (
-              <div className="aspect-[21/9] relative overflow-hidden">
-                <img
-                  src={resolveImageUrl(postImage)}
-                  alt=""
-                  className="object-cover w-full h-full"
-                />
+            {(postImage || firstVideo) && (
+              <div className="aspect-[21/9] relative overflow-hidden rounded-t-lg">
+                {postImage ? (
+                  <img
+                    src={resolveImageUrl(postImage)}
+                    alt=""
+                    className="object-cover w-full h-full"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                ) : firstVideo ? (
+                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <div className="text-center">
+                      <span className="text-4xl">▶️</span>
+                      <p className="text-xs text-muted-foreground mt-1">Video</p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
             <CardContent className="p-4">
