@@ -67,7 +67,19 @@ export default function Feed() {
   const [showCreatePost, setShowCreatePost] = useState(false)
 
   useEffect(() => {
-    return () => {
+    if (window.location.hash) {
+      const id = window.location.hash.slice(1)
+      const timer = setTimeout(() => {
+        const el = document.getElementById(id)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+          }, 2000)
+        }
+      }, 500)
+      return () => clearTimeout(timer)
     }
   }, [])
 
@@ -157,7 +169,9 @@ export default function Feed() {
         <>
           <div className="space-y-4">
             {posts.map(post => (
-              <PostCard key={post._id} post={post} />
+              <div key={post._id} id={`post-${post._id}`}>
+                <PostCard post={post} />
+              </div>
             ))}
           </div>
 

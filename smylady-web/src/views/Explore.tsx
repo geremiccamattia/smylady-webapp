@@ -17,6 +17,7 @@ import {
   isLiveLocationEnabled,
 } from '@/services/location'
 import Link from 'next/link'
+import ScrollSignupPrompt from '@/components/ScrollSignupPrompt'
 import EventCard from '@/components/events/EventCard'
 import LocationModal, { LocationResult } from '@/components/LocationModal'
 import { Button } from '@/components/ui/button'
@@ -43,8 +44,6 @@ import {
 import { EVENT_CATEGORIES } from '@/lib/constants'
 import { resolveImageUrl } from '@/lib/utils'
 import { postsService } from '@/services/posts'
-import { formatDistanceToNow } from 'date-fns'
-import { de } from 'date-fns/locale'
 import { Event } from '@/types'
 
 interface SpotlightAd {
@@ -491,7 +490,7 @@ function ExploreContent() {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
           {onShowAll && (
             <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={onShowAll}>
               {t('explore.viewAll', { defaultValue: 'Alle anzeigen' })}
@@ -512,74 +511,71 @@ function ExploreContent() {
     )
   }
 
-  const PostCard = ({ post }: { post: any }) => {
-    const author = post.userId || post.user || {}
-    const firstImage = post.media?.find((m: any) => m.type === 'image')
-    const firstVideo = post.media?.find((m: any) => m.type === 'video')
-    const postImage = firstImage?.url || post.images?.[0]?.url || post.images?.[0]
-    const postText = post.text || post.content || ''
-    const postId = post._id || post.id
+  const PostRow = ({ posts }: { posts: any[] }) => {
+    if (posts.length === 0) return null
     return (
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-2xl font-bold tracking-tight">
           💭 {t('explore.yourVibes', { defaultValue: 'Deine Vibes' })}
         </h2>
-        <Link href={`/post/${postId}`}>
-          <Card className="overflow-hidden hover:shadow-md transition-shadow">
-            {(postImage || firstVideo) && (
-              <div className="aspect-[21/9] relative overflow-hidden rounded-t-lg">
-                {postImage ? (
-                  <img
-                    src={resolveImageUrl(postImage)}
-                    alt=""
-                    className="object-cover w-full h-full"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none'
-                    }}
-                  />
-                ) : firstVideo ? (
-                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <div className="text-center">
-                      <span className="text-4xl">▶️</span>
-                      <p className="text-xs text-muted-foreground mt-1">Video</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {posts.slice(0, 3).map((post: any) => {
+            const author = post.userId || post.user || {}
+            const firstImage = post.media?.find((m: any) => m.type === 'image')
+            const firstVideo = post.media?.find((m: any) => m.type === 'video')
+            const postImage = firstImage?.url || post.images?.[0]?.url || post.images?.[0]
+            const postText = post.text || post.content || ''
+            const postId = post._id || post.id
+            return (
+              <Link key={postId} href={`/feed#post-${postId}`}>
+                <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
+                  {(postImage || firstVideo) && (
+                    <div className="aspect-video relative overflow-hidden">
+                      {postImage ? (
+                        <img
+                          src={resolveImageUrl(postImage)}
+                          alt=""
+                          className="object-cover w-full h-full"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <span className="text-3xl">▶️</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-10 w-10 flex-shrink-0">
-                  <AvatarImage src={resolveImageUrl(author.profileImage)} />
-                  <AvatarFallback className="text-xs">
-                    {author.name?.charAt(0) || '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm truncate">{author.name || 'User'}</p>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {post.createdAt
-                        ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: de })
-                        : ''}
-                    </span>
-                  </div>
-                  {postText && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{postText}</p>
                   )}
-                  <div className="flex items-center gap-4 pt-1">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Heart className="h-3 w-3" /> {post.likeCount || post.likes?.length || 0}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MessageCircle className="h-3 w-3" /> {post.commentCount || post.comments?.length || 0}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2">
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarImage src={resolveImageUrl(author.profileImage)} />
+                        <AvatarFallback className="text-xs">
+                          {author.name?.charAt(0) || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{author.name || 'User'}</p>
+                        {postText && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{postText}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Heart className="h-3 w-3" /> {post.likeCount || post.likes?.length || 0}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MessageCircle className="h-3 w-3" /> {post.commentCount || post.comments?.length || 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
       </div>
     )
   }
@@ -630,30 +626,41 @@ function ExploreContent() {
 
       <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm py-3 -mx-4 px-4 space-y-2 border-b">
         {/* Date Filter Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {[
-            { value: 'today', label: t('explore.dateToday', { defaultValue: 'Heute' }) },
-            { value: 'tomorrow', label: t('explore.dateTomorrow', { defaultValue: 'Morgen' }) },
-            { value: 'weekend', label: t('explore.dateWeekend', { defaultValue: 'Wochenende' }) },
-            { value: 'this_week', label: t('explore.dateThisWeek', { defaultValue: 'Diese Woche' }) },
-            { value: 'next_week', label: t('explore.dateNextWeek', { defaultValue: 'Nächste Woche' }) },
-          ].map((d) => (
-            <button
-              key={d.value}
-              onClick={() => setDateFilter(dateFilter === d.value ? 'all' : d.value)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                dateFilter === d.value
-                  ? 'bg-primary text-white'
-                  : 'bg-muted hover:bg-muted/80 text-foreground'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+        <div className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {t('explore.dateLabel', { defaultValue: 'Wann' })}
+          </span>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {[
+              { value: 'today', label: t('explore.dateToday', { defaultValue: 'Heute' }) },
+              { value: 'tomorrow', label: t('explore.dateTomorrow', { defaultValue: 'Morgen' }) },
+              { value: 'weekend', label: t('explore.dateWeekend', { defaultValue: 'Wochenende' }) },
+              { value: 'this_week', label: t('explore.dateThisWeek', { defaultValue: 'Diese Woche' }) },
+              { value: 'next_week', label: t('explore.dateNextWeek', { defaultValue: 'Nächste Woche' }) },
+            ].map((d) => (
+              <button
+                key={d.value}
+                onClick={() => setDateFilter(dateFilter === d.value ? 'all' : d.value)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                  dateFilter === d.value
+                    ? 'bg-primary text-white'
+                    : 'bg-muted hover:bg-muted/80 text-foreground'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
 
+        <div className="border-t" />
+
         {/* Category + Price Filter Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {t('explore.categoryLabel', { defaultValue: 'Was' })}
+          </span>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           <button
             onClick={() => setPriceFilter(priceFilter === 'free' ? 'all' : 'free')}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
@@ -683,6 +690,7 @@ function ExploreContent() {
               ✕ {t('common.clear', { defaultValue: 'Löschen' })}
             </button>
           )}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -751,8 +759,10 @@ function ExploreContent() {
             />
           )}
 
-          {/* Post 1 — nur nach Top Picks wenn vorhanden */}
-          {topPicks.length > 0 && latestPosts[0] && <PostCard post={latestPosts[0]} />}
+          {/* Posts Row 1 — nach Top Picks */}
+          {topPicks.length > 0 && latestPosts.length > 0 && (
+            <PostRow posts={latestPosts.slice(0, 3)} />
+          )}
 
           {/* 🎟 Abendkasse */}
           <EventSection
@@ -761,8 +771,10 @@ function ExploreContent() {
             onShowAll={() => scrollToAllEvents({ priceFilter: 'door' })}
           />
 
-          {/* Post 2 — nur nach Abendkasse wenn vorhanden */}
-          {doorEvents.length > 0 && latestPosts[1] && <PostCard post={latestPosts[1]} />}
+          {/* Posts Row 2 — nach Abendkasse */}
+          {doorEvents.length > 0 && latestPosts.length > 3 && (
+            <PostRow posts={latestPosts.slice(3, 6)} />
+          )}
 
           {/* 🎉 Kostenlos starten */}
           <EventSection
@@ -771,23 +783,22 @@ function ExploreContent() {
             onShowAll={() => scrollToAllEvents({ priceFilter: 'free' })}
           />
 
-          {/* Post 3 — nur nach Kostenlos wenn vorhanden */}
-          {freeEvents.length > 0 && latestPosts[2] && <PostCard post={latestPosts[2]} />}
+          {/* Posts Row 3 — nach Kostenlos */}
+          {freeEvents.length > 0 && latestPosts.length > 6 && (
+            <PostRow posts={latestPosts.slice(6, 9)} />
+          )}
 
-          {/* Kategorie-Sektionen mit Posts dazwischen */}
-          {categoriesWithEvents.map(([category, evs], idx) => {
+          {/* Kategorie-Sektionen */}
+          {categoriesWithEvents.map(([category, evs]) => {
             const catInfo = EVENT_CATEGORIES.find((c) => c.value === category)
             const catLabel = catInfo?.label || category
-            const post = latestPosts[3 + idx]
             return (
-              <React.Fragment key={category}>
-                <EventSection
-                  title={catLabel}
-                  events={evs}
-                  onShowAll={() => scrollToAllEvents({ selectedCategory: category })}
-                />
-                {evs.length > 0 && post && <PostCard post={post} />}
-              </React.Fragment>
+              <EventSection
+                key={category}
+                title={catLabel}
+                events={evs}
+                onShowAll={() => scrollToAllEvents({ selectedCategory: category })}
+              />
             )
           })}
 
@@ -802,7 +813,7 @@ function ExploreContent() {
 
             return eventsToShow.length > 0 ? (
               <div ref={allEventsRef} className="space-y-3">
-                <h2 className="text-lg font-semibold">
+                <h2 className="text-2xl font-bold tracking-tight">
                   📋 {t('explore.allEvents', { defaultValue: 'Alle Events' })}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -858,6 +869,8 @@ function ExploreContent() {
         onSelect={handleLocationSelect}
         initialLocation={selectedLocation}
       />
+
+      <ScrollSignupPrompt />
     </div>
   )
 }
