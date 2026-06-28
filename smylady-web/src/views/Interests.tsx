@@ -18,6 +18,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'Business': '🤝',
   'Sports': '⚽',
   'Workshop': '📚',
+  'Yoga': '🧘',
 }
 
 export default function Interests() {
