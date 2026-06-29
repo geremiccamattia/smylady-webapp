@@ -10,8 +10,6 @@ import { userService } from '@/services/user'
 import { publicClient } from '@/services/api'
 import { ticketmasterService } from '@/services/ticketmaster'
 import {
-  isTicketmasterEnabled,
-  setTicketmasterEnabled,
   getManualLocation,
   getCurrentLocation,
   isLiveLocationEnabled,
@@ -22,7 +20,6 @@ import EventCard from '@/components/events/EventCard'
 import LocationModal, { LocationResult } from '@/components/LocationModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -34,7 +31,6 @@ import {
 } from '@/components/ui/select'
 import {
   Search,
-  Ticket,
   MapPin,
   Navigation,
   ChevronRight,
@@ -79,11 +75,7 @@ function ExploreContent() {
   const [dateFilter, setDateFilter] = useState(searchParams.get('date') || '')
   const [priceFilter, setPriceFilter] = useState(searchParams.get('price') || '')
   const [scrollToAll, setScrollToAll] = useState(0)
-  const [showTicketmaster, setShowTicketmaster] = useState(() => {
-    if (typeof window === 'undefined') return true
-    const saved = localStorage.getItem('syp_ticketmaster_enabled')
-    return saved === null ? true : saved === 'true'
-  })
+  const showTicketmaster = true
 
   // Location state
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null)
@@ -461,11 +453,6 @@ function ExploreContent() {
     setSelectedLocation(location || FALLBACK_LOCATION)
   }
 
-  const handleTicketmasterToggle = (enabled: boolean) => {
-    setShowTicketmaster(enabled)
-    setTicketmasterEnabled(enabled)
-  }
-
   const hasActiveFilters = submittedSearch ||
     (selectedCategory && selectedCategory !== 'all') ||
     (dateFilter && dateFilter !== 'all') ||
@@ -518,7 +505,7 @@ function ExploreContent() {
         <h2 className="text-2xl font-bold tracking-tight">
           💭 {t('explore.yourVibes', { defaultValue: 'Deine Vibes' })}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible">
           {posts.slice(0, 3).map((post: any) => {
             const author = post.userId || post.user || {}
             const firstImage = post.media?.find((m: any) => m.type === 'image')
@@ -526,11 +513,16 @@ function ExploreContent() {
             const postImage = firstImage?.url || post.images?.[0]?.url || post.images?.[0]
             const postText = post.text || post.content || ''
             const postId = post._id || post.id
+
             return (
-              <Link key={postId} href={`/feed#post-${postId}`}>
+              <Link
+                key={postId}
+                href={`/feed#post-${postId}`}
+                className="flex-shrink-0 w-[70vw] md:w-auto"
+              >
                 <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
                   {(postImage || firstVideo) && (
-                    <div className="aspect-video relative overflow-hidden">
+                    <div className="aspect-[16/9] relative overflow-hidden">
                       {postImage ? (
                         <img
                           src={resolveImageUrl(postImage)}
@@ -542,33 +534,31 @@ function ExploreContent() {
                         />
                       ) : (
                         <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <span className="text-3xl">▶️</span>
+                          <span className="text-2xl">▶️</span>
                         </div>
                       )}
                     </div>
                   )}
                   <CardContent className="p-3">
-                    <div className="flex items-start gap-2">
-                      <Avatar className="h-8 w-8 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6 flex-shrink-0">
                         <AvatarImage src={resolveImageUrl(author.profileImage)} />
-                        <AvatarFallback className="text-xs">
+                        <AvatarFallback className="text-[10px]">
                           {author.name?.charAt(0) || '?'}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{author.name || 'User'}</p>
-                        {postText && (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{postText}</p>
-                        )}
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Heart className="h-3 w-3" /> {post.likeCount || post.likes?.length || 0}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MessageCircle className="h-3 w-3" /> {post.commentCount || post.comments?.length || 0}
-                          </span>
-                        </div>
-                      </div>
+                      <p className="font-medium text-xs truncate">{author.name || 'User'}</p>
+                    </div>
+                    {postText && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{postText}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Heart className="h-2.5 w-2.5" /> {post.likeCount || post.likes?.length || 0}
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <MessageCircle className="h-2.5 w-2.5" /> {post.commentCount || post.comments?.length || 0}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -705,17 +695,6 @@ function ExploreContent() {
             className="pl-10 h-9"
           />
         </form>
-      </div>
-
-      {/* Ticketmaster Toggle */}
-      <div className="flex items-center justify-between p-3 bg-card rounded-xl border">
-        <div className="flex items-center gap-3">
-          <Ticket className={`h-5 w-5 ${showTicketmaster ? 'text-primary' : 'text-muted-foreground'}`} />
-          <span className="font-medium text-sm">
-            {t('explore.ticketmasterEvents', { defaultValue: 'Ticketmaster Events' })}
-          </span>
-        </div>
-        <Switch checked={showTicketmaster} onCheckedChange={handleTicketmasterToggle} />
       </div>
 
       {/* Loading */}
