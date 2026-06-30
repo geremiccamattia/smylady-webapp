@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslation } from 'react-i18next'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { LogIn, UserPlus } from 'lucide-react'
 
 export default function AuthModal() {
   const { isAuthModalVisible, hideAuthModal } = useAuthModal()
-  const router = useRouter()
+  const router = useRouter()
   const { t, i18n } = useTranslation()
   console.log('[AuthModal] current language:', i18n.language)
 
@@ -38,7 +38,7 @@ export default function AuthModal() {
             }}
           >
             <UserPlus className="h-5 w-5" />
-            {t('auth.registerFree', { defaultValue: 'Kostenlos registrieren' })}
+            {t('auth.registerFree', { defaultValue: 'Kostenlos dabei sein' })}
           </Button>
           <Button
             variant="outline"

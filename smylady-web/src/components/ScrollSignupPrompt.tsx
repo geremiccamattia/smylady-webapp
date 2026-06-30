@@ -58,7 +58,7 @@ export default function ScrollSignupPrompt() {
             }}
           >
             <UserPlus className="h-5 w-5" />
-            {t('auth.registerFree', { defaultValue: 'Kostenlos registrieren' })}
+            {t('auth.registerFree', { defaultValue: 'Kostenlos dabei sein' })}
           </Button>
           <Button
             variant="outline"

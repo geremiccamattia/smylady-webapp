@@ -124,9 +124,9 @@ export default function Register() {
             alt="Share Your Party"
             className="mx-auto w-16 h-16 rounded-full object-cover mb-4"
           />
-          <CardTitle className="text-2xl gradient-text">{t('auth.createAccount', { defaultValue: 'Create account' })}</CardTitle>
+          <CardTitle className="text-2xl gradient-text">{t('auth.createAccount', { defaultValue: 'Join now' })}</CardTitle>
           <CardDescription>
-            {t('auth.registerSubtitle', { defaultValue: 'Sign up to discover and share events' })}
+            {t('auth.registerSubtitle', { defaultValue: 'Discover and share the best events' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -217,7 +217,7 @@ export default function Register() {
               />
             </div>
             <Button type="submit" variant="gradient" className="w-full" loading={isLoading}>
-              {t('auth.register', { defaultValue: 'Register' })}
+              {t('auth.register', { defaultValue: 'Join now' })}
             </Button>
           </form>
           )}

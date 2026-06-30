@@ -19,7 +19,6 @@ import ScrollSignupPrompt from '@/components/ScrollSignupPrompt'
 import EventCard from '@/components/events/EventCard'
 import LocationModal, { LocationResult } from '@/components/LocationModal'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -75,6 +74,8 @@ function ExploreContent() {
   const [dateFilter, setDateFilter] = useState(searchParams.get('date') || '')
   const [priceFilter, setPriceFilter] = useState(searchParams.get('price') || '')
   const [scrollToAll, setScrollToAll] = useState(0)
+  const [customDate, setCustomDate] = useState<string>('')
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const showTicketmaster = true
 
   // Location state
@@ -146,13 +147,11 @@ function ExploreContent() {
       searchTrigger,
       submittedSearch,
       selectedCategory,
-      dateFilter,
       selectedLocation?.lat,
       selectedLocation?.lng,
       radius,
     ],
     queryFn: () => {
-      console.log('QUERY FIRED with search:', searchRef.current)
       const catParam = selectedCategory === 'all' ? '' : selectedCategory
       return isAuthenticated
         ? eventsService.getEvents(
@@ -241,17 +240,26 @@ function ExploreContent() {
     staleTime: 10 * 60 * 1000,
   })
 
-  // Combine events
-  const allEvents: Event[] = [
-    ...(events || []),
-    ...(showTicketmaster && ticketmasterEvents
-      ? ticketmasterEvents.map((e: Event) => ({ ...e, isTicketmaster: true }))
-      : []),
-  ]
-
   const filteredEvents = useMemo(() => {
-    const topPickIds = new Set(topPicks.map((e: any) => e._id))
-    let result: Event[] = (allEvents || []).filter((e: any) => !topPickIds.has(e._id))
+    const allEvents: Event[] = [
+      ...(events || []),
+      ...(showTicketmaster && ticketmasterEvents
+        ? ticketmasterEvents.map((e: Event) => ({ ...e, isTicketmaster: true }))
+        : []),
+    ]
+
+    const isFilterActive =
+      (dateFilter && dateFilter !== 'all') ||
+      (priceFilter && priceFilter !== 'all') ||
+      (selectedCategory && selectedCategory !== 'all')
+
+    let result: Event[]
+    if (isFilterActive) {
+      result = [...allEvents]
+    } else {
+      const topPickIds = new Set(topPicks.map((e: any) => e._id))
+      result = allEvents.filter((e: any) => !topPickIds.has(e._id))
+    }
 
     if (dateFilter && dateFilter !== 'all') {
       const now = new Date()
@@ -298,6 +306,14 @@ function ExploreContent() {
           from = startOfDay(now)
           to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
           break
+        case 'custom': {
+          if (customDate) {
+            const selected = new Date(customDate)
+            from = startOfDay(selected)
+            to = endOfDay(selected)
+          }
+          break
+        }
       }
       if (from && to) {
         result = result.filter((e: any) => {
@@ -320,7 +336,7 @@ function ExploreContent() {
     }
 
     return result
-  }, [allEvents, dateFilter, priceFilter])
+  }, [events, ticketmasterEvents, showTicketmaster, dateFilter, priceFilter, customDate, topPicks, selectedCategory])
 
   // === SECTION-BASED FEED ===
 
@@ -422,8 +438,6 @@ function ExploreContent() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('HANDLE SEARCH - searchQuery:', searchQuery)
-    console.log('HANDLE SEARCH - searchRef:', searchRef.current)
     window.dataLayer = window.dataLayer || []
     window.dataLayer.push({
       event: 'explore_search',
@@ -440,6 +454,8 @@ function ExploreContent() {
     setSelectedCategory('')
     setDateFilter('')
     setPriceFilter('')
+    setCustomDate('')
+    setShowDatePicker(false)
   }
 
   const scrollToAllEvents = (filters: { priceFilter?: string; dateFilter?: string; selectedCategory?: string }) => {
@@ -452,6 +468,11 @@ function ExploreContent() {
   const handleLocationSelect = (location: LocationResult | null) => {
     setSelectedLocation(location || FALLBACK_LOCATION)
   }
+
+  const isFilterActive =
+    (dateFilter && dateFilter !== 'all') ||
+    (priceFilter && priceFilter !== 'all') ||
+    (selectedCategory && selectedCategory !== 'all')
 
   const hasActiveFilters = submittedSearch ||
     (selectedCategory && selectedCategory !== 'all') ||
@@ -640,7 +661,34 @@ function ExploreContent() {
                 {d.label}
               </button>
             ))}
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                dateFilter === 'custom'
+                  ? 'bg-primary text-white'
+                  : 'bg-muted hover:bg-muted/80 text-foreground'
+              }`}
+            >
+              {customDate && dateFilter === 'custom'
+                ? new Date(customDate).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })
+                : t('explore.dateChoose', { defaultValue: 'Datum wählen' })}
+            </button>
           </div>
+          {showDatePicker && (
+            <div className="pt-1">
+              <input
+                type="date"
+                className="px-3 py-1.5 border rounded-lg text-sm bg-background"
+                value={customDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  setCustomDate(e.target.value)
+                  setDateFilter('custom')
+                  setShowDatePicker(false)
+                }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="border-t" />
@@ -659,7 +707,16 @@ function ExploreContent() {
           >
             {t('explore.priceFree', { defaultValue: 'Gratis' })}
           </button>
-          {EVENT_CATEGORIES.filter(c => c.value !== 'Other').map((cat) => (
+          {(() => {
+            const priorityOrder = ['Music', 'Clubbing', 'Business']
+            const cats = EVENT_CATEGORIES.filter(c => c.value !== 'Other')
+            const sorted = [
+              ...cats.filter(c => priorityOrder.includes(c.value))
+                .sort((a, b) => priorityOrder.indexOf(a.value) - priorityOrder.indexOf(b.value)),
+              ...cats.filter(c => !priorityOrder.includes(c.value)),
+            ]
+            return sorted
+          })().map((cat) => (
             <button
               key={cat.value}
               onClick={() => setSelectedCategory(selectedCategory === cat.value ? 'all' : cat.value)}
@@ -683,18 +740,6 @@ function ExploreContent() {
           </div>
         </div>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder={t('explore.searchPlaceholder', { defaultValue: 'Events suchen...' })}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(e) }}
-            className="pl-10 h-9"
-          />
-        </form>
       </div>
 
       {/* Loading */}
@@ -730,62 +775,63 @@ function ExploreContent() {
             return null
           })()}
 
-          {/* 🔥 Top Pick */}
-          {topPicks.length > 0 && (
-            <EventSection
-              title={`🔥 ${t('explore.topPick', { defaultValue: 'Top Pick' })}`}
-              events={topPicks}
-            />
-          )}
+          {!isFilterActive && (
+            <>
+              {/* 🔥 Top Pick */}
+              {topPicks.length > 0 && (
+                <EventSection
+                  title={`🔥 ${t('explore.topPick', { defaultValue: 'Top Pick' })}`}
+                  events={topPicks}
+                />
+              )}
 
-          {/* Posts Row 1 — nach Top Picks */}
-          {topPicks.length > 0 && latestPosts.length > 0 && (
-            <PostRow posts={latestPosts.slice(0, 3)} />
-          )}
+              {/* Posts Row 1 — nach Top Picks */}
+              {topPicks.length > 0 && latestPosts.length > 0 && (
+                <PostRow posts={latestPosts.slice(0, 3)} />
+              )}
 
-          {/* 🎟 Abendkasse */}
-          <EventSection
-            title={`🎟 ${t('explore.doorEvents', { defaultValue: 'Mit Gästeliste (Abendkasse)' })}`}
-            events={doorEvents}
-            onShowAll={() => scrollToAllEvents({ priceFilter: 'door' })}
-          />
-
-          {/* Posts Row 2 — nach Abendkasse */}
-          {doorEvents.length > 0 && latestPosts.length > 3 && (
-            <PostRow posts={latestPosts.slice(3, 6)} />
-          )}
-
-          {/* 🎉 Kostenlos starten */}
-          <EventSection
-            title={`🎉 ${t('explore.freeToStart', { defaultValue: 'Kostenlos starten' })}`}
-            events={freeEvents}
-            onShowAll={() => scrollToAllEvents({ priceFilter: 'free' })}
-          />
-
-          {/* Posts Row 3 — nach Kostenlos */}
-          {freeEvents.length > 0 && latestPosts.length > 6 && (
-            <PostRow posts={latestPosts.slice(6, 9)} />
-          )}
-
-          {/* Kategorie-Sektionen */}
-          {categoriesWithEvents.map(([category, evs]) => {
-            const catInfo = EVENT_CATEGORIES.find((c) => c.value === category)
-            const catLabel = catInfo?.label || category
-            return (
+              {/* 🎟 Abendkasse */}
               <EventSection
-                key={category}
-                title={catLabel}
-                events={evs}
-                onShowAll={() => scrollToAllEvents({ selectedCategory: category })}
+                title={`🎟 ${t('explore.doorEvents', { defaultValue: 'Mit Gästeliste (Abendkasse)' })}`}
+                events={doorEvents}
+                onShowAll={() => scrollToAllEvents({ priceFilter: 'door' })}
               />
-            )
-          })}
+
+              {/* Posts Row 2 — nach Abendkasse */}
+              {doorEvents.length > 0 && latestPosts.length > 3 && (
+                <PostRow posts={latestPosts.slice(3, 6)} />
+              )}
+
+              {/* 🎉 Kostenlos starten */}
+              <EventSection
+                title={`🎉 ${t('explore.freeToStart', { defaultValue: 'Kostenlos starten' })}`}
+                events={freeEvents}
+                onShowAll={() => scrollToAllEvents({ priceFilter: 'free' })}
+              />
+
+              {/* Posts Row 3 — nach Kostenlos */}
+              {freeEvents.length > 0 && latestPosts.length > 6 && (
+                <PostRow posts={latestPosts.slice(6, 9)} />
+              )}
+
+              {/* Kategorie-Sektionen */}
+              {categoriesWithEvents.map(([category, evs]) => {
+                const catInfo = EVENT_CATEGORIES.find((c) => c.value === category)
+                const catLabel = catInfo?.label || category
+                return (
+                  <EventSection
+                    key={category}
+                    title={catLabel}
+                    events={evs}
+                    onShowAll={() => scrollToAllEvents({ selectedCategory: category })}
+                  />
+                )
+              })}
+            </>
+          )}
 
           {/* 📋 Alle Events */}
           {(() => {
-            const isFilterActive = (priceFilter && priceFilter !== 'all') ||
-              (dateFilter && dateFilter !== 'all') ||
-              (selectedCategory && selectedCategory !== 'all')
             const eventsToShow = isFilterActive
               ? (filteredEvents || [])
               : remainingEvents.filter((e: any) => !e.isTicketmaster && !e.isExternalEvent)

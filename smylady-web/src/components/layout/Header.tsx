@@ -267,7 +267,7 @@ export default function Header() {
                   Anmelden
                 </Button>
                 <Link href={localePath("/register")} onClick={() => setShowMobileMenu(false)}>
-                  <Button variant="gradient" className="w-full">Registrieren</Button>
+                  <Button variant="gradient" className="w-full">{t('auth.register')}</Button>
                 </Link>
               </>
             )}
