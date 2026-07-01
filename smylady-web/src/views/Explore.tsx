@@ -835,7 +835,7 @@ function ExploreContent() {
           {(() => {
             const eventsToShow = isFilterActive
               ? (filteredEvents || [])
-              : remainingEvents.filter((e: any) => !e.isTicketmaster && !e.isExternalEvent)
+              : (filteredEvents || []).filter((e: any) => !e.isTicketmaster && !e.isExternalEvent)
 
             return eventsToShow.length > 0 ? (
               <div ref={allEventsRef} className="space-y-3">
