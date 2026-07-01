@@ -138,7 +138,7 @@ export function PurchaseQuestionsDialog({
             {t('common.cancel', { defaultValue: 'Abbrechen' })}
           </Button>
           <Button onClick={handleSubmit} disabled={!isComplete || submitting}>
-            {t('purchaseQuestions.continue', { defaultValue: 'Weiter zum Kauf' })}
+            {t('purchase.continueToTicket', { defaultValue: 'Weiter zum Ticket' })}
           </Button>
         </DialogFooter>
       </DialogContent>

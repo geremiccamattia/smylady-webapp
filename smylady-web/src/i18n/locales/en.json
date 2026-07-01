@@ -1280,5 +1280,8 @@
     "errorMessage": "Please enter a message.",
     "successDesc": "Your email client will open.",
     "errorMailClient": "No email client could be found."
+  },
+  "purchase": {
+    "continueToTicket": "Continue to Ticket"
   }
 }

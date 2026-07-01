@@ -1104,5 +1104,8 @@
     "magazine": "Magazin",
     "partyMagazine": "Party Magazin",
     "readInBlog": "Im Blog lesen"
+  },
+  "purchase": {
+    "continueToTicket": "Weiter zum Ticket"
   }
 }
