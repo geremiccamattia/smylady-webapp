@@ -576,7 +576,7 @@ function ExploreContent() {
                     )}
                     <div className="flex items-center gap-3 mt-1.5">
                       <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <Heart className="h-2.5 w-2.5" /> {post.likeCount || post.likes?.length || 0}
+                        <Heart className="h-2.5 w-2.5" /> {post.likeCount || post.reactions?.length || post.likes?.length || 0}
                       </span>
                       <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                         <MessageCircle className="h-2.5 w-2.5" /> {post.commentCount || post.comments?.length || 0}
