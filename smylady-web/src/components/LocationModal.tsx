@@ -41,6 +41,7 @@ const POPULAR_LOCATIONS: LocationResult[] = [
   { place_id: 'frankfurt', description: 'Frankfurt, Deutschland', lat: 50.1109, lng: 8.6821 },
   { place_id: 'cologne', description: 'Köln, Deutschland', lat: 50.9375, lng: 6.9603 },
   { place_id: 'salzburg', description: 'Salzburg, Österreich', lat: 47.8095, lng: 13.055 },
+  { place_id: 'graz', description: 'Graz, Österreich', lat: 47.0707, lng: 15.4395 },
 ]
 
 export function LocationModal({ open, onClose, onSelect, initialLocation }: LocationModalProps) {

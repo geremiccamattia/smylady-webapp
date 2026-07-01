@@ -335,8 +335,12 @@ function ExploreContent() {
       })
     }
 
+    if (submittedSearch) {
+      result = result.filter((e: any) => !e.isTicketmaster && !e.isExternalEvent)
+    }
+
     return result
-  }, [events, ticketmasterEvents, showTicketmaster, dateFilter, priceFilter, customDate, topPicks, selectedCategory])
+  }, [events, ticketmasterEvents, showTicketmaster, dateFilter, priceFilter, customDate, topPicks, selectedCategory, submittedSearch])
 
   // === SECTION-BASED FEED ===
 
@@ -469,15 +473,12 @@ function ExploreContent() {
     setSelectedLocation(location || FALLBACK_LOCATION)
   }
 
-  const isFilterActive =
+  const isFilterActive = submittedSearch ||
     (dateFilter && dateFilter !== 'all') ||
     (priceFilter && priceFilter !== 'all') ||
     (selectedCategory && selectedCategory !== 'all')
 
-  const hasActiveFilters = submittedSearch ||
-    (selectedCategory && selectedCategory !== 'all') ||
-    (dateFilter && dateFilter !== 'all') ||
-    (priceFilter && priceFilter !== 'all')
+  const hasActiveFilters = isFilterActive
 
   const getCategoryLink = (category: string) => {
     const categoryPageMap: Record<string, string> = {
