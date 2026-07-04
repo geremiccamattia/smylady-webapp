@@ -324,8 +324,8 @@ export default function TicketDetail() {
             </div>
           )}
 
-          {/* QR Code - matching mobile app format (show for all active/scanned tickets, hide only for cancelled) */}
-          {!isCancelled && (
+          {/* QR Code - matching mobile app format (show for all active/scanned tickets, hide only for cancelled or online events) */}
+          {!isCancelled && (event as any)?.locationType !== 'online' && (
             <div className="flex flex-col items-center py-6">
               <p className="text-sm font-medium mb-4">Dein Ticket QR-Code</p>
               <div className="p-4 bg-white rounded-lg shadow-lg">
@@ -440,6 +440,21 @@ export default function TicketDetail() {
               <span className="text-muted-foreground">Gekauft am</span>
               <span>{format(new Date(ticket.purchaseDate || ticket.createdAt), 'dd.MM.yyyy', { locale: de })}</span>
             </div>
+            {(event as any)?.locationType === 'online' && (event as any)?.onlineUrl && (
+              <div className="flex justify-between items-center py-2">
+                <span className="text-muted-foreground">
+                  {t('ticket.eventLink', { defaultValue: 'Event-Link' })}
+                </span>
+                <a
+                  href={(event as any).onlineUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline font-medium"
+                >
+                  {t('ticket.joinNow', { defaultValue: 'Jetzt teilnehmen' })}
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Safety Companion Hint (like mobile app) */}

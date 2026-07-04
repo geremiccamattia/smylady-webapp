@@ -97,6 +97,13 @@ export default function EditEvent() {
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
   const [payAtDoor, setPayAtDoor] = useState(false)
   const [addressDetail, setAddressDetail] = useState('')
+  const [locationQuery, setLocationQuery] = useState('')
+  const [locationResults, setLocationResults] = useState<any[]>([])
+  const [locationType, setLocationType] = useState<'physical' | 'online' | 'tba'>('physical')
+  const [onlineUrl, setOnlineUrl] = useState('')
+  const [tbaCityQuery, setTbaCityQuery] = useState('')
+  const [tbaCityResults, setTbaCityResults] = useState<Array<{ name: string; lat: number; lng: number }>>([])
+  const [selectedTbaCity, setSelectedTbaCity] = useState<{ name: string; lat: number; lng: number } | null>(null)
   const [translating, setTranslating] = useState(false)
   const [translatedPreview, setTranslatedPreview] = useState<{
     lang: string; name: string; description: string; restrictions: string
@@ -114,6 +121,7 @@ export default function EditEvent() {
     eventStartTime: '',
     eventEndTime: '',
     locationName: '',
+    location: null as { type: string; coordinates: number[] } | null,
     minimumAge: '0',
     offerings: '',
     restrictions: '',
@@ -174,6 +182,7 @@ export default function EditEvent() {
           }
           return existingLocation
         })(),
+        location: null,
         minimumAge: event.minimumAge?.toString() || '0',
         offerings: parseStringField(event.offerings),
         restrictions: parseStringField(event.restrictions),
@@ -181,6 +190,22 @@ export default function EditEvent() {
       })
       setAllowGuestMemories(event.allowGuestMemories !== false)
       setPayAtDoor((event as any).paymentType === 'door')
+      setLocationType((event as any).locationType || 'physical')
+      setOnlineUrl((event as any).onlineUrl || '')
+      if ((event as any).locationType === 'physical' || !(event as any).locationType) {
+        setLocationQuery(event.locationName || '')
+      }
+      if ((event as any).locationType === 'tba' && event.locationName) {
+        const cityName = event.locationName.replace(' — Standort folgt', '')
+        if (cityName && cityName !== 'Standort folgt') {
+          const coords = event.location?.coordinates
+          setSelectedTbaCity({
+            name: cityName,
+            lat: coords?.[1] || 0,
+            lng: coords?.[0] || 0,
+          })
+        }
+      }
 
       // Set ticket tiers if present
       if (event.ticketTiers && event.ticketTiers?.length > 0) {
@@ -228,6 +253,49 @@ export default function EditEvent() {
       }
     }
   }, [event])
+
+  useEffect(() => {
+    if (locationType !== 'tba' || tbaCityQuery.trim().length < 2) {
+      setTbaCityResults([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(tbaCityQuery)}&limit=5&featuretype=city&addressdetails=1&countrycodes=at,de,ch`
+        )
+        const data = await res.json()
+        const cities = data.map((r: any) => ({
+          name: [r.address?.city || r.address?.town || r.name, r.address?.country].filter(Boolean).join(', '),
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon),
+        }))
+        setTbaCityResults(cities)
+      } catch {
+        setTbaCityResults([])
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [tbaCityQuery, locationType])
+
+  useEffect(() => {
+    if (!locationQuery.trim() || locationQuery.trim().length < 3) {
+      setLocationResults([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5&addressdetails=1&countrycodes=at,de,ch`
+        )
+        const data = await res.json()
+        setLocationResults(data)
+      } catch {
+        setLocationResults([])
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [locationQuery])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -389,13 +457,33 @@ export default function EditEvent() {
   const buildEventFormData = () => {
     const eventFormData = new FormData()
 
-    const { offerings, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, ...restFormData } = formData
-    const fullLocationName = addressDetail.trim()
-      ? `${restFormData.locationName} Top ${addressDetail.trim()}`
-      : restFormData.locationName
-    Object.entries({ ...restFormData, locationName: fullLocationName }).forEach(([key, value]) => {
+    const { offerings, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, locationName, location, ...restFormData } = formData
+    Object.entries(restFormData).forEach(([key, value]) => {
       eventFormData.append(key, value)
     })
+
+    eventFormData.append('locationType', locationType)
+    if (locationType === 'online') {
+      eventFormData.append('locationName', 'Online')
+    } else if (locationType === 'tba') {
+      if (selectedTbaCity) {
+        eventFormData.append('locationName', `${selectedTbaCity.name} — Standort folgt`)
+        eventFormData.append('location', JSON.stringify({
+          type: 'Point',
+          coordinates: [selectedTbaCity.lng, selectedTbaCity.lat],
+        }))
+      } else {
+        eventFormData.append('locationName', 'Standort folgt')
+      }
+    } else {
+      const fullLocationName = addressDetail.trim()
+        ? `${locationName} Top ${addressDetail.trim()}`
+        : locationName
+      eventFormData.append('locationName', fullLocationName)
+    }
+    if (onlineUrl) {
+      eventFormData.append('onlineUrl', onlineUrl)
+    }
 
     if (eventDate) {
       eventFormData.append('eventDate', new Date(eventDate).toISOString())
@@ -456,8 +544,8 @@ export default function EditEvent() {
 
     eventFormData.append('existingImages', JSON.stringify(existingImages))
 
-    if (event?.location) {
-      eventFormData.append('location', JSON.stringify(event.location))
+    if (locationType === 'physical' && (location || event?.location)) {
+      eventFormData.append('location', JSON.stringify(location || event?.location))
     }
 
     images.forEach(image => {
@@ -469,6 +557,14 @@ export default function EditEvent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (locationType === 'tba' && !selectedTbaCity) {
+      toast({
+        variant: 'destructive',
+        title: t('createEvent.tbaCityRequired', { defaultValue: 'Bitte wähle eine Stadt aus' }),
+      })
+      return
+    }
 
     const stripeReady = connectedAccount && connectedAccount.accountStatus === 'active'
     if (hasPaidTickets() && !stripeReady) {
@@ -746,25 +842,140 @@ export default function EditEvent() {
               {t('events.location')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="locationName">{t('editEvent.locationLabel')} *</Label>
-              <Input
-                id="locationName"
-                value={formData.locationName}
-                onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-                placeholder={t('editEvent.locationPlaceholder')}
-                required
-              />
-              <Input
-                placeholder={t('createEvent.addressDetail', {
-                  defaultValue: 'Adresszusatz (z.B. Stiege 2, Top 5) — optional',
-                })}
-                value={addressDetail}
-                onChange={(e) => setAddressDetail(e.target.value)}
-                className="mt-2"
-              />
+              <Label>{t('createEvent.locationType', { defaultValue: 'Veranstaltungsort' })}</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={locationType === 'physical' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setLocationType('physical')}
+                >
+                  📍 {t('createEvent.locationPhysical', { defaultValue: 'Vor Ort' })}
+                </Button>
+                <Button
+                  type="button"
+                  variant={locationType === 'online' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setLocationType('online')}
+                >
+                  💻 {t('createEvent.locationOnline', { defaultValue: 'Online' })}
+                </Button>
+                <Button
+                  type="button"
+                  variant={locationType === 'tba' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setLocationType('tba')}
+                >
+                  📌 {t('createEvent.locationTba', { defaultValue: 'Standort folgt' })}
+                </Button>
+              </div>
             </div>
+
+            {locationType === 'physical' && (
+              <div className="space-y-2">
+                <Label>{t('createEvent.location', { defaultValue: 'Standort' })} *</Label>
+                <div className="relative">
+                  <Input
+                    placeholder={t('createEvent.searchAddress', { defaultValue: 'Adresse suchen...' })}
+                    value={locationQuery}
+                    onChange={(e) => setLocationQuery(e.target.value)}
+                  />
+                  {locationResults.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {locationResults.map((result: any, idx: number) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                          onClick={() => {
+                            setLocationQuery(result.display_name)
+                            setLocationResults([])
+                            setFormData({
+                              ...formData,
+                              locationName: result.display_name,
+                              location: {
+                                type: 'Point',
+                                coordinates: [parseFloat(result.lon), parseFloat(result.lat)],
+                              },
+                            })
+                          }}
+                        >
+                          📍 {result.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Input
+                  placeholder={t('createEvent.addressDetail', {
+                    defaultValue: 'Adresszusatz (z.B. Stiege 2, Top 5) — optional',
+                  })}
+                  value={addressDetail}
+                  onChange={(e) => setAddressDetail(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+            )}
+
+            {locationType === 'online' && (
+              <div className="space-y-2">
+                <Label>{t('createEvent.onlineUrl', { defaultValue: 'Link zum Event (optional)' })}</Label>
+                <Input
+                  type="url"
+                  placeholder="https://zoom.us/j/... oder https://meet.google.com/..."
+                  value={onlineUrl}
+                  onChange={(e) => setOnlineUrl(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('createEvent.onlineUrlHint', { defaultValue: 'Den Link können Teilnehmer nach dem Ticketkauf sehen.' })}
+                </p>
+              </div>
+            )}
+
+            {locationType === 'tba' && (
+              <div className="space-y-2">
+                <Label>{t('createEvent.tbaCity', { defaultValue: 'In welcher Stadt findet das Event statt?' })}</Label>
+                <div className="relative">
+                  <Input
+                    placeholder={t('createEvent.searchCity', { defaultValue: 'Stadt eingeben...' })}
+                    value={selectedTbaCity ? selectedTbaCity.name : tbaCityQuery}
+                    onChange={(e) => {
+                      setTbaCityQuery(e.target.value)
+                      setSelectedTbaCity(null)
+                    }}
+                    onFocus={() => {
+                      if (selectedTbaCity) {
+                        setTbaCityQuery(selectedTbaCity.name)
+                        setSelectedTbaCity(null)
+                      }
+                    }}
+                  />
+                  {tbaCityResults.length > 0 && !selectedTbaCity && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {tbaCityResults.map((city, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                          onClick={() => {
+                            setSelectedTbaCity(city)
+                            setTbaCityQuery('')
+                            setTbaCityResults([])
+                          }}
+                        >
+                          📍 {city.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('createEvent.tbaHint', { defaultValue: 'Du kannst den genauen Standort später über "Event bearbeiten" ergänzen.' })}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -890,7 +890,7 @@ export default function EventDetailClient({ id }: Props) {
                 </div>
 
                 {/* QR Code */}
-                {(purchasedTicket.status === 'valid' || purchasedTicket.status === 'active') && !purchasedTicket.isScanned && (
+                {(event as any)?.locationType !== 'online' && (purchasedTicket.status === 'valid' || purchasedTicket.status === 'active') && !purchasedTicket.isScanned && (
                   <div className="flex flex-col items-center py-4 bg-white rounded-lg">
                     <p className="text-sm font-medium mb-3">{t('tickets.yourQrCode')}</p>
                     <div className="p-3 bg-white rounded-lg shadow-sm border">
@@ -1035,11 +1035,21 @@ export default function EventDetailClient({ id }: Props) {
               </div>
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
-                  <MapPin className="h-5 w-5 text-primary" />
+                  {(event as any).locationType === 'online' ? (
+                    <span className="h-5 w-5 flex items-center justify-center">💻</span>
+                  ) : (event as any).locationType === 'tba' ? (
+                    <span className="h-5 w-5 flex items-center justify-center">📌</span>
+                  ) : (
+                    <MapPin className="h-5 w-5 text-primary" />
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t('events.location')}</p>
-                  {event.location?.coordinates?.[0] && event.location?.coordinates?.[1] ? (
+                  {(event as any).locationType === 'online' ? (
+                    <p className="font-semibold">{t('event.online', { defaultValue: 'Online-Event' })}</p>
+                  ) : (event as any).locationType === 'tba' ? (
+                    <p className="font-semibold">{t('event.tba', { defaultValue: 'Standort folgt' })}</p>
+                  ) : event.location?.coordinates?.[0] && event.location?.coordinates?.[1] ? (
                     <a
                       href={getMapsSearchUrl(event.locationName)}
                       target="_blank"

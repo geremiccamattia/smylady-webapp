@@ -81,7 +81,7 @@ function ExploreContent() {
   // Location state
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null)
   const [locationModalOpen, setLocationModalOpen] = useState(false)
-  const [radius, setRadius] = useState('25')
+  const [radius, setRadius] = useState('50')
   const [locationLoaded, setLocationLoaded] = useState(false)
 
   useEffect(() => {
@@ -330,6 +330,7 @@ function ExploreContent() {
           case 'free': return (e.price === 0 || !e.price) && e.paymentType !== 'door'
           case 'paid': return e.price > 0 && e.paymentType !== 'door'
           case 'door': return e.paymentType === 'door'
+          case 'online': return e.locationType === 'online'
           default: return true
         }
       })
@@ -383,11 +384,29 @@ function ExploreContent() {
       .slice(0, 3)
   }, [filteredEvents, topPicks, doorEvents])
 
+  const onlineEvents = useMemo(() => {
+    const usedIds = new Set([
+      ...topPicks.map((e: any) => e._id),
+      ...doorEvents.map((e: any) => e._id || e.id),
+      ...freeEvents.map((e: any) => e._id || e.id),
+    ])
+    return (filteredEvents || [])
+      .filter((e: any) => {
+        const eid = e._id || e.id
+        return !usedIds.has(eid) && e.locationType === 'online'
+      })
+      .sort((a: any, b: any) =>
+        new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
+      )
+      .slice(0, 3)
+  }, [filteredEvents, topPicks, doorEvents, freeEvents])
+
   const categoriesWithEvents = useMemo(() => {
     const usedIds = new Set([
       ...topPicks.map((e: any) => e._id),
       ...doorEvents.map((e: any) => e._id || e.id),
       ...freeEvents.map((e: any) => e._id || e.id),
+      ...onlineEvents.map((e: any) => e._id || e.id),
     ])
     const remaining = (filteredEvents || []).filter((e: any) => !usedIds.has(e._id || e.id))
     const categoryMap = new Map<string, any[]>()
@@ -400,13 +419,14 @@ function ExploreContent() {
     return Array.from(categoryMap.entries())
       .filter(([_, evs]) => evs.length > 0)
       .sort((a, b) => b[1].length - a[1].length)
-  }, [filteredEvents, topPicks, doorEvents, freeEvents])
+  }, [filteredEvents, topPicks, doorEvents, freeEvents, onlineEvents])
 
   const remainingEvents = useMemo(() => {
     const usedIds = new Set([
       ...topPicks.map((e: any) => e._id),
       ...doorEvents.map((e: any) => e._id || e.id),
       ...freeEvents.map((e: any) => e._id || e.id),
+      ...onlineEvents.map((e: any) => e._id || e.id),
       ...categoriesWithEvents.flatMap(([_, evs]) => evs.map((e: any) => e._id || e.id)),
     ])
     return (filteredEvents || [])
@@ -414,7 +434,7 @@ function ExploreContent() {
       .sort((a: any, b: any) =>
         new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
       )
-  }, [filteredEvents, topPicks, doorEvents, freeEvents, categoriesWithEvents])
+  }, [filteredEvents, topPicks, doorEvents, freeEvents, onlineEvents, categoriesWithEvents])
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -708,6 +728,14 @@ function ExploreContent() {
           >
             {t('explore.priceFree', { defaultValue: 'Gratis' })}
           </button>
+          <button
+            onClick={() => setPriceFilter(priceFilter === 'online' ? 'all' : 'online')}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              priceFilter === 'online' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
+            }`}
+          >
+            {t('explore.online', { defaultValue: 'Online' })}
+          </button>
           {(() => {
             const priorityOrder = ['Music', 'Clubbing', 'Business']
             const cats = EVENT_CATEGORIES.filter(c => c.value !== 'Other')
@@ -814,6 +842,13 @@ function ExploreContent() {
               {freeEvents.length > 0 && latestPosts.length > 6 && (
                 <PostRow posts={latestPosts.slice(6, 9)} />
               )}
+
+              {/* 💻 Online Events */}
+              <EventSection
+                title={`💻 ${t('explore.onlineEvents', { defaultValue: 'Online Events' })}`}
+                events={onlineEvents}
+                onShowAll={() => scrollToAllEvents({ priceFilter: 'online' })}
+              />
 
               {/* Kategorie-Sektionen */}
               {categoriesWithEvents.map(([category, evs]) => {

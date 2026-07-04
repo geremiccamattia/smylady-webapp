@@ -81,6 +81,8 @@ export interface Event {
     type: string
     coordinates: number[]
   }
+  locationType?: 'physical' | 'online' | 'tba'
+  onlineUrl?: string
   images: string[]
   locationImages?: { url: string; fileName: string }[]
   thumbnailUrl?: string

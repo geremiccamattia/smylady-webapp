@@ -220,8 +220,22 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
 
         {/* Location */}
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4 flex-shrink-0" />
-          <span className="line-clamp-1">{shortenAddress(event.locationName || event.venue?.name || '')}</span>
+          {(event as any).locationType === 'online' ? (
+            <>
+              <span className="flex-shrink-0">💻</span>
+              <span>{t('event.online', { defaultValue: 'Online-Event' })}</span>
+            </>
+          ) : (event as any).locationType === 'tba' ? (
+            <>
+              <span className="flex-shrink-0">📌</span>
+              <span>{t('event.tba', { defaultValue: 'Standort folgt' })}</span>
+            </>
+          ) : (
+            <>
+              <MapPin className="h-4 w-4 flex-shrink-0" />
+              <span className="line-clamp-1">{shortenAddress(event.locationName || event.venue?.name || '')}</span>
+            </>
+          )}
         </div>
 
         {/* Tickets - hide for external/Ticketmaster events */}
