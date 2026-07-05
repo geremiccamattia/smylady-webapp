@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQueries, useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import {
@@ -21,6 +21,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo } from '@/services/memories'
 import { apiClient } from '@/services/api'
@@ -126,6 +127,14 @@ export default function MemoryViewer({
   const [showTagPicker, setShowTagPicker] = useState(false)
   const [pendingTagPosition, setPendingTagPosition] = useState<{ x: number; y: number } | null>(null)
   const [showTags, setShowTags] = useState(true)
+  const [tagSearchQuery, setTagSearchQuery] = useState('')
+
+  const { data: tagSearchResults = [] } = useQuery({
+    queryKey: ['tagUserSearch', tagSearchQuery],
+    queryFn: () => userService.searchUsers(tagSearchQuery),
+    enabled: tagSearchQuery.length >= 2,
+    staleTime: 30 * 1000,
+  })
 
   // Reactions modal state
   const [showReactionsModal, setShowReactionsModal] = useState(false)
@@ -567,6 +576,7 @@ export default function MemoryViewer({
     setShowTagPicker(false)
     setPendingTagPosition(null)
     setIsTagMode(false)
+    setTagSearchQuery('')
   }
 
   // Get unique emojis for memory reactions summary
@@ -1084,35 +1094,80 @@ export default function MemoryViewer({
                 onClick={() => {
                   setShowTagPicker(false)
                   setPendingTagPosition(null)
+                  setTagSearchQuery('')
                 }}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+            <div className="p-3 border-b">
+              <Input
+                placeholder={t('memories.searchUser', { defaultValue: 'Nutzer suchen...' })}
+                value={tagSearchQuery}
+                onChange={(e) => setTagSearchQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
             <div className="overflow-y-auto max-h-80">
-              {participants.length === 0 ? (
-                <p className="p-4 text-center text-muted-foreground">
-                  {t('memories.noParticipants')}
-                </p>
+              {tagSearchQuery.length >= 2 ? (
+                tagSearchResults.length === 0 ? (
+                  <p className="p-4 text-center text-muted-foreground">
+                    {t('memories.noUsersFound', { defaultValue: 'Keine Nutzer gefunden' })}
+                  </p>
+                ) : (
+                  tagSearchResults.map((user: any) => (
+                    <button
+                      key={user._id}
+                      onClick={() => {
+                        handleTagUser(user._id)
+                        setTagSearchQuery('')
+                      }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors"
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={resolveImageUrl(user.profileImage)} />
+                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="text-left">
+                        <p className="font-medium">{user.name}</p>
+                        {user.username && (
+                          <p className="text-sm text-muted-foreground">@{user.username}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )
+              ) : participants.length > 0 ? (
+                <>
+                  <p className="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t('memories.suggestions', { defaultValue: 'Vorschläge' })}
+                  </p>
+                  {participants.map((participant) => (
+                    <button
+                      key={participant._id}
+                      onClick={() => {
+                        handleTagUser(participant._id)
+                        setTagSearchQuery('')
+                      }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors"
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={resolveImageUrl(participant.profileImage)} />
+                        <AvatarFallback>{getInitials(participant.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="text-left">
+                        <p className="font-medium">{participant.name}</p>
+                        {participant.username && (
+                          <p className="text-sm text-muted-foreground">@{participant.username}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </>
               ) : (
-                participants.map((participant) => (
-                  <button
-                    key={participant._id}
-                    onClick={() => handleTagUser(participant._id)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors"
-                  >
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={resolveImageUrl(participant.profileImage)} />
-                      <AvatarFallback>{getInitials(participant.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-left">
-                      <p className="font-medium">{participant.name}</p>
-                      {participant.username && (
-                        <p className="text-sm text-muted-foreground">@{participant.username}</p>
-                      )}
-                    </div>
-                  </button>
-                ))
+                <p className="p-4 text-center text-muted-foreground text-sm">
+                  {t('memories.searchHint', { defaultValue: 'Nutzer suchen um zu markieren' })}
+                </p>
               )}
             </div>
           </div>
