@@ -854,7 +854,7 @@ function PostCard({ post }: { post: Post }) {
         {/* Event Reference */}
         {post.eventTitle && post.eventId && (
           <a
-            href={`/event/${generateEventSlug(post.eventTitle, typeof post.eventId === 'string' ? post.eventId : '')}`}
+            href={`/event/${generateEventSlug(post.eventTitle, typeof post.eventId === 'string' ? post.eventId : '')}#memories`}
             className="flex items-center gap-2 mt-2 px-3 py-2 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
             onClick={e => e.stopPropagation()}
           >

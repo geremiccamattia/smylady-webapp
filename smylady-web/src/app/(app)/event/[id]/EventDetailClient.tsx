@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { eventsService } from '@/services/events'
 import { favoritesService } from '@/services/favorites'
 import { Button } from '@/components/ui/button'
@@ -77,6 +77,7 @@ export default function EventDetailClient({ id }: Props) {
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [imageViewerOpen, setImageViewerOpen] = useState(false)
   const [imageViewerIndex, setImageViewerIndex] = useState(0)
+  const memoriesRef = useRef<HTMLDivElement>(null)
 
   // Stripe payment hooks
   const { isOpen: isPaymentOpen, paymentData, openPayment, closePayment } = usePaymentModal()
@@ -206,23 +207,28 @@ export default function EventDetailClient({ id }: Props) {
     enabled: !!id && !!user && !!event,
   })
 
-  // Fetch event memories - handle 403 gracefully (user needs ticket to view)
+  // Fetch event memories - public endpoint, visible without a ticket
   // MUST be called before any conditional returns to follow React hook rules
   const { data: eventMemories = [] } = useQuery({
     queryKey: ['eventMemories', id],
     queryFn: async () => {
       try {
-        return await memoriesService.getEventMemories(eventId!)
-      } catch (error: any) {
-        // 403 = user doesn't have ticket, return empty array
-        if (error?.response?.status === 403) {
-          return []
-        }
-        throw error
+        return await eventsService.getEventMemories(id!)
+      } catch {
+        return []
       }
     },
-    enabled: !!id && eventHasStarted && isAuthenticated,
+    enabled: !!id && eventHasStarted,
   })
+
+  useEffect(() => {
+    if (window.location.hash === '#memories') {
+      const timer = setTimeout(() => {
+        memoriesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [eventMemories])
 
   // Fetch user's purchased ticket for this event (to display ticket info on event page)
   const { data: purchasedTicket } = useQuery({
@@ -753,7 +759,7 @@ export default function EventDetailClient({ id }: Props) {
 
           {/* Memories Section - Only for internal events */}
           {eventHasStarted && !isExternalEvent && (
-            <div className="bg-card rounded-xl border p-6">
+            <div ref={memoriesRef} id="memories" className="bg-card rounded-xl border p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Image className="w-5 h-5 text-muted-foreground" />

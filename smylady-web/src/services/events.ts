@@ -254,4 +254,22 @@ export const eventsService = {
       return {}
     }
   },
+
+  async getEventMemories(eventId: string): Promise<any[]> {
+    try {
+      const response = await apiClient.get(`/events/${eventId}/memories`)
+      return response.data.data || []
+    } catch {
+      return []
+    }
+  },
+
+  async getRecentMemories(): Promise<any[]> {
+    try {
+      const response = await apiClient.get('/events/recent-memories')
+      return response.data.data || []
+    } catch {
+      return []
+    }
+  },
 }

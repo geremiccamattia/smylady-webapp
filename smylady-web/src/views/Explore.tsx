@@ -76,6 +76,7 @@ function ExploreContent() {
   const [scrollToAll, setScrollToAll] = useState(0)
   const [customDate, setCustomDate] = useState<string>('')
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [fullscreenMemory, setFullscreenMemory] = useState<string | null>(null)
   const showTicketmaster = true
 
   // Location state
@@ -220,6 +221,12 @@ function ExploreContent() {
     queryKey: ['attendeePreviews', allEventIds],
     queryFn: () => eventsService.getAttendeePreviews(allEventIds),
     enabled: allEventIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: recentMemories = [] } = useQuery({
+    queryKey: ['recentMemories'],
+    queryFn: () => eventsService.getRecentMemories(),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -850,6 +857,78 @@ function ExploreContent() {
                 onShowAll={() => scrollToAllEvents({ priceFilter: 'online' })}
               />
 
+              {/* 📸 Memories der Woche */}
+              {recentMemories.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold tracking-tight">
+                      📸 {t('explore.memoriesOfWeek', { defaultValue: 'Memories der Woche' })}
+                    </h2>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible">
+                    {recentMemories.slice(0, 3).map((memory: any) => (
+                      <div
+                        key={memory.memoryId}
+                        className="flex-shrink-0 w-[60vw] md:w-auto"
+                      >
+                        <div
+                          className="relative aspect-[4/5] rounded-xl overflow-hidden cursor-pointer group"
+                          onClick={() => {
+                            if (memory.event?.slug || memory.event?._id) {
+                              router.push(`/event/${memory.event.slug || memory.event._id}#memories`)
+                            } else {
+                              setFullscreenMemory(resolveImageUrl(memory.url) || null)
+                            }
+                          }}
+                        >
+                          {memory.type === 'video' ? (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <span className="text-4xl">▶️</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={resolveImageUrl(memory.url)}
+                              alt={memory.caption || 'Memory'}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none'
+                              }}
+                            />
+                          )}
+
+                          {/* Event name overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={resolveImageUrl(memory.uploadedBy?.profileImage)} />
+                                <AvatarFallback className="text-[8px]">
+                                  {memory.uploadedBy?.name?.charAt(0) || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-white text-xs truncate">
+                                {memory.uploadedBy?.name || 'User'}
+                              </span>
+                            </div>
+                            {memory.event?.name && (
+                              <p className="text-white text-xs font-medium truncate">
+                                🎉 {memory.event.name}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Reactions count */}
+                          {memory.reactions?.length > 0 && (
+                            <div className="absolute top-2 right-2 bg-black/50 text-white rounded-full px-2 py-0.5 text-xs">
+                              ❤️ {memory.reactions.length}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Kategorie-Sektionen */}
               {categoriesWithEvents.map(([category, evs]) => {
                 const catInfo = EVENT_CATEGORIES.find((c) => c.value === category)
@@ -930,6 +1009,27 @@ function ExploreContent() {
         onSelect={handleLocationSelect}
         initialLocation={selectedLocation}
       />
+
+      {/* Fullscreen Memory */}
+      {fullscreenMemory && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center cursor-pointer"
+          onClick={() => setFullscreenMemory(null)}
+        >
+          <img
+            src={fullscreenMemory}
+            alt="Memory"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white text-3xl"
+            onClick={() => setFullscreenMemory(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <ScrollSignupPrompt />
     </div>
