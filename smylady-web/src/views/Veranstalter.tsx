@@ -10,7 +10,7 @@ const DARK = "#1a1020";
 const MUTED = "#7a6a80";
 const BORDER = "#ede8f2";
 const CREATE_URL = "https://shareyourparty.de/create-event";
-const IOS_URL = "https://apps.apple.com/app/id6748308083";
+const IOS_URL = "https://apps.apple.com/at/app/share-your-party/id6748308083";
 const ANDROID_URL = "https://play.google.com/store/apps/details?id=com.shareyourparty.app";
 
 const featuresDE = [

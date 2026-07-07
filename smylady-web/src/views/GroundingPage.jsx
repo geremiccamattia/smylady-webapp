@@ -28,7 +28,7 @@ const schemas = [
     sameAs: [
       "https://www.instagram.com/shareyourparty_official/",
       "https://www.facebook.com/profile.php?id=61586246214092",
-      "https://apps.apple.com/app/id6748308083",
+      "https://apps.apple.com/at/app/share-your-party/id6748308083",
       "https://play.google.com/store/apps/details?id=com.shareyourparty.app",
     ],
   },
@@ -41,7 +41,7 @@ const schemas = [
     applicationCategory: "EntertainmentApplication",
     description:
       "Share Your Party App für iOS – Events entdecken, Tickets kaufen und Partys mit Freunden teilen.",
-    url: "https://apps.apple.com/app/id6748308083",
+    url: "https://apps.apple.com/at/app/share-your-party/id6748308083",
     offers: {
       "@type": "Offer",
       price: "0",
@@ -211,7 +211,7 @@ export default function GroundingPage() {
           </p>
           <div style={styles.appLinks}>
             <a
-              href="https://apps.apple.com/app/id6748308083"
+              href="https://apps.apple.com/at/app/share-your-party/id6748308083"
               style={styles.appBtn}
               target="_blank"
               rel="noopener noreferrer"
@@ -328,7 +328,7 @@ export default function GroundingPage() {
             <li>
               <strong>iOS App:</strong>{" "}
               <a
-                href="https://apps.apple.com/app/id6748308083"
+                href="https://apps.apple.com/at/app/share-your-party/id6748308083"
                 style={styles.link}
                 target="_blank"
                 rel="noopener noreferrer"
