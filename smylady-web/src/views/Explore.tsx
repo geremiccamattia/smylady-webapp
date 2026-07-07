@@ -875,7 +875,8 @@ function ExploreContent() {
                           className="relative aspect-[4/5] rounded-xl overflow-hidden cursor-pointer group"
                           onClick={() => {
                             if (memory.event?.slug || memory.event?._id) {
-                              router.push(`/event/${memory.event.slug || memory.event._id}#memories`)
+                              const eventPath = memory.event?.slug || memory.event?._id || ''
+                              router.push(`/event/${eventPath.replace(/#.*$/, '')}#memories`)
                             } else {
                               setFullscreenMemory(resolveImageUrl(memory.url) || null)
                             }

@@ -77,6 +77,7 @@ export default function EventDetailClient({ id }: Props) {
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [imageViewerOpen, setImageViewerOpen] = useState(false)
   const [imageViewerIndex, setImageViewerIndex] = useState(0)
+  const [fullscreenMemoryIndex, setFullscreenMemoryIndex] = useState<number | null>(null)
   const memoriesRef = useRef<HTMLDivElement>(null)
 
   // Stripe payment hooks
@@ -222,9 +223,11 @@ export default function EventDetailClient({ id }: Props) {
   })
 
   useEffect(() => {
-    if (window.location.hash === '#memories') {
+    if (window.location.hash.includes('memories')) {
       const timer = setTimeout(() => {
         memoriesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        // Clean up double hash
+        history.replaceState(null, '', window.location.pathname + '#memories')
       }, 500)
       return () => clearTimeout(timer)
     }
@@ -760,22 +763,14 @@ export default function EventDetailClient({ id }: Props) {
           {/* Memories Section - Only for internal events */}
           {eventHasStarted && !isExternalEvent && (
             <div ref={memoriesRef} id="memories" className="bg-card rounded-xl border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Image className="w-5 h-5 text-muted-foreground" />
-                  <h2 className="text-xl font-semibold">{t('memories.title')}</h2>
-                  <span className="text-sm text-muted-foreground">({eventMemories.length})</span>
-                </div>
-                {eventMemories.length > 0 && (
-                  <Link href={`/event/${id}/memories`}>
-                    <Button variant="ghost" size="sm">
-                      {t('common.viewAll')}
-                    </Button>
-                  </Link>
-                )}
+              <div className="flex items-center gap-2 mb-4">
+                <Image className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-xl font-semibold">{t('memories.title')}</h2>
+                <span className="text-sm text-muted-foreground">({eventMemories.length})</span>
               </div>
 
-              {userTicket?.ticketId ? (
+              {/* Upload-Bereich nur für Ticket-Besitzer */}
+              {userTicket?.ticketId && (
                 <MemoryGallery
                   ticketId={userTicket.ticketId}
                   eventId={eventId!}
@@ -786,87 +781,72 @@ export default function EventDetailClient({ id }: Props) {
                   allowGuestMemories={event?.allowGuestMemories !== false}
                   isPublicEvent={event?.visibility === 'public'}
                 />
-              ) : (
-                <div className="space-y-4">
-                  {/* Show memories even without ticket (read-only) */}
-                  {eventMemories.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                      {eventMemories.slice(0, 8).map((memory: any) => {
-                        const memUrl = getMemoryUrl(memory)
-                        const memType = getMemoryType(memory)
-                        const uploaderInfo = getUploadedByInfo(memory)
-                        return (
-                        <div
-                          key={getMemoryId(memory)}
-                          className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
-                          onClick={() => router.push(`/event/${id}/memories`)}
-                        >
-                          {memType === 'video' ? (
-                            <div className="relative w-full h-full bg-black">
-                              <video
-                                src={resolveImageUrl(memUrl)}
-                                className="w-full h-full object-cover"
-                                muted
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center">
-                                  <div className="w-0 h-0 border-l-[10px] border-l-white border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1" />
-                                </div>
+              )}
+
+              {/* Alle Event-Memories für ALLE sichtbar */}
+              {eventMemories.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-4">
+                  {eventMemories.map((memory: any, index: number) => {
+                    const memUrl = getMemoryUrl(memory)
+                    const memType = getMemoryType(memory)
+                    const uploaderInfo = getUploadedByInfo(memory)
+                    return (
+                      <div
+                        key={getMemoryId(memory)}
+                        className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
+                        onClick={() => setFullscreenMemoryIndex(index)}
+                      >
+                        {memType === 'video' ? (
+                          <div className="relative w-full h-full bg-black">
+                            <video
+                              src={resolveImageUrl(memUrl)}
+                              className="w-full h-full object-cover"
+                              muted
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center">
+                                <div className="w-0 h-0 border-l-[10px] border-l-white border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1" />
                               </div>
                             </div>
-                          ) : (
-                            <img
-                              src={resolveImageUrl(memUrl)}
-                              alt={memory.caption || 'Memory'}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x300?text=Memory'
-                              }}
-                            />
-                          )}
-                          {/* Uploader avatar */}
-                          <div className="absolute bottom-2 left-2">
-                            <Avatar className="w-6 h-6 border-2 border-white">
-                              <AvatarImage src={resolveImageUrl(uploaderInfo.profileImage)} />
-                              <AvatarFallback className="text-xs">
-                                {getInitials(uploaderInfo.name)}
-                              </AvatarFallback>
-                            </Avatar>
                           </div>
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                            <div className="flex items-center gap-1 text-white">
-                              <Heart className="w-5 h-5" />
-                              <span>{memory.likes?.length || 0}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-white">
-                              <MessageCircle className="w-5 h-5" />
-                              <span>{memory.comments?.length || 0}</span>
-                            </div>
+                        ) : (
+                          <img
+                            src={resolveImageUrl(memUrl)}
+                            alt={memory.caption || 'Memory'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        )}
+                        <div className="absolute bottom-2 left-2">
+                          <Avatar className="w-6 h-6 border-2 border-white">
+                            <AvatarImage src={resolveImageUrl(uploaderInfo.profileImage)} />
+                            <AvatarFallback className="text-xs">
+                              {getInitials(uploaderInfo.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                          <div className="flex items-center gap-1 text-white">
+                            <Heart className="w-5 h-5" />
+                            <span>{memory.reactions?.length || memory.likes?.length || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-white">
+                            <MessageCircle className="w-5 h-5" />
+                            <span>{memory.comments?.length || 0}</span>
                           </div>
                         </div>
-                      )})}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 bg-muted/30 rounded-lg">
-                      <Image className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">{t('memories.noMemories')}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {t('events.buyTicketToShare')}
-                      </p>
-                    </div>
-                  )}
-
-                  {eventMemories.length > 8 && (
-                    <div className="text-center">
-                      <Link href={`/event/${id}/memories`}>
-                        <Button variant="outline">
-                          {t('memories.viewAllCount', { count: eventMemories.length })}
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
+                      </div>
+                    )
+                  })}
                 </div>
-              )}
+              ) : !userTicket?.ticketId ? (
+                <div className="text-center py-8 bg-muted/30 rounded-lg">
+                  <Image className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">{t('memories.noMemories')}</p>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -1454,6 +1434,98 @@ export default function EventDetailClient({ id }: Props) {
           executePurchase(answers)
         }}
       />
+
+      {fullscreenMemoryIndex !== null && eventMemories[fullscreenMemoryIndex] && (() => {
+        const memory = eventMemories[fullscreenMemoryIndex]
+        const memUrl = resolveImageUrl(getMemoryUrl(memory))
+        const memType = getMemoryType(memory)
+        const uploaderInfo = getUploadedByInfo(memory)
+        const hasPrev = fullscreenMemoryIndex > 0
+        const hasNext = fullscreenMemoryIndex < eventMemories.length - 1
+
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center"
+            onClick={() => setFullscreenMemoryIndex(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft' && hasPrev) setFullscreenMemoryIndex(fullscreenMemoryIndex - 1)
+              if (e.key === 'ArrowRight' && hasNext) setFullscreenMemoryIndex(fullscreenMemoryIndex + 1)
+              if (e.key === 'Escape') setFullscreenMemoryIndex(null)
+            }}
+            tabIndex={0}
+            ref={(el) => el?.focus()}
+          >
+            {/* Close */}
+            <button
+              className="absolute top-4 right-4 z-10 text-white/80 hover:text-white text-3xl"
+              onClick={(e) => {
+                e.stopPropagation()
+                setFullscreenMemoryIndex(null)
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Counter */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
+              {fullscreenMemoryIndex + 1} / {eventMemories.length}
+            </div>
+
+            {/* Previous */}
+            {hasPrev && (
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setFullscreenMemoryIndex(fullscreenMemoryIndex - 1)
+                }}
+              >
+                ‹
+              </button>
+            )}
+
+            {/* Next */}
+            {hasNext && (
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setFullscreenMemoryIndex(fullscreenMemoryIndex + 1)
+                }}
+              >
+                ›
+              </button>
+            )}
+
+            {/* Image/Video */}
+            <div className="max-w-[90vw] max-h-[80vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+              {memType === 'video' ? (
+                <video
+                  src={memUrl}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[80vh] rounded-lg"
+                />
+              ) : (
+                <img
+                  src={memUrl}
+                  alt="Memory"
+                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                />
+              )}
+            </div>
+
+            {/* Uploader info */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/50 rounded-full px-4 py-2">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={resolveImageUrl(uploaderInfo.profileImage)} />
+                <AvatarFallback className="text-xs">{uploaderInfo.name?.charAt(0) || '?'}</AvatarFallback>
+              </Avatar>
+              <span className="text-white text-sm">{uploaderInfo.name || 'User'}</span>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
