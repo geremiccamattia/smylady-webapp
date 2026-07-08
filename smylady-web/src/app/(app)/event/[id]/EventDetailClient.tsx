@@ -98,12 +98,20 @@ export default function EventDetailClient({ id }: Props) {
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', id, isAuthenticated],
-    queryFn: () => {
+    queryFn: async () => {
       // Use public endpoint when not authenticated, authenticated endpoint otherwise
-      if (isAuthenticated) {
-        return eventsService.getEventById(id!)
+      if (!isAuthenticated) {
+        return eventsService.getPublicEventById(id!)
       }
-      return eventsService.getPublicEventById(id!)
+      try {
+        return await eventsService.getEventById(id!)
+      } catch (err: any) {
+        // Stale/expired token — fall back to the public endpoint instead of failing
+        if (err?.response?.status === 401) {
+          return eventsService.getPublicEventById(id!)
+        }
+        throw err
+      }
     },
     enabled: !!id,
     retry: (failureCount, err: any) => {

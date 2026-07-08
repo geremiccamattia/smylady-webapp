@@ -35,14 +35,13 @@ export const eventsService = {
   },
 
   // Get event by ID - with error handling
-  // Throws on 403 (visibility restricted) so the UI can show a proper message
+  // Throws on 403 (visibility restricted) and 401 (expired token, caller can fall back to the public endpoint)
   async getEventById(id: string, populateCreator: boolean = true): Promise<Event | null> {
     try {
       const response = await apiClient.get(`/events/${id}?populateCreator=${populateCreator}`)
       return response.data.data || null
     } catch (error: any) {
-      // Re-throw 403 errors so the UI can handle visibility restrictions
-      if (error?.response?.status === 403) {
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
         throw error
       }
       console.error('Error getting event by ID:', error)
