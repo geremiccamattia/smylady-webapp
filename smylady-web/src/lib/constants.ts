@@ -41,6 +41,8 @@ export const MUSIC_TYPES = [
   { value: 'rock', label: 'Rock' },
   { value: 'latin', label: 'Latin' },
   { value: 'mixed', label: 'Mixed' },
+  { value: 'indie', label: 'Indie' },
+  { value: 'dnb', label: 'Drum & Bass' },
 ] as const
 
 // Age Restrictions

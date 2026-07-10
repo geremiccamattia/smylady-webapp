@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocalePath } from '@/hooks/useLocalePath'
 
 export default function Footer() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const localePath = useLocalePath()
 
   return (
@@ -63,6 +63,31 @@ export default function Footer() {
                   <rect width="4" height="12" x="2" y="9" />
                   <circle cx="4" cy="4" r="2" />
                 </svg>
+              </a>
+            </div>
+            {/* App Store Badges */}
+            <div className="flex items-center gap-3 pt-3">
+              <a
+                href="https://apps.apple.com/at/app/share-your-party/id6748308083"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src={i18n.language?.startsWith('en') ? '/ios-logo-en.svg' : '/ios-logo-de.svg'}
+                  alt="Download on the App Store"
+                  className="h-10"
+                />
+              </a>
+              <a
+                href="https://play.google.com/store/apps/details?id=com.shareyourparty.app"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src={i18n.language?.startsWith('en') ? '/android-logo-en.png' : '/android-logo-de.png'}
+                  alt="Get it on Google Play"
+                  className="h-10"
+                />
               </a>
             </div>
           </div>

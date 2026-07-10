@@ -31,8 +31,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(STORAGE_KEYS.TOKEN)
-      localStorage.removeItem(STORAGE_KEYS.USER)
+      // Don't clear token when returning from Spotify OAuth
+      const isSpotifyReturn = window.location.search.includes('spotify=')
+      if (!isSpotifyReturn) {
+        localStorage.removeItem(STORAGE_KEYS.TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.USER)
+      }
       const publicPaths = ['/explore', '/login', '/register', '/event/', '/user/', '/feed', '/post/']
       const isPublicPath = publicPaths.some(path =>
         window.location.pathname.startsWith(path)

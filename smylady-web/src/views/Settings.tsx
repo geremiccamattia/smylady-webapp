@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { StripeConnectCard } from '@/components/settings/StripeConnectCard'
+import { SpotifyConnectCard } from '@/components/settings/SpotifyConnectCard'
 import { ChangeEmailModal } from '@/components/settings/ChangeEmailModal'
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal'
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal'
@@ -263,6 +264,9 @@ function SettingsContent() {
 
       {/* Stripe Connect for Organizers */}
       <StripeConnectCard />
+
+      {/* Spotify Connect */}
+      <SpotifyConnectCard />
 
       {/* Notifications */}
       <Card>
