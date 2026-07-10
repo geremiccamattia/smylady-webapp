@@ -201,6 +201,15 @@ export interface ChatMessage {
   parentMessage?: ChatMessage
   senderName?: string
   senderImage?: string
+  spotifyTrack?: {
+    spotifyId: string
+    name: string
+    artist: string
+    album?: string
+    albumCover?: string
+    spotifyUrl: string
+    previewUrl?: string
+  }
 }
 
 export interface ChatUser {

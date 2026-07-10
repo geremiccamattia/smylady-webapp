@@ -660,6 +660,12 @@
       "secureNote": "Deine Daten werden sicher über Stripe verarbeitet"
     }
   },
+  "spotify": {
+    "searchSong": "Song suchen",
+    "searchPlaceholder": "Titel oder Künstler...",
+    "noResults": "Keine Songs gefunden",
+    "typeToSearch": "Tippe um zu suchen"
+  },
   "legal": {
     "privacy": "Datenschutz",
     "terms": "AGB",

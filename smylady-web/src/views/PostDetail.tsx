@@ -24,6 +24,7 @@ import {
   DEFAULT_LIKE_EMOJI,
 } from '@/components/emojiReaction/EmojiReactionPicker'
 import MentionInput, { RenderTextWithMentions } from '@/components/mentionInput/MentionInput'
+import { SpotifyTrackPreview } from '@/components/SpotifyTrackPreview'
 
 export default function PostDetail() {
   const { t, i18n } = useTranslation()
@@ -505,6 +506,13 @@ export default function PostDetail() {
             onMentionPress={(userId) => router.push(`/user/${userId}`)}
             className="mb-4 whitespace-pre-wrap block"
           />
+
+          {/* Shared Song */}
+          {post.spotifyTrack && (
+            <div className="mb-4">
+              <SpotifyTrackPreview track={post.spotifyTrack} />
+            </div>
+          )}
 
           {/* Images */}
           {post.images && post.images.length > 0 && (

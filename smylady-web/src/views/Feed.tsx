@@ -28,6 +28,9 @@ import {
 import MentionInput, { RenderTextWithMentions } from '@/components/mentionInput/MentionInput'
 import ReportModal from '@/components/ReportModal'
 import { ImageViewer } from '@/components/ImageViewer'
+import { SpotifyTrackSearch } from '@/components/SpotifyTrackSearch'
+import { SpotifyTrackPreview } from '@/components/SpotifyTrackPreview'
+import { SpotifyTrack } from '@/services/spotify'
 import {
   Heart,
   MessageCircle,
@@ -42,6 +45,7 @@ import {
   Smile,
   AlertTriangle,
   Calendar,
+  Music,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -798,6 +802,13 @@ function PostCard({ post }: { post: Post }) {
           className="mb-4 whitespace-pre-wrap block"
         />
 
+        {/* Shared Song */}
+        {post.spotifyTrack && (
+          <div className="mb-4">
+            <SpotifyTrackPreview track={post.spotifyTrack} />
+          </div>
+        )}
+
         {/* Media/Images */}
         {((post.media && post.media.length > 0) || (post.images && post.images.length > 0)) && (
           <div className={cn(
@@ -1352,6 +1363,8 @@ function CreatePostModal({
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [showSongSearch, setShowSongSearch] = useState(false)
+  const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null)
 
   const createMutation = useMutation({
     mutationFn: () => postsService.create({
@@ -1360,10 +1373,12 @@ function CreatePostModal({
       mentions: mentions.length > 0 ? mentions : undefined,
       eventId: eventId ?? undefined,
       eventTitle: eventTitle ?? undefined,
+      spotifyTrack: selectedTrack ?? undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] })
       toast({ title: t('posts.postCreated') })
+      setSelectedTrack(null)
       onClose()
     },
     onError: () => {
@@ -1506,6 +1521,32 @@ function CreatePostModal({
             </div>
           )}
 
+          {/* Song Search */}
+          {showSongSearch && (
+            <div className="mt-4">
+              <SpotifyTrackSearch
+                onSelect={(track) => {
+                  setSelectedTrack(track)
+                  setShowSongSearch(false)
+                }}
+                onClose={() => setShowSongSearch(false)}
+              />
+            </div>
+          )}
+
+          {/* Selected Song Preview */}
+          {selectedTrack && (
+            <div className="mt-4 relative">
+              <SpotifyTrackPreview track={selectedTrack} compact />
+              <button
+                className="absolute top-1 right-1 bg-background rounded-full p-0.5"
+                onClick={() => setSelectedTrack(null)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="flex gap-2">
               <label className="cursor-pointer">
@@ -1520,6 +1561,15 @@ function CreatePostModal({
                   <ImageIcon className="h-5 w-5 text-muted-foreground" />
                 </div>
               </label>
+              <button
+                type="button"
+                onClick={() => setShowSongSearch(!showSongSearch)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showSongSearch ? 'text-[#1DB954] bg-[#1DB954]/10' : 'text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <Music className="h-5 w-5" />
+              </button>
             </div>
             <Button
               onClick={() => createMutation.mutate()}

@@ -17,6 +17,7 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Phone,
+  Music,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { chatService, type Message } from '@/services/chat'
+import { SpotifyTrackSearch } from '@/components/SpotifyTrackSearch'
+import { SpotifyTrackPreview } from '@/components/SpotifyTrackPreview'
+import { SpotifyTrack } from '@/services/spotify'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, resolveImageUrl, formatRelativeTime } from '@/lib/utils'
@@ -53,6 +57,8 @@ function ConversationContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [showSongSearch, setShowSongSearch] = useState(false)
+  const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -70,12 +76,13 @@ function ConversationContent() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: (data: { receiverId: string; content: string; file?: File }) =>
-      chatService.sendMessage(data.receiverId, data.content, data.file),
+    mutationFn: (data: { receiverId: string; content: string; file?: File; spotifyTrack?: SpotifyTrack }) =>
+      chatService.sendMessage(data.receiverId, data.content, data.file, data.spotifyTrack),
     onSuccess: () => {
       setMessage('')
       setSelectedFile(null)
       setSelectedMessage(null)
+      setSelectedTrack(null)
       refetch()
     },
     onError: () => {
@@ -116,7 +123,7 @@ function ConversationContent() {
   }, [conversationId, chat?.messages?.length])
 
   const handleSend = () => {
-    if (!message.trim() && !selectedFile) return
+    if (!message.trim() && !selectedFile && !selectedTrack) return
 
     const receiverId = recipientId || chat?.otherUser?.id || chat?.otherUser?._id
     if (!receiverId) return
@@ -125,6 +132,7 @@ function ConversationContent() {
       receiverId,
       content: message,
       file: selectedFile || undefined,
+      spotifyTrack: selectedTrack || undefined,
     })
   }
 
@@ -335,9 +343,16 @@ function ConversationContent() {
                       }}
                     />
                   )}
-                  <p className="whitespace-pre-wrap break-words">
-                    {renderMessageContent(msg.content, isOwn)}
-                  </p>
+                  {msg.content && (
+                    <p className="whitespace-pre-wrap break-words">
+                      {renderMessageContent(msg.content, isOwn)}
+                    </p>
+                  )}
+                  {msg.spotifyTrack && (
+                    <div className="mt-2">
+                      <SpotifyTrackPreview track={msg.spotifyTrack} compact />
+                    </div>
+                  )}
                   <p
                     className={`text-xs mt-1 ${
                       isOwn ? 'text-white/70' : 'text-muted-foreground'
@@ -381,6 +396,32 @@ function ConversationContent() {
         </div>
       )}
 
+      {/* Song Search */}
+      {showSongSearch && (
+        <div className="px-4 pb-2 pt-2 border-t">
+          <SpotifyTrackSearch
+            onSelect={(track) => {
+              setSelectedTrack(track)
+              setShowSongSearch(false)
+            }}
+            onClose={() => setShowSongSearch(false)}
+          />
+        </div>
+      )}
+
+      {/* Selected Song Preview */}
+      {selectedTrack && (
+        <div className="px-4 pb-2 pt-2 border-t relative">
+          <SpotifyTrackPreview track={selectedTrack} compact />
+          <button
+            className="absolute top-3 right-5 bg-background rounded-full p-0.5"
+            onClick={() => setSelectedTrack(null)}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
       {/* Input */}
       <div className="p-4 border-t">
         <div className="flex items-center gap-2">
@@ -401,6 +442,15 @@ function ConversationContent() {
           <Button variant="ghost" size="icon" onClick={handleLocationShare}>
             <MapPin className="h-5 w-5" />
           </Button>
+          <button
+            type="button"
+            onClick={() => setShowSongSearch(!showSongSearch)}
+            className={`p-2 rounded-full transition-colors ${
+              showSongSearch ? 'text-[#1DB954] bg-[#1DB954]/10' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Music className="h-5 w-5" />
+          </button>
           <Input
             placeholder={t('chat.writeMessage')}
             value={message}
@@ -411,7 +461,7 @@ function ConversationContent() {
           <Button
             size="icon"
             onClick={handleSend}
-            disabled={(!message.trim() && !selectedFile) || sendMessageMutation.isPending}
+            disabled={(!message.trim() && !selectedFile && !selectedTrack) || sendMessageMutation.isPending}
           >
             {sendMessageMutation.isPending ? (
               <Loader2 className="h-5 w-5 animate-spin" />

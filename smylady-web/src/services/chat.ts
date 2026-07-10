@@ -2,6 +2,7 @@
 
 import { apiClient } from './api'
 import { ChatRoom, ChatMessagesResponse, ChatMessage } from '@/types'
+import { SpotifyTrack } from './spotify'
 
 export interface Message {
   id?: string
@@ -12,6 +13,7 @@ export interface Message {
   file?: string
   createdAt: string
   referenceId?: string
+  spotifyTrack?: SpotifyTrack
 }
 
 export const chatService = {
@@ -82,13 +84,16 @@ export const chatService = {
     return response.data.data
   },
 
-  // Send message with optional file
-  async sendMessage(receiverId: string, content: string, file?: File): Promise<ChatMessage> {
+  // Send message with optional file and/or shared Spotify track
+  async sendMessage(receiverId: string, content: string, file?: File, spotifyTrack?: SpotifyTrack): Promise<ChatMessage> {
     if (file) {
       const formData = new FormData()
       formData.append('receiverId', receiverId)
       formData.append('content', content)
       formData.append('file', file)
+      if (spotifyTrack) {
+        formData.append('spotifyTrack', JSON.stringify(spotifyTrack))
+      }
 
       const response = await apiClient.post('/chat', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -96,7 +101,11 @@ export const chatService = {
       return response.data.data
     }
 
-    const response = await apiClient.post('/chat', { receiverId, content })
+    const response = await apiClient.post('/chat', {
+      receiverId,
+      content,
+      ...(spotifyTrack ? { spotifyTrack } : {}),
+    })
     return response.data.data
   },
 

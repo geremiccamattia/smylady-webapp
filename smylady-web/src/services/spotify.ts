@@ -2,6 +2,18 @@
 
 import { apiClient } from './api'
 
+export interface SpotifyTrack {
+  spotifyId: string
+  name: string
+  artist: string
+  album: string
+  albumCover: string
+  albumCoverSmall: string
+  previewUrl: string
+  spotifyUrl: string
+  durationMs: number
+}
+
 export const spotifyService = {
   /**
    * Get the Spotify OAuth authorization URL
@@ -28,5 +40,19 @@ export const spotifyService = {
    */
   async disconnect(): Promise<void> {
     await apiClient.delete('/auth/spotify/disconnect')
+  },
+
+  /**
+   * Search Spotify tracks by title/artist
+   */
+  async searchTracks(query: string): Promise<SpotifyTrack[]> {
+    try {
+      const response = await apiClient.get('/auth/spotify/search', {
+        params: { q: query, limit: 10 },
+      })
+      return response.data.data || []
+    } catch {
+      return []
+    }
   },
 }

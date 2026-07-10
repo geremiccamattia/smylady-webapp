@@ -3,6 +3,7 @@
 import axios from 'axios'
 import { apiClient } from './api'
 import { CONFIG } from '@/lib/constants'
+import { SpotifyTrack } from './spotify'
 
 const publicClient = axios.create({
   baseURL: CONFIG.API_URL,
@@ -55,6 +56,7 @@ export interface Post {
     name?: string
     username?: string
   }>
+  spotifyTrack?: SpotifyTrack
   createdAt: string
   updatedAt: string
 }
@@ -156,6 +158,7 @@ export interface CreatePostPayload {
   mentions?: string[]
   eventId?: string
   eventTitle?: string
+  spotifyTrack?: SpotifyTrack
 }
 
 export interface UpdatePostPayload {
@@ -285,6 +288,7 @@ export const postsService = {
     mentions?: string[]
     eventId?: string
     eventTitle?: string
+    spotifyTrack?: SpotifyTrack
   }): Promise<Post> => {
     // Upload images first if any
     const media: Array<{ url: string; type: 'image' | 'video' }> = []
@@ -311,6 +315,9 @@ export const postsService = {
     }
     if (payload.eventTitle) {
       postData.eventTitle = payload.eventTitle
+    }
+    if (payload.spotifyTrack) {
+      postData.spotifyTrack = payload.spotifyTrack
     }
 
     const response = await apiClient.post('/posts', postData)

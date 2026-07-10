@@ -701,6 +701,12 @@
       "secureNote": "Your data is processed securely through Stripe"
     }
   },
+  "spotify": {
+    "searchSong": "Search song",
+    "searchPlaceholder": "Title or artist...",
+    "noResults": "No songs found",
+    "typeToSearch": "Type to search"
+  },
   "pricing": {
     "title": "Pricing & Conditions",
     "subtitle": "Transparent fees for organizers and guests on Share Your Party.",

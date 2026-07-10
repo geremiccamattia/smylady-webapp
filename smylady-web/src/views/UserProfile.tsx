@@ -32,6 +32,7 @@ import {
   DEFAULT_LIKE_EMOJI,
 } from '@/components/emojiReaction/EmojiReactionPicker'
 import MentionInput, { RenderTextWithMentions, MentionUser } from '@/components/mentionInput/MentionInput'
+import { SpotifyTrackPreview } from '@/components/SpotifyTrackPreview'
 import { ImageViewer } from '@/components/ImageViewer'
 import {
   ArrowLeft,
@@ -1378,6 +1379,13 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
           onMentionPress={(uid) => router.push(`/user/${uid}`)}
           className="mb-4 whitespace-pre-wrap block"
         />
+
+        {/* Shared Song */}
+        {post.spotifyTrack && (
+          <div className="mb-4">
+            <SpotifyTrackPreview track={post.spotifyTrack} />
+          </div>
+        )}
 
         {/* Media/Images */}
         {((post.media && post.media.length > 0) || (post.images && post.images.length > 0)) && (
