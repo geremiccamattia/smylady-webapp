@@ -664,7 +664,8 @@
     "searchSong": "Song suchen",
     "searchPlaceholder": "Titel oder Künstler...",
     "noResults": "Keine Songs gefunden",
-    "typeToSearch": "Tippe um zu suchen"
+    "typeToSearch": "Tippe um zu suchen",
+    "openInSpotify": "Auf Spotify öffnen"
   },
   "legal": {
     "privacy": "Datenschutz",

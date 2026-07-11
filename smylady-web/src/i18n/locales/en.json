@@ -705,7 +705,8 @@
     "searchSong": "Search song",
     "searchPlaceholder": "Title or artist...",
     "noResults": "No songs found",
-    "typeToSearch": "Type to search"
+    "typeToSearch": "Type to search",
+    "openInSpotify": "Open in Spotify"
   },
   "pricing": {
     "title": "Pricing & Conditions",
