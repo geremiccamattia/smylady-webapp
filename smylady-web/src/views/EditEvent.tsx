@@ -28,6 +28,9 @@ export default function EditEvent() {
   const { data: connectedAccount } = useGetConnectedAccount()
   const [isLoading, setIsLoading] = useState(false)
   const [seriesScope, setSeriesScope] = useState<'this' | 'future' | 'all' | null>(null)
+  const [showAddDates, setShowAddDates] = useState(false)
+  const [newDates, setNewDates] = useState<string[]>([])
+  const [addingDates, setAddingDates] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<string[]>([])
@@ -553,6 +556,47 @@ export default function EditEvent() {
     })
 
     return eventFormData
+  }
+
+  const handleAddDate = () => {
+    setNewDates([...newDates, ''])
+  }
+
+  const handleRemoveDate = (index: number) => {
+    setNewDates(newDates.filter((_, i) => i !== index))
+  }
+
+  const handleDateChange = (index: number, value: string) => {
+    const updated = [...newDates]
+    updated[index] = value
+    setNewDates(updated)
+  }
+
+  const handleSaveNewDates = async () => {
+    const validDates = newDates.filter((d) => d)
+    if (validDates.length === 0) return
+    setAddingDates(true)
+    try {
+      console.log('Calling addSeriesDates with:', id, validDates)
+      const result = await eventsService.addSeriesDates(id!, validDates)
+      console.log('addSeriesDates result:', result)
+      toast({
+        title: `${validDates.length} Termine hinzugefügt`,
+      })
+      setNewDates([])
+      setShowAddDates(false)
+    } catch (error: any) {
+      console.error('addSeriesDates ERROR:', error)
+      console.error('Response:', error?.response?.data)
+      console.error('Status:', error?.response?.status)
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: error?.response?.data?.message || error?.message || 'Unbekannter Fehler',
+      })
+    } finally {
+      setAddingDates(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1443,6 +1487,90 @@ export default function EditEvent() {
                 })}
               </div>
             </div>
+          )}
+
+          {(event as any)?.eventSeriesId && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  {t('editEvent.addDates', { defaultValue: 'Termine hinzufügen' })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!showAddDates ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setShowAddDates(true)
+                      setNewDates([''])
+                    }}
+                  >
+                    + {t('editEvent.addMoreDates', { defaultValue: 'Weitere Termine zur Serie hinzufügen' })}
+                  </Button>
+                ) : (
+                  <>
+                    {newDates.map((date, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="datetime-local"
+                          className="flex-1 px-3 py-2 border rounded-md bg-background text-sm"
+                          value={date}
+                          onChange={(e) => handleDateChange(index, e.target.value)}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveDate(index)}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ))}
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleAddDate}
+                    >
+                      + {t('editEvent.addAnotherDate', { defaultValue: 'Weiteren Termin hinzufügen' })}
+                    </Button>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setShowAddDates(false)
+                          setNewDates([])
+                        }}
+                      >
+                        {t('common.cancel', { defaultValue: 'Abbrechen' })}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="gradient"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleSaveNewDates}
+                        disabled={addingDates || newDates.every((d) => !d)}
+                      >
+                        {addingDates
+                          ? t('common.saving', { defaultValue: 'Speichert...' })
+                          : t('editEvent.saveDates', { defaultValue: 'Termine speichern' })}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           <div className="flex gap-4">

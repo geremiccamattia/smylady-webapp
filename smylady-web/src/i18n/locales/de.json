@@ -882,6 +882,11 @@
   },
   "editEvent": {
     "addImage": "Bild hinzufügen",
+    "addDates": "Termine hinzufügen",
+    "addMoreDates": "Weitere Termine zur Serie hinzufügen",
+    "addAnotherDate": "Weiteren Termin hinzufügen",
+    "saveDates": "Termine speichern",
+    "datesAdded": "Termine hinzugefügt",
     "basicInfo": "Grundinformationen",
     "changesSaved": "Änderungen gespeichert",
     "dateAndTime": "Datum und Uhrzeit",

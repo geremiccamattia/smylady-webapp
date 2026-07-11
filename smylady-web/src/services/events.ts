@@ -171,6 +171,12 @@ export const eventsService = {
     })
   },
 
+  // Add additional dates to an existing event series
+  async addSeriesDates(eventId: string, dates: string[]): Promise<any> {
+    const response = await apiClient.post(`/events/${eventId}/series/add-dates`, { dates })
+    return response.data
+  },
+
   // Get public events without authentication
   async getPublicEvents(filters: EventFilters = {}, upcoming: boolean = false): Promise<Event[]> {
     try {

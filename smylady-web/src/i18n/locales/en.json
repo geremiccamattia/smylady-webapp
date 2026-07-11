@@ -1029,6 +1029,11 @@
   },
   "editEvent": {
     "addImage": "Add image",
+    "addDates": "Add dates",
+    "addMoreDates": "Add more dates to this series",
+    "addAnotherDate": "Add another date",
+    "saveDates": "Save dates",
+    "datesAdded": "Dates added",
     "basicInfo": "Basic information",
     "changesSaved": "Changes saved",
     "dateAndTime": "Date and time",
