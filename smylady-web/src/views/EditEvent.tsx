@@ -387,20 +387,6 @@ export default function EditEvent() {
     return parseFloat(formData.price) > 0
   }
 
-  const isDST = (date: Date): boolean => {
-    const month = date.getMonth() + 1
-    if (month > 3 && month < 10) return true
-    if (month < 3 || month > 10) return false
-    const lastSunday = (m: number) => {
-      const d = new Date(date.getFullYear(), m, 0)
-      d.setDate(d.getDate() - d.getDay())
-      return d.getDate()
-    }
-    if (month === 3) return date.getDate() >= lastSunday(3)
-    if (month === 10) return date.getDate() < lastSunday(10)
-    return false
-  }
-
   const handleSaveTranslation = async () => {
     if (!id || !translatedPreview) return
     setTranslating(true)
@@ -493,18 +479,21 @@ export default function EditEvent() {
     }
 
     if (eventDate && eventStartTime) {
-      const startDateTime = new Date(`${eventDate}T${eventStartTime}:00`)
-      const offsetMinutes = isDST(startDateTime) ? 120 : 60
-      const utcStart = new Date(startDateTime.getTime() - offsetMinutes * 60 * 1000)
-      eventFormData.append('eventStartTime', utcStart.toISOString())
+      const [hours, minutes] = eventStartTime.split(':').map(Number)
+      const startDate = new Date(eventDate)
+      startDate.setHours(hours, minutes, 0, 0)
+      eventFormData.append('eventStartTime', startDate.toISOString())
     }
 
     if (eventDate && eventEndTime) {
-      const endDateTime = new Date(`${eventDate}T${eventEndTime}:00`)
-      eventFormData.append('eventEndTime', endDateTime.toISOString())
+      const [hours, minutes] = eventEndTime.split(':').map(Number)
+      const endDate = new Date(eventDate)
+      endDate.setHours(hours, minutes, 0, 0)
+      eventFormData.append('eventEndTime', endDate.toISOString())
     } else if (eventDate && eventStartTime) {
-      const fallbackEnd = new Date(`${eventDate}T${eventStartTime}:00`)
-      fallbackEnd.setHours(fallbackEnd.getHours() + 4)
+      const [hours, minutes] = eventStartTime.split(':').map(Number)
+      const fallbackEnd = new Date(eventDate)
+      fallbackEnd.setHours(hours + 4, minutes, 0, 0)
       eventFormData.append('eventEndTime', fallbackEnd.toISOString())
     }
 

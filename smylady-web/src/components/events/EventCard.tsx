@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
-import { formatDate, formatPrice, cn, resolveImageUrl, generateEventSlug, shortenAddress } from '@/lib/utils'
+import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, generateEventSlug, shortenAddress } from '@/lib/utils'
 import { useState } from 'react'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { favoritesService } from '@/services/favorites'
@@ -209,11 +209,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           {event.eventStartTime && (
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              <span>
-                {event.eventStartTime.includes('T')
-                  ? new Date(event.eventStartTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-                  : event.eventStartTime}
-              </span>
+              <span>{formatEventTime(event.eventStartTime)}</span>
             </div>
           )}
         </div>
