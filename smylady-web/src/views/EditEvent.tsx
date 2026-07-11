@@ -562,7 +562,8 @@ export default function EditEvent() {
   }
 
   const handleSaveNewDates = async () => {
-    const validDates = newDates.filter((d) => d)
+    // datetime-local Werte in ISO konvertieren damit der Backend die Zeitzone korrekt hat
+    const validDates = newDates.filter((d) => d).map((d) => new Date(d).toISOString())
     if (validDates.length === 0) return
     setAddingDates(true)
     try {
@@ -624,21 +625,15 @@ export default function EditEvent() {
       const eventFormData = buildEventFormData()
 
       if (seriesConfig) {
-        eventFormData.append('series', JSON.stringify(seriesConfig))
-
-        for (const imageUrl of existingImages) {
-          try {
-            const res = await fetch(imageUrl)
-            const blob = await res.blob()
-            const fileName = imageUrl.split('/').pop() || 'image.jpg'
-            const file = new File([blob], fileName, { type: blob.type })
-            eventFormData.append('files', file)
-          } catch {
-            // Bild konnte nicht geladen werden — überspringen
-          }
+        // Bestehendes Event serverseitig in Serie umwandeln
+        // Bilder werden direkt vom bestehenden Event kopiert — kein Re-Upload nötig
+        const config = { ...seriesConfig }
+        // baseDate aus customDates entfernen — convertToSeries nutzt
+        // das bestehende Event bereits als Index 0
+        if (config.customDates && formData.eventDate) {
+          config.customDates = config.customDates.filter((d: string) => d !== formData.eventDate)
         }
-
-        await eventsService.createEventSeries(eventFormData)
+        await eventsService.convertToSeries(id!, config)
         toast({ title: 'Serie erstellt!' })
         router.push('/my-events')
         return

@@ -665,7 +665,8 @@
     "searchPlaceholder": "Titel oder Künstler...",
     "noResults": "Keine Songs gefunden",
     "typeToSearch": "Tippe um zu suchen",
-    "openInSpotify": "Auf Spotify öffnen"
+    "openInSpotify": "Auf Spotify öffnen",
+    "premiumHint": "Vollständige Wiedergabe nur mit Spotify Premium — bei spotify.com im Browser einloggen"
   },
   "legal": {
     "privacy": "Datenschutz",

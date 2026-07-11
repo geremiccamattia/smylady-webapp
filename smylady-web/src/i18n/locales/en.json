@@ -706,7 +706,8 @@
     "searchPlaceholder": "Title or artist...",
     "noResults": "No songs found",
     "typeToSearch": "Type to search",
-    "openInSpotify": "Open in Spotify"
+    "openInSpotify": "Open in Spotify",
+    "premiumHint": "Full playback only with Spotify Premium — log in at spotify.com in your browser"
   },
   "pricing": {
     "title": "Pricing & Conditions",

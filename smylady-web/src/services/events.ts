@@ -177,6 +177,12 @@ export const eventsService = {
     return response.data
   },
 
+  // Convert an existing single event into a series server-side (no re-upload needed)
+  async convertToSeries(eventId: string, seriesConfig: { recurrence: string; occurrences?: number; customDates?: string[] }): Promise<any> {
+    const response = await apiClient.post(`/events/${eventId}/series/convert`, seriesConfig)
+    return response.data
+  },
+
   // Get public events without authentication
   async getPublicEvents(filters: EventFilters = {}, upcoming: boolean = false): Promise<Event[]> {
     try {

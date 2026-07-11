@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Music, X } from 'lucide-react'
 
 interface SpotifyTrackPreviewProps {
@@ -17,6 +18,7 @@ interface SpotifyTrackPreviewProps {
 }
 
 export function SpotifyTrackPreview({ track, compact = false }: SpotifyTrackPreviewProps) {
+  const { t } = useTranslation()
   const [showPlayer, setShowPlayer] = useState(false)
 
   const spotifyId = track.spotifyId ||
@@ -88,6 +90,9 @@ export function SpotifyTrackPreview({ track, compact = false }: SpotifyTrackPrev
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
           />
+          <p className="text-center text-[10px] text-muted-foreground py-1.5 px-2">
+            {t('spotify.premiumHint', { defaultValue: 'Vollständige Wiedergabe nur mit Spotify Premium — bei spotify.com im Browser einloggen' })}
+          </p>
         </div>
       )}
     </div>
