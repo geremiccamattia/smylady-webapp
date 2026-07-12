@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query'
 import { authService } from '@/services/auth'
 import { userService } from '@/services/user'
 import { ImageViewer } from '@/components/ImageViewer'
+import InviteButton from '@/components/InviteButton'
 import {
   User,
   Mail,
@@ -508,11 +509,14 @@ export default function Profile() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsEditing(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  {t('profile.editProfile', { defaultValue: 'Profil bearbeiten' })}
-                </Button>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setIsEditing(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    {t('profile.editProfile', { defaultValue: 'Profil bearbeiten' })}
+                  </Button>
+                </div>
+                <InviteButton referralCode={profile?.referralCode} />
               </div>
             </div>
           </CardContent>
