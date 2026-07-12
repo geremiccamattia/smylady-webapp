@@ -38,6 +38,7 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
+import { apiClient } from '@/services/api'
 import axios from 'axios'
 import { useTranslation } from 'react-i18next'
 
@@ -609,9 +610,21 @@ export default function Login() {
                     </div>
 
                     <GoogleLoginButton
-                      onSuccess={() => {
+                      onSuccess={async () => {
                         window.dataLayer = window.dataLayer || []
                         window.dataLayer.push({ event: 'sign_in', method: 'google' })
+
+                        // Referral-Code nachträglich anwenden (für Social Login)
+                        const referralCode = localStorage.getItem('referral_code')
+                        if (referralCode) {
+                          try {
+                            await apiClient.post('/auth/apply-referral', { referralCode })
+                            localStorage.removeItem('referral_code')
+                          } catch {
+                            // Nicht kritisch — Code war ungültig oder bereits angewendet
+                          }
+                        }
+
                         router.replace(from)
                       }}
                       className="w-full"

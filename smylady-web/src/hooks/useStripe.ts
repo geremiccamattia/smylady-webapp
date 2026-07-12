@@ -8,8 +8,8 @@ import { stripeService, PurchaseAnswer } from '@/services/stripe'
  */
 export const useCreatePaymentIntent = () => {
   return useMutation({
-    mutationFn: ({ eventId, tierId, answers }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[] }) =>
-      stripeService.createPaymentIntent(eventId, tierId, answers),
+    mutationFn: ({ eventId, tierId, answers, useBalance }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[]; useBalance?: boolean }) =>
+      stripeService.createPaymentIntent({ eventId, tierId, answers, useBalance }),
   })
 }
 

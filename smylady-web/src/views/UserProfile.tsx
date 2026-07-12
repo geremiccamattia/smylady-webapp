@@ -34,6 +34,7 @@ import {
 import MentionInput, { RenderTextWithMentions, MentionUser } from '@/components/mentionInput/MentionInput'
 import { SpotifyTrackPreview } from '@/components/SpotifyTrackPreview'
 import { ImageViewer } from '@/components/ImageViewer'
+import InviteButton from '@/components/InviteButton'
 import {
   ArrowLeft,
   MapPin,
@@ -545,15 +546,18 @@ export default function UserProfile() {
               </div>
             )}
             {isOwnProfile && (
-              <div className="flex gap-2">
-                <Link href={localePath('/profile')}>
-                  <Button variant="outline">{t('profile.editProfileBtn')}</Button>
-                </Link>
-                <Link href="/settings">
-                  <Button variant="ghost" size="icon" title={t('settings.title')}>
-                    <Settings className="h-5 w-5" />
-                  </Button>
-                </Link>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Link href={localePath('/profile')}>
+                    <Button variant="outline">{t('profile.editProfileBtn')}</Button>
+                  </Link>
+                  <Link href="/settings">
+                    <Button variant="ghost" size="icon" title={t('settings.title')}>
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+                <InviteButton referralCode={profile?.referralCode} />
               </div>
             )}
           </div>

@@ -43,6 +43,7 @@ export interface RegisterCredentials {
   email: string
   password: string
   dateOfBirth: string
+  referralCode?: string
 }
 
 export interface AuthResponse {

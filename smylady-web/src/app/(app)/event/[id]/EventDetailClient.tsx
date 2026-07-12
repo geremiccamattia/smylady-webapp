@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { eventsService } from '@/services/events'
 import { favoritesService } from '@/services/favorites'
+import { apiClient } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
@@ -94,7 +95,22 @@ export default function EventDetailClient({ id }: Props) {
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false)
   const [pendingAnswers, setPendingAnswers] = useState<PurchaseAnswer[] | undefined>(undefined)
+  const [userBalance, setUserBalance] = useState(0)
+  const [useBalance, setUseBalance] = useState(true) // Default: an
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const fetchBalance = async () => {
+      try {
+        const response = await apiClient.get('/users/balance')
+        setUserBalance(response.data?.data?.balance || 0)
+      } catch {
+        // Nicht kritisch
+      }
+    }
+    fetchBalance()
+  }, [isAuthenticated])
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', id, isAuthenticated],
@@ -349,11 +365,20 @@ export default function EventDetailClient({ id }: Props) {
         onSettled: () => setIsPurchasing(false),
       })
     } else {
-      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers }, {
+      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, useBalance: useBalance && userBalance > 0 }, {
         onSuccess: (data) => {
+          if (data.ticket) {
+            // Full balance coverage — Ticket wurde direkt erstellt, kein Stripe nötig
+            toast({ title: t('common.success'), description: t('tickets.purchasedWithBalance', { defaultValue: 'Ticket mit Guthaben gekauft!' }) })
+            router.push(`/payment-complete?ticketId=${data.ticket._id || data.ticket.id}&eventId=${eventId}&type=balance`)
+            setIsPurchasing(false)
+            return
+          }
+
+          // Partial oder no balance — normaler Stripe-Flow
           const paymentIntentId = data.paymentIntentId || data.clientSecret?.split('_secret_')[0] || ''
           openPayment({
-            clientSecret: data.clientSecret,
+            clientSecret: data.clientSecret || '',
             paymentIntentId,
             eventName: event.name || 'Event',
             amount: data.amount || numericPrice || 0,
@@ -521,6 +546,14 @@ export default function EventDetailClient({ id }: Props) {
   // Use the backend's soldOut flag as the primary source of truth.
   // Only fall back to availableTickets check when totalTickets is explicitly set (> 0)
   const isSoldOut = event.soldOut === true || (event.totalTickets > 0 && availableTickets <= 0)
+
+  const displayPrice = (() => {
+    if (event?.ticketTiers?.length && selectedTierId) {
+      const tier = event.ticketTiers.find((t: any) => t._id === selectedTierId)
+      return tier?.price || 0
+    }
+    return typeof event?.price === 'string' ? parseFloat(event.price) : (event?.price || 0)
+  })()
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -1237,6 +1270,25 @@ export default function EventDetailClient({ id }: Props) {
                             defaultValue: 'Die Tickets für dieses Event werden ausschließlich an der Abendkasse verkauft. Du zahlst das Ticket vor Ort.'
                           })}
                         </p>
+                      </div>
+                    )}
+                    {isAuthenticated && userBalance > 0 && !isDoorPayment && displayPrice > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 mb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="useBalance"
+                            checked={useBalance}
+                            onChange={(e) => setUseBalance(e.target.checked)}
+                            className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                          />
+                          <label htmlFor="useBalance" className="text-sm text-green-700 dark:text-green-300">
+                            {t('tickets.useBalance', { defaultValue: 'Guthaben einsetzen' })}
+                          </label>
+                        </div>
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                          {(userBalance / 100).toFixed(2).replace('.', ',')} €
+                        </span>
                       </div>
                     )}
                     <Button

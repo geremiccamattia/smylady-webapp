@@ -19,7 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   isLoading: boolean
   login: LoginWithCredentials & LoginWithResponse
-  register: (name: string, email: string, password: string, dateOfBirth: string) => Promise<unknown>
+  register: (name: string, email: string, password: string, dateOfBirth: string, referralCode?: string) => Promise<unknown>
   logout: () => void
   updateUser: (user: User) => void
   refreshUser: () => Promise<void>
@@ -118,8 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const register = async (name: string, email: string, password: string, dateOfBirth: string) => {
-    const response = await authService.register({ name, email, password, dateOfBirth })
+  const register = async (name: string, email: string, password: string, dateOfBirth: string, referralCode?: string) => {
+    const response = await authService.register({ name, email, password, dateOfBirth, referralCode })
     // After registration, user needs to verify OTP
     // Don't set token here - redirect to OTP screen
     return response

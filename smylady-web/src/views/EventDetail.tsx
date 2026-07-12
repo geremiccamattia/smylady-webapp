@@ -450,7 +450,7 @@ export default function EventDetail() {
         onSuccess: (data) => {
           const paymentIntentId = data.paymentIntentId || data.clientSecret?.split('_secret_')[0] || ''
           openPayment({
-            clientSecret: data.clientSecret,
+            clientSecret: data.clientSecret || '',
             paymentIntentId,
             eventName: event.name || 'Event',
             amount: data.amount || numericPrice || 0,

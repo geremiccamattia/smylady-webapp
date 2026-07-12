@@ -13,6 +13,7 @@ const publicClient = axios.create({
 
 // Extended User Profile type with additional fields from mobile app
 export interface UserProfile extends User {
+  referralCode?: string
   subscriberCount?: number
   subscribedCount?: number
   isSubscribed?: boolean

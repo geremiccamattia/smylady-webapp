@@ -1,5 +1,6 @@
 {
   "common": {
+    "optional": "optional",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "save": "Save",
@@ -134,7 +135,16 @@
     "canLogin": "You can now sign in.",
     "registerFailed": "Registration failed",
     "namePlaceholder": "John Doe",
-    "continueWithGoogle": "Continue with Google"
+    "continueWithGoogle": "Continue with Google",
+    "referralCode": "Referral code",
+    "referralCodePlaceholder": "e.g. A8K2MX9P",
+    "referralCodeHint": "Were you invited by a friend? Enter their code and you both get €10 credit."
+  },
+  "invite": {
+    "inviteFriends": "Invite friends",
+    "linkCopied": "Link copied!",
+    "shareTitle": "Share Your Party — Invitation",
+    "shareText": "Sign up on Share Your Party and we both get €10 credit!"
   },
   "nav": {
     "home": "Home",
@@ -227,6 +237,8 @@
     "joinNow": "Join now"
   },
   "tickets": {
+    "useBalance": "Use balance",
+    "purchasedWithBalance": "Ticket purchased with balance!",
     "title": "Tickets",
     "myTickets": "My Tickets",
     "noTickets": "No tickets",
@@ -683,6 +695,10 @@
     "spotifyDisconnectError": "Could not disconnect Spotify",
     "connectSpotify": "Connect",
     "disconnect": "Disconnect",
+    "balance": "My balance",
+    "balanceInfo": "Redeemable on your next ticket purchase.",
+    "showHistory": "Show history",
+    "hideHistory": "Hide history",
     "stripe": {
       "title": "Payments",
       "description": "Connect your Stripe account to receive payments for your events",

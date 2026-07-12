@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { StripeConnectCard } from '@/components/settings/StripeConnectCard'
 import { SpotifyConnectCard } from '@/components/settings/SpotifyConnectCard'
+import { BalanceCard } from '@/components/settings/BalanceCard'
 import { ChangeEmailModal } from '@/components/settings/ChangeEmailModal'
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal'
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal'
@@ -168,6 +169,9 @@ function SettingsContent() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
+
+      {/* Balance */}
+      <BalanceCard />
 
       {/* Location Settings */}
       <Card>

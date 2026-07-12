@@ -1,12 +1,17 @@
 'use client'
 
 import { apiClient } from './api'
+import { Ticket } from '@/types'
 
 export interface PaymentIntent {
-  clientSecret: string
-  paymentIntentId: string
-  amount: number
-  currency: string
+  clientSecret?: string
+  paymentIntentId?: string
+  amount?: number
+  currency?: string
+  // Present when the balance fully covers the price — no Stripe charge was made
+  ticket?: Ticket
+  balanceUsed?: number
+  paidViaStripe?: number
 }
 
 export interface AccountBalance {
@@ -44,11 +49,13 @@ export const stripeService = {
   /**
    * Create a payment intent for ticket purchase
    */
-  async createPaymentIntent(eventId: string, tierId?: string, answers?: PurchaseAnswer[]): Promise<PaymentIntent> {
+  async createPaymentIntent(data: { eventId: string; tierId?: string; answers?: PurchaseAnswer[]; useBalance?: boolean }): Promise<PaymentIntent> {
+    const { eventId, tierId, answers, useBalance } = data
     const response = await apiClient.post('/stripe/create-payment-intent', {
       eventId,
       ...(tierId ? { tierId } : {}),
       ...(answers && answers.length > 0 ? { answers } : {}),
+      ...(useBalance ? { useBalance } : {}),
     })
     if (response.data?.status >= 400) {
       const error = new Error(response.data?.message || 'Failed to create payment') as Error & {

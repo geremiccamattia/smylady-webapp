@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -25,10 +25,18 @@ export default function Register() {
   const [step, setStep] = useState<'register' | 'verify'>('register')
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [otp, setOtp] = useState('')
+  const [referralInput, setReferralInput] = useState('')
   const { register, login } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const { t } = useTranslation()
+
+  useEffect(() => {
+    const storedCode = localStorage.getItem('referral_code')
+    if (storedCode) {
+      setReferralInput(storedCode)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +62,9 @@ export default function Register() {
     setIsLoading(true)
 
     try {
-      await register(name, email, password, dateOfBirth)
+      const referralCode = referralInput.trim().toUpperCase() || localStorage.getItem('referral_code') || undefined
+      await register(name, email, password, dateOfBirth, referralCode)
+      localStorage.removeItem('referral_code')
       window.dataLayer = window.dataLayer || []
       window.dataLayer.push({ event: 'sign_up', method: 'email' })
       setRegisteredEmail(email)
@@ -216,6 +226,26 @@ export default function Register() {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="referralCode">
+                {t('auth.referralCode', { defaultValue: 'Referral code' })}
+                <span className="text-muted-foreground text-xs ml-1">
+                  ({t('common.optional', { defaultValue: 'optional' })})
+                </span>
+              </Label>
+              <Input
+                id="referralCode"
+                type="text"
+                placeholder={t('auth.referralCodePlaceholder', { defaultValue: 'z.B. A8K2MX9P' })}
+                value={referralInput}
+                onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
+                maxLength={8}
+                className="uppercase tracking-wider"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('auth.referralCodeHint', { defaultValue: 'Wurdest du von einem Freund eingeladen? Gib seinen Code ein und ihr bekommt beide 10€ Guthaben.' })}
+              </p>
+            </div>
             <Button type="submit" variant="gradient" className="w-full" loading={isLoading}>
               {t('auth.register', { defaultValue: 'Join now' })}
             </Button>
@@ -237,9 +267,21 @@ export default function Register() {
 
             <div className="mt-6">
               <GoogleLoginButton
-                onSuccess={() => {
+                onSuccess={async () => {
                   window.dataLayer = window.dataLayer || []
                   window.dataLayer.push({ event: 'sign_up', method: 'google' })
+
+                  // Referral-Code nachträglich anwenden (für Social Login)
+                  const referralCode = localStorage.getItem('referral_code')
+                  if (referralCode) {
+                    try {
+                      await apiClient.post('/auth/apply-referral', { referralCode })
+                      localStorage.removeItem('referral_code')
+                    } catch {
+                      // Nicht kritisch — Code war ungültig oder bereits angewendet
+                    }
+                  }
+
                   router.push('/explore')
                 }}
                 className="w-full"
