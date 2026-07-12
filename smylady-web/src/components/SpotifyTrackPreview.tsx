@@ -91,7 +91,7 @@ export function SpotifyTrackPreview({ track, compact = false }: SpotifyTrackPrev
             loading="lazy"
           />
           <p className="text-center text-[10px] text-muted-foreground py-1.5 px-2">
-            {t('spotify.premiumHint', { defaultValue: 'Vollständige Wiedergabe nur mit Spotify Premium — bei spotify.com im Browser einloggen' })}
+            {t('spotify.premiumHint', { defaultValue: 'Verbinde dich mit Spotify Premium, um das gesamte Lied abzuspielen.' })}
           </p>
         </div>
       )}

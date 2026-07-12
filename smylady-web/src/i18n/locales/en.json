@@ -138,13 +138,13 @@
     "continueWithGoogle": "Continue with Google",
     "referralCode": "Referral code",
     "referralCodePlaceholder": "e.g. A8K2MX9P",
-    "referralCodeHint": "Were you invited by a friend? Enter their code and you both get €10 credit."
+    "referralCodeHint": "Were you invited by a friend? Enter their code and you both get €20 credit."
   },
   "invite": {
-    "inviteFriends": "Invite friends",
+    "inviteFriends": "Invite friends and earn money",
     "linkCopied": "Link copied!",
     "shareTitle": "Share Your Party — Invitation",
-    "shareText": "Sign up on Share Your Party and we both get €10 credit!"
+    "shareText": "Sign up on Share Your Party and we both get €20 credit!"
   },
   "nav": {
     "home": "Home",
@@ -725,7 +725,7 @@
     "noResults": "No songs found",
     "typeToSearch": "Type to search",
     "openInSpotify": "Open in Spotify",
-    "premiumHint": "Full playback only with Spotify Premium — log in at spotify.com in your browser"
+    "premiumHint": "Sign in to Spotify Premium to play the entire song."
   },
   "pricing": {
     "title": "Pricing & Conditions",

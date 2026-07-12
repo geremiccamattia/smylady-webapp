@@ -10,15 +10,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const url = `https://shareyourparty.de/invite/${code}`
 
   return {
-    title: 'Du bist eingeladen! Sichere dir 10€ Guthaben — Share Your Party',
-    description: 'Registriere dich bei Share Your Party und erhalte 10€ Guthaben für Events und Tickets.',
+    title: 'Du bist eingeladen! Sichere dir 20€ Guthaben — Share Your Party',
+    description: 'Registriere dich bei Share Your Party und erhalte 20€ Guthaben für Events und Tickets.',
     alternates: {
       canonical: url,
       languages: { en: `https://shareyourparty.de/en/invite/${code}` },
     },
     openGraph: {
       title: 'Du bist eingeladen zu Share Your Party! 🎉',
-      description: 'Registriere dich jetzt und wir bekommen beide 10€ Guthaben.',
+      description: 'Registriere dich jetzt und wir bekommen beide 20€ Guthaben.',
       url,
       type: 'website',
       images: [{ url: 'https://shareyourparty.de/logo.png' }],

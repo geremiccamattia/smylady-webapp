@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Instagram } from 'lucide-react'
 
-const REFERRAL_BONUS_AMOUNT = 10 // Euro
+const REFERRAL_BONUS_AMOUNT = 20 // Euro
 const REFERRAL_CODE_STORAGE_KEY = 'referral_code'
 const APP_STORE_URL = 'https://apps.apple.com/at/app/share-your-party/id6748308083'
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.shareyourparty.app'

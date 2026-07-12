@@ -159,13 +159,13 @@
     "continueWithGoogle": "Weiter mit Google",
     "referralCode": "Einladungscode",
     "referralCodePlaceholder": "z.B. A8K2MX9P",
-    "referralCodeHint": "Wurdest du von einem Freund eingeladen? Gib seinen Code ein und ihr bekommt beide 10€ Guthaben."
+    "referralCodeHint": "Wurdest du von einem Freund eingeladen? Gib seinen Code ein und ihr bekommt beide 20€ Guthaben."
   },
   "invite": {
-    "inviteFriends": "Freunde einladen",
+    "inviteFriends": "Freunde einladen und Geld verdienen",
     "linkCopied": "Link kopiert!",
     "shareTitle": "Share Your Party — Einladung",
-    "shareText": "Registriere dich bei Share Your Party und wir bekommen beide 10€ Guthaben!"
+    "shareText": "Registriere dich bei Share Your Party und wir bekommen beide 20€ Guthaben!"
   },
   "nav": {
     "home": "Start",
@@ -696,7 +696,7 @@
     "noResults": "Keine Songs gefunden",
     "typeToSearch": "Tippe um zu suchen",
     "openInSpotify": "Auf Spotify öffnen",
-    "premiumHint": "Vollständige Wiedergabe nur mit Spotify Premium — bei spotify.com im Browser einloggen"
+    "premiumHint": "Verbinde dich mit Spotify Premium, um das gesamte Lied abzuspielen."
   },
   "legal": {
     "privacy": "Datenschutz",

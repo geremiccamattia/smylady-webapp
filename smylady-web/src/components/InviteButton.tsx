@@ -45,7 +45,7 @@ export default function InviteButton({ referralCode }: InviteButtonProps) {
       try {
         await navigator.share({
           title: t('invite.shareTitle', { defaultValue: 'Share Your Party — Einladung' }),
-          text: t('invite.shareText', { defaultValue: 'Registriere dich bei Share Your Party und wir bekommen beide 10€ Guthaben!' }),
+          text: t('invite.shareText', { defaultValue: 'Registriere dich bei Share Your Party und wir bekommen beide 20€ Guthaben!' }),
           url: inviteUrl,
         })
       } catch {
@@ -65,7 +65,7 @@ export default function InviteButton({ referralCode }: InviteButtonProps) {
         onClick={() => setShowLink(true)}
       >
         <UserPlus className="h-4 w-4 mr-2" />
-        {t('invite.inviteFriends', { defaultValue: 'Freunde einladen' })}
+        {t('invite.inviteFriends', { defaultValue: 'Invite friends and earn money' })}
       </Button>
     )
   }

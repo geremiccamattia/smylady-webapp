@@ -253,7 +253,7 @@ export default function Register() {
                 className="uppercase tracking-wider"
               />
               <p className="text-xs text-muted-foreground">
-                {t('auth.referralCodeHint', { defaultValue: 'Wurdest du von einem Freund eingeladen? Gib seinen Code ein und ihr bekommt beide 10€ Guthaben.' })}
+                {t('auth.referralCodeHint', { defaultValue: 'Wurdest du von einem Freund eingeladen? Gib seinen Code ein und ihr bekommt beide 20€ Guthaben.' })}
               </p>
             </div>
             <Button type="submit" variant="gradient" className="w-full" loading={isLoading}>
