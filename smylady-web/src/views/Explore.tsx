@@ -735,36 +735,60 @@ function ExploreContent() {
           >
             {t('explore.priceFree', { defaultValue: 'Gratis' })}
           </button>
-          <button
-            onClick={() => setPriceFilter(priceFilter === 'online' ? 'all' : 'online')}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-              priceFilter === 'online' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
-            }`}
-          >
-            {t('explore.online', { defaultValue: 'Online' })}
-          </button>
+          {(() => {
+            const workshopCat = EVENT_CATEGORIES.find(c => c.value === 'Workshop')
+            if (!workshopCat) return null
+            return (
+              <button
+                key="Workshop"
+                onClick={() => setSelectedCategory(selectedCategory === 'Workshop' ? 'all' : 'Workshop')}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                  selectedCategory === 'Workshop'
+                    ? 'bg-primary text-white'
+                    : 'bg-muted hover:bg-muted/80 text-foreground'
+                }`}
+              >
+                {t('categories.Workshop', { defaultValue: workshopCat.label })}
+              </button>
+            )
+          })()}
           {(() => {
             const priorityOrder = ['Music', 'Clubbing', 'Business']
-            const cats = EVENT_CATEGORIES.filter(c => c.value !== 'Other')
+            const cats = EVENT_CATEGORIES.filter(c => c.value !== 'Other' && c.value !== 'Workshop')
             const sorted = [
               ...cats.filter(c => priorityOrder.includes(c.value))
                 .sort((a, b) => priorityOrder.indexOf(a.value) - priorityOrder.indexOf(b.value)),
               ...cats.filter(c => !priorityOrder.includes(c.value)),
             ]
             return sorted
-          })().map((cat) => (
-            <button
-              key={cat.value}
-              onClick={() => setSelectedCategory(selectedCategory === cat.value ? 'all' : cat.value)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                selectedCategory === cat.value
-                  ? 'bg-primary text-white'
-                  : 'bg-muted hover:bg-muted/80 text-foreground'
-              }`}
-            >
-              {t(`categories.${cat.value}`, { defaultValue: cat.label })}
-            </button>
-          ))}
+          })().flatMap((cat) => {
+            const categoryButton = (
+              <button
+                key={cat.value}
+                onClick={() => setSelectedCategory(selectedCategory === cat.value ? 'all' : cat.value)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                  selectedCategory === cat.value
+                    ? 'bg-primary text-white'
+                    : 'bg-muted hover:bg-muted/80 text-foreground'
+                }`}
+              >
+                {t(`categories.${cat.value}`, { defaultValue: cat.label })}
+              </button>
+            )
+            if (cat.value !== 'Sports') return [categoryButton]
+            return [
+              categoryButton,
+              <button
+                key="online-filter"
+                onClick={() => setPriceFilter(priceFilter === 'online' ? 'all' : 'online')}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                  priceFilter === 'online' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
+                }`}
+              >
+                {t('explore.online', { defaultValue: 'Online' })}
+              </button>,
+            ]
+          })}
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
