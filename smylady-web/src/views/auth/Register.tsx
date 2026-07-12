@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast'
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { apiClient } from '@/services/api'
+import { authService } from '@/services/auth'
+import { useFingerprint } from '@/hooks/useFingerprint'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -26,10 +28,11 @@ export default function Register() {
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [referralInput, setReferralInput] = useState('')
-  const { register, login } = useAuth()
+  const { login } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const { t } = useTranslation()
+  const fingerprint = useFingerprint()
 
   useEffect(() => {
     const storedCode = localStorage.getItem('referral_code')
@@ -63,7 +66,14 @@ export default function Register() {
 
     try {
       const referralCode = referralInput.trim().toUpperCase() || localStorage.getItem('referral_code') || undefined
-      await register(name, email, password, dateOfBirth, referralCode)
+      await authService.register({
+        name,
+        email,
+        password,
+        dateOfBirth,
+        referralCode,
+        deviceFingerprint: fingerprint || undefined,
+      })
       localStorage.removeItem('referral_code')
       window.dataLayer = window.dataLayer || []
       window.dataLayer.push({ event: 'sign_up', method: 'email' })
@@ -270,6 +280,15 @@ export default function Register() {
                 onSuccess={async () => {
                   window.dataLayer = window.dataLayer || []
                   window.dataLayer.push({ event: 'sign_up', method: 'google' })
+
+                  // Fingerprint nachreichen
+                  if (fingerprint) {
+                    try {
+                      await apiClient.patch('/auth/device-fingerprint', { fingerprint })
+                    } catch {
+                      // Nicht kritisch
+                    }
+                  }
 
                   // Referral-Code nachträglich anwenden (für Social Login)
                   const referralCode = localStorage.getItem('referral_code')

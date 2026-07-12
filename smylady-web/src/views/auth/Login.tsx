@@ -41,6 +41,7 @@ import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { apiClient } from '@/services/api'
 import axios from 'axios'
 import { useTranslation } from 'react-i18next'
+import { useFingerprint } from '@/hooks/useFingerprint'
 
 // Blog articles from shareyourparty.de/blog
 const blogArticles = [
@@ -184,6 +185,7 @@ export default function Login() {
   const { login, isAuthenticated, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const fingerprint = useFingerprint()
   const queryClient = useQueryClient()
 
   // Redirect to explore if already authenticated
@@ -613,6 +615,15 @@ export default function Login() {
                       onSuccess={async () => {
                         window.dataLayer = window.dataLayer || []
                         window.dataLayer.push({ event: 'sign_in', method: 'google' })
+
+                        // Fingerprint nachreichen
+                        if (fingerprint) {
+                          try {
+                            await apiClient.patch('/auth/device-fingerprint', { fingerprint })
+                          } catch {
+                            // Nicht kritisch
+                          }
+                        }
 
                         // Referral-Code nachträglich anwenden (für Social Login)
                         const referralCode = localStorage.getItem('referral_code')

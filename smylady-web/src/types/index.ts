@@ -44,6 +44,7 @@ export interface RegisterCredentials {
   password: string
   dateOfBirth: string
   referralCode?: string
+  deviceFingerprint?: string
 }
 
 export interface AuthResponse {
