@@ -141,7 +141,21 @@
     "sendLink": "Link senden",
     "setNewPasswordDesc": "Gib dein neues Passwort ein",
     "welcome": "Willkommen",
-    "wrongPassword": "Falsches Passwort"
+    "wrongPassword": "Falsches Passwort",
+    "dateOfBirth": "Geburtsdatum",
+    "loginNow": "Jetzt einloggen",
+    "termsPrefix": "Mit der Registrierung stimmst du unseren",
+    "termsLink": "Nutzungsbedingungen",
+    "privacyLink": "Datenschutzerklärung",
+    "namePlaceholder": "Max Mustermann",
+    "verificationSent": "Wir haben einen Bestätigungscode an {{email}} gesendet.",
+    "verificationCode": "Bestätigungscode",
+    "registerSuccess": "Registrierung erfolgreich!",
+    "checkEmailOTP": "Bitte prüfe deine E-Mails für den Bestätigungscode.",
+    "emailConfirmed": "E-Mail bestätigt!",
+    "canLogin": "Du kannst dich jetzt einloggen.",
+    "registerFailed": "Registrierung fehlgeschlagen",
+    "continueWithGoogle": "Weiter mit Google"
   },
   "nav": {
     "home": "Start",

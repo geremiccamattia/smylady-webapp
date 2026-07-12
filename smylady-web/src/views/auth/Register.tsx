@@ -158,7 +158,7 @@ export default function Register() {
               <Input
                 id="name"
                 type="text"
-                placeholder="Max Mustermann"
+                placeholder={t('auth.namePlaceholder', { defaultValue: 'John Doe' })}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -169,7 +169,7 @@ export default function Register() {
               <Input
                 id="email"
                 type="email"
-                placeholder="deine@email.de"
+                placeholder={t('auth.emailPlaceholder', { defaultValue: 'your@email.com' })}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

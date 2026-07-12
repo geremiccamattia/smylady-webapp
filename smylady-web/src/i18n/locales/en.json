@@ -132,7 +132,9 @@
     "checkEmailOTP": "Please check your email for the verification code.",
     "emailConfirmed": "Email confirmed!",
     "canLogin": "You can now sign in.",
-    "registerFailed": "Registration failed"
+    "registerFailed": "Registration failed",
+    "namePlaceholder": "John Doe",
+    "continueWithGoogle": "Continue with Google"
   },
   "nav": {
     "home": "Home",
