@@ -685,7 +685,7 @@ export default function InfluencerClubPage() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between mt-6">
+                <div className="w-full flex items-center justify-between mt-6">
                   {currentStep > 0 ? (
                     <Button type="button" variant="outline" className="rounded-full uppercase text-xs font-black" onClick={handleBack}>
                       ← {t('influencer.back', { defaultValue: 'Zurück' })}
