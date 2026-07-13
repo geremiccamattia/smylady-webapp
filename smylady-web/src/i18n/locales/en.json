@@ -1187,7 +1187,8 @@
     "concertsVienna": "Concerts in Vienna",
     "clubbingVienna": "Clubbing in Vienna",
     "businessEventsVienna": "Business Events in Vienna",
-    "workshopsVienna": "Workshops in Vienna"
+    "workshopsVienna": "Workshops in Vienna",
+    "influencerClub": "Influencer Club"
   },
   "forgotPassword": {
     "error": "Could not reset password",
