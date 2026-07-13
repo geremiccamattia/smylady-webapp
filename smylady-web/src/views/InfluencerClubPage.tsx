@@ -417,15 +417,15 @@ export default function InfluencerClubPage() {
       </section>
 
       {/* Application Form */}
-      <section id="bewerbung" className="grid md:grid-cols-[230px_1fr] rounded-3xl bg-white shadow-lg scroll-mt-20 md:overflow-hidden">
-        <div className="relative hidden md:block overflow-hidden bg-[#fff2ed]">
+      <section id="bewerbung" className="flex flex-col md:flex-row rounded-3xl bg-white shadow-lg scroll-mt-20">
+        <div className="relative hidden md:block md:w-[230px] md:shrink-0 md:rounded-l-3xl overflow-hidden bg-[#fff2ed]">
           <div className={cn('absolute w-40 h-40 -left-16 -bottom-14 rounded-full opacity-65', GRADIENT)} />
           <div className={cn('absolute w-24 h-24 -right-8 -bottom-6 rounded-full opacity-65', GRADIENT)} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/influencer/creator.jpg" alt="" className="relative z-10 w-full h-full object-cover" />
         </div>
 
-        <div className="p-5 md:p-8">
+        <div className="flex-1 p-6">
           {submitted ? (
             <div className="text-center py-16 px-4">
               <div className={cn('mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full', GRADIENT)}>
@@ -685,32 +685,39 @@ export default function InfluencerClubPage() {
                   </div>
                 )}
 
-                <div className="w-full flex items-center justify-between mt-6">
+                <div className="flex justify-between items-center mt-6 pt-4 border-t">
                   {currentStep > 0 ? (
-                    <Button type="button" variant="outline" className="rounded-full uppercase text-xs font-black" onClick={handleBack}>
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="px-6 py-3 border border-input rounded-full text-sm font-semibold uppercase text-xs tracking-wide"
+                    >
                       ← {t('influencer.back', { defaultValue: 'Zurück' })}
-                    </Button>
+                    </button>
                   ) : (
-                    <span />
+                    <div />
                   )}
                   {currentStep < STEP_KEYS.length - 1 ? (
-                    <Button
+                    <button
                       type="button"
-                      className={cn('rounded-full text-white hover:opacity-90 uppercase text-xs font-black', GRADIENT)}
                       onClick={handleNext}
+                      className={cn('px-6 py-3 rounded-full text-sm font-semibold uppercase text-xs tracking-wide text-white hover:opacity-90', GRADIENT)}
                     >
                       {t('influencer.next', { defaultValue: 'Weiter' })} →
-                    </Button>
+                    </button>
                   ) : (
-                    <Button
+                    <button
                       type="submit"
-                      loading={isSubmitting}
-                      className={cn('rounded-full text-white hover:opacity-90 uppercase text-xs font-black', GRADIENT)}
+                      disabled={isSubmitting}
+                      className={cn(
+                        'px-6 py-3 rounded-full text-sm font-semibold uppercase text-xs tracking-wide text-white hover:opacity-90 disabled:opacity-50',
+                        GRADIENT
+                      )}
                     >
                       {isSubmitting
                         ? t('influencer.submitting', { defaultValue: 'Wird gesendet...' })
                         : `${t('influencer.submit', { defaultValue: 'Bewerbung absenden' })} →`}
-                    </Button>
+                    </button>
                   )}
                 </div>
                 {stepError && (
