@@ -266,7 +266,7 @@ export default function InfluencerClubPage() {
   const stepIcons = [User, Instagram, Sparkles, Check]
 
   return (
-    <div className="max-w-[1200px] mx-auto">
+    <div className="max-w-[1200px] mx-auto pb-24 md:pb-0">
       {/* Hero */}
       <section className="grid md:grid-cols-[0.86fr_1.14fr] gap-10 items-center py-6 md:py-10">
         <div>
@@ -417,7 +417,7 @@ export default function InfluencerClubPage() {
       </section>
 
       {/* Application Form */}
-      <section id="bewerbung" className="grid md:grid-cols-[230px_1fr] rounded-3xl overflow-hidden bg-white shadow-lg scroll-mt-20">
+      <section id="bewerbung" className="grid md:grid-cols-[230px_1fr] rounded-3xl bg-white shadow-lg scroll-mt-20 md:overflow-hidden">
         <div className="relative hidden md:block overflow-hidden bg-[#fff2ed]">
           <div className={cn('absolute w-40 h-40 -left-16 -bottom-14 rounded-full opacity-65', GRADIENT)} />
           <div className={cn('absolute w-24 h-24 -right-8 -bottom-6 rounded-full opacity-65', GRADIENT)} />
