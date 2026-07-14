@@ -204,6 +204,9 @@ export default function Header() {
                 <Link href={localePath("/contact")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Kontakt</Button>
                 </Link>
+                <Link href={localePath("/influencer-club")} onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Influencer Club</Button>
+                </Link>
                 <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
                 </a>
@@ -239,6 +242,9 @@ export default function Header() {
                 <div className="border-t my-2" />
                 <Link href={localePath("/contact")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Kontakt</Button>
+                </Link>
+                <Link href={localePath("/influencer-club")} onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">Influencer Club</Button>
                 </Link>
                 <a href="mailto:office@shareyourparty.de" onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">E-Mail Support</Button>
