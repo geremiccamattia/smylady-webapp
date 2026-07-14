@@ -549,17 +549,23 @@ function ExploreContent() {
 
   const PostRow = ({ posts }: { posts: any[] }) => {
     if (posts.length === 0) return null
+
+    const TEXT_CARD_COLORS = ['#FFF0F6', '#F0F4FF', '#F0FFF4', '#FFFBF0', '#F5F0FF']
+
     return (
       <div className="space-y-3">
         <h2 className="text-2xl font-bold tracking-tight">
           💭 {t('explore.yourVibes', { defaultValue: 'Deine Vibes' })}
         </h2>
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible">
-          {posts.slice(0, 3).map((post: any) => {
+          {posts.slice(0, 3).map((post: any, index: number) => {
             const author = post.userId || post.user || {}
             const firstImage = post.media?.find((m: any) => m.type === 'image')
             const firstVideo = post.media?.find((m: any) => m.type === 'video')
             const postImage = firstImage?.url || post.images?.[0]?.url || post.images?.[0]
+            const spotifyTrack = post.spotifyTrack
+            const isSpotifyPost = !postImage && !firstVideo && !!spotifyTrack
+            const isTextOnly = !postImage && !firstVideo && !isSpotifyPost
             const postText = post.text || post.content || ''
             const postId = post._id || post.id
 
@@ -570,24 +576,83 @@ function ExploreContent() {
                 className="flex-shrink-0 w-[70vw] md:w-auto"
               >
                 <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
-                  {(postImage || firstVideo) && (
+                  {/* Bild-Post */}
+                  {postImage && (
                     <div className="aspect-[16/9] relative overflow-hidden">
-                      {postImage ? (
-                        <img
-                          src={resolveImageUrl(postImage)}
-                          alt=""
-                          className="object-cover w-full h-full"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none'
-                          }}
-                        />
+                      <img
+                        src={resolveImageUrl(postImage)}
+                        alt=""
+                        className="object-cover w-full h-full"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Video-Post */}
+                  {!postImage && firstVideo && (
+                    <div className="aspect-[16/9] relative overflow-hidden bg-gray-900 flex items-center justify-center">
+                      {firstVideo.thumbnailUrl ? (
+                        <>
+                          <img
+                            src={resolveImageUrl(firstVideo.thumbnailUrl)}
+                            alt=""
+                            className="object-cover w-full h-full"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
+                              <span className="text-white text-lg ml-0.5">▶</span>
+                            </div>
+                          </div>
+                        </>
                       ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <span className="text-2xl">▶️</span>
+                        <div className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
+                          <span className="text-white text-lg ml-0.5">▶</span>
                         </div>
                       )}
                     </div>
                   )}
+
+                  {/* Spotify-Post */}
+                  {isSpotifyPost && (
+                    <div className="aspect-[16/9] relative overflow-hidden">
+                      {spotifyTrack.albumCover ? (
+                        <img
+                          src={spotifyTrack.albumCover}
+                          alt={spotifyTrack.name}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#1DB954] flex items-center justify-center">
+                          <span className="text-3xl">🎵</span>
+                        </div>
+                      )}
+                      {/* Spotify Badge */}
+                      <div className="absolute top-2 right-2 bg-[#1DB954] rounded-full w-6 h-6 flex items-center justify-center">
+                        <span className="text-white text-xs">♪</span>
+                      </div>
+                      {/* Track Info Overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-2">
+                        <p className="text-white text-xs font-bold truncate">{spotifyTrack.name}</p>
+                        <p className="text-white/80 text-[10px] truncate">{spotifyTrack.artist}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Text-only Post */}
+                  {isTextOnly && (
+                    <div
+                      className="aspect-[16/9] flex flex-col items-center justify-center p-4"
+                      style={{ backgroundColor: TEXT_CARD_COLORS[index % TEXT_CARD_COLORS.length] }}
+                    >
+                      <span className="text-2xl mb-2">💬</span>
+                      <p className="text-xs text-gray-700 text-center line-clamp-4 italic leading-relaxed">
+                        {postText}
+                      </p>
+                    </div>
+                  )}
+
                   <CardContent className="p-3">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6 flex-shrink-0">
@@ -598,7 +663,7 @@ function ExploreContent() {
                       </Avatar>
                       <p className="font-medium text-xs truncate">{author.name || 'User'}</p>
                     </div>
-                    {postText && (
+                    {postText && !isTextOnly && (
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{postText}</p>
                     )}
                     <div className="flex items-center gap-3 mt-1.5">

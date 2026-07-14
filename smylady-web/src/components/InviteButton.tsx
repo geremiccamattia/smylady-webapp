@@ -58,15 +58,20 @@ export default function InviteButton({ referralCode }: InviteButtonProps) {
 
   if (!showLink) {
     return (
-      <Button
-        variant="gradient"
-        size="sm"
-        className="w-full"
-        onClick={() => setShowLink(true)}
-      >
-        <UserPlus className="h-4 w-4 mr-2" />
-        {t('invite.inviteFriends', { defaultValue: 'Invite friends and earn money' })}
-      </Button>
+      <div className="w-full">
+        <Button
+          variant="gradient"
+          size="sm"
+          className="w-full"
+          onClick={() => setShowLink(true)}
+        >
+          <UserPlus className="h-4 w-4 mr-2" />
+          {t('invite.inviteFriends', { defaultValue: 'Invite friends and earn money' })}
+        </Button>
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          {t('invite.bonusHint', { defaultValue: 'Your friend uploads a profile photo — you both earn €20 credit.' })}
+        </p>
+      </div>
     )
   }
 
@@ -81,6 +86,9 @@ export default function InviteButton({ referralCode }: InviteButtonProps) {
           <Share2 className="h-3.5 w-3.5" />
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground text-center">
+        {t('invite.bonusHint', { defaultValue: 'Your friend uploads a profile photo — you both earn €20 credit.' })}
+      </p>
     </div>
   )
 }

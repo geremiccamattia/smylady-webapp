@@ -144,7 +144,8 @@
     "inviteFriends": "Invite friends and earn money",
     "linkCopied": "Link copied!",
     "shareTitle": "Share Your Party — Invitation",
-    "shareText": "Sign up on Share Your Party and we both get €20 credit!"
+    "shareText": "Sign up on Share Your Party and we both get €20 credit!",
+    "bonusHint": "Your friend uploads a profile photo — you both earn €20 credit."
   },
   "nav": {
     "home": "Home",
