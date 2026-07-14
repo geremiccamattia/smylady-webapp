@@ -317,7 +317,7 @@ export default function InfluencerClubPage() {
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/influencer/hero.jpg" alt="" className="w-full h-full object-cover" />
+            <img src="/images/influencer/hero-neu.jpeg" alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className={cn('hidden md:block absolute w-44 h-48 -right-3 bottom-6 opacity-80', GRADIENT)}
@@ -422,7 +422,7 @@ export default function InfluencerClubPage() {
           <div className={cn('absolute w-40 h-40 -left-16 -bottom-14 rounded-full opacity-65', GRADIENT)} />
           <div className={cn('absolute w-24 h-24 -right-8 -bottom-6 rounded-full opacity-65', GRADIENT)} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/influencer/creator.jpg" alt="" className="relative z-10 w-full h-full object-cover" />
+          <img src="/images/influencer/creator-neu.jpeg" alt="" className="relative z-10 w-full h-full object-cover" />
         </div>
 
         <div className="flex-1 p-6">
