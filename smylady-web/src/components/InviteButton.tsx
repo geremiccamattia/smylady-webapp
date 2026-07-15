@@ -58,37 +58,27 @@ export default function InviteButton({ referralCode }: InviteButtonProps) {
 
   if (!showLink) {
     return (
-      <div className="w-full">
-        <Button
-          variant="gradient"
-          size="sm"
-          className="w-full"
-          onClick={() => setShowLink(true)}
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          {t('invite.inviteFriends', { defaultValue: 'Invite friends and earn money' })}
-        </Button>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          {t('invite.bonusHint', { defaultValue: 'Your friend uploads a profile photo — you both earn €20 credit.' })}
-        </p>
-      </div>
+      <Button
+        variant="gradient"
+        size="sm"
+        className="w-full"
+        onClick={() => setShowLink(true)}
+      >
+        <UserPlus className="h-4 w-4 mr-2" />
+        {t('invite.inviteFriends', { defaultValue: 'Invite friends and earn €20' })}
+      </Button>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2 w-full">
-      <div className="flex items-center gap-1 bg-muted rounded-md px-3 py-2 text-sm">
-        <span className="truncate flex-1 text-muted-foreground select-all">{inviteUrl}</span>
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleCopy}>
-          {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleShare}>
-          <Share2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-      <p className="text-xs text-muted-foreground text-center">
-        {t('invite.bonusHint', { defaultValue: 'Your friend uploads a profile photo — you both earn €20 credit.' })}
-      </p>
+    <div className="flex items-center gap-1 bg-muted rounded-md px-3 py-2 text-sm w-full">
+      <span className="truncate flex-1 text-muted-foreground select-all">{inviteUrl}</span>
+      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleCopy}>
+        {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleShare}>
+        <Share2 className="h-3.5 w-3.5" />
+      </Button>
     </div>
   )
 }

@@ -141,11 +141,10 @@
     "referralCodeHint": "Were you invited by a friend? Enter their code and you both get €20 credit."
   },
   "invite": {
-    "inviteFriends": "Invite friends and earn money",
+    "inviteFriends": "Invite friends and earn €20",
     "linkCopied": "Link copied!",
     "shareTitle": "Share Your Party — Invitation",
-    "shareText": "Sign up on Share Your Party and we both get €20 credit!",
-    "bonusHint": "Your friend uploads a profile photo — you both earn €20 credit."
+    "shareText": "Sign up on Share Your Party and we both get €20 credit!"
   },
   "nav": {
     "home": "Home",
@@ -1355,10 +1354,10 @@
     "continueToTicket": "Continue to Ticket"
   },
   "influencer": {
-    "eyebrow": "Share Your Party Influencer Club",
+    "eyebrow": "Share Your Party",
     "heroHeadline1": "Create moments.",
-    "heroHeadline2": "Inspire your city.",
     "heroHeadline3": "Share Your Party.",
+    "heroHeadline4": "Influencer Club.",
     "heroLead": "Become part of the Share Your Party Influencer Club. Experience exclusive events, share real moments and grow together with an active community.",
     "ctaApply": "Apply now",
     "ctaLearnMore": "Learn more",

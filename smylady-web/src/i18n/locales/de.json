@@ -162,11 +162,10 @@
     "referralCodeHint": "Wurdest du von einem Freund eingeladen? Gib seinen Code ein und ihr bekommt beide 20€ Guthaben."
   },
   "invite": {
-    "inviteFriends": "Freunde einladen und Geld verdienen",
+    "inviteFriends": "Freunde einladen und 20 € verdienen",
     "linkCopied": "Link kopiert!",
     "shareTitle": "Share Your Party — Einladung",
-    "shareText": "Registriere dich bei Share Your Party und wir bekommen beide 20€ Guthaben!",
-    "bonusHint": "Dein Freund lädt ein Profilfoto hoch — ihr bekommt beide 20€ Guthaben."
+    "shareText": "Registriere dich bei Share Your Party und wir bekommen beide 20€ Guthaben!"
   },
   "nav": {
     "home": "Start",
@@ -1191,10 +1190,10 @@
     "continueToTicket": "Weiter zum Ticket"
   },
   "influencer": {
-    "eyebrow": "Share Your Party Influencer Club",
+    "eyebrow": "Share Your Party",
     "heroHeadline1": "Create moments.",
-    "heroHeadline2": "Inspire your city.",
     "heroHeadline3": "Share Your Party.",
+    "heroHeadline4": "Influencer Club.",
     "heroLead": "Werde Teil des Share Your Party Influencer Clubs. Erlebe exklusive Events, teile echte Momente und wachse gemeinsam mit einer aktiven Community.",
     "ctaApply": "Jetzt bewerben",
     "ctaLearnMore": "Mehr erfahren",

@@ -271,15 +271,15 @@ export default function InfluencerClubPage() {
       <section className="grid md:grid-cols-[0.86fr_1.14fr] gap-10 items-center py-6 md:py-10">
         <div>
           <p className="mb-4 text-[13px] font-black uppercase tracking-wide text-[#e9548c]">
-            {t('influencer.eyebrow', { defaultValue: 'Share Your Party Influencer Club' })}
+            {t('influencer.eyebrow', { defaultValue: 'Share Your Party' })}
           </p>
           <h1 className="text-[40px] sm:text-[56px] md:text-[68px] font-black leading-[1.05] tracking-tight">
             {t('influencer.heroHeadline1', { defaultValue: 'Create moments.' })}
             <br />
-            {t('influencer.heroHeadline2', { defaultValue: 'Inspire your city.' })}
+            {t('influencer.heroHeadline3', { defaultValue: 'Share Your Party.' })}
             <br />
             <span className={cn(GRADIENT, 'bg-clip-text text-transparent')}>
-              {t('influencer.heroHeadline3', { defaultValue: 'Share Your Party.' })}
+              {t('influencer.heroHeadline4', { defaultValue: 'Influencer Club.' })}
             </span>
           </h1>
           <div className={cn('w-14 h-0.5 my-6', GRADIENT)} />
@@ -317,7 +317,7 @@ export default function InfluencerClubPage() {
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/influencer/hero-neu.jpeg" alt="" className="w-full h-full object-cover" />
+            <img src="/images/influencer/creator-neu.jpeg" alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className={cn('hidden md:block absolute w-44 h-48 -right-3 bottom-6 opacity-80', GRADIENT)}
@@ -422,7 +422,7 @@ export default function InfluencerClubPage() {
           <div className={cn('absolute w-40 h-40 -left-16 -bottom-14 rounded-full opacity-65', GRADIENT)} />
           <div className={cn('absolute w-24 h-24 -right-8 -bottom-6 rounded-full opacity-65', GRADIENT)} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/influencer/creator-neu.jpeg" alt="" className="relative z-10 w-full h-full object-cover" />
+          <img src="/images/influencer/hero-neu.jpeg" alt="" className="relative z-10 w-full h-full object-cover" />
         </div>
 
         <div className="flex-1 p-6">
