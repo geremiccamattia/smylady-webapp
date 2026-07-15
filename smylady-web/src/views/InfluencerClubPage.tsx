@@ -273,12 +273,14 @@ export default function InfluencerClubPage() {
           <p className="mb-4 text-[13px] font-black uppercase tracking-wide text-[#e9548c]">
             {t('influencer.eyebrow', { defaultValue: 'Share Your Party' })}
           </p>
-          <h1 className="text-[40px] sm:text-[56px] md:text-[68px] font-black leading-[1.05] tracking-tight">
-            {t('influencer.heroHeadline1', { defaultValue: 'Create moments.' })}
-            <br />
-            {t('influencer.heroHeadline3', { defaultValue: 'Share Your Party.' })}
-            <br />
-            <span className={cn(GRADIENT, 'bg-clip-text text-transparent')}>
+          <h1 className="text-4xl md:text-5xl font-bold leading-[1.05] tracking-tight">
+            <span className="block">
+              {t('influencer.heroHeadline1', { defaultValue: 'Create moments.' })}
+            </span>
+            <span className="block">
+              {t('influencer.heroHeadline3', { defaultValue: 'Share Your Party.' })}
+            </span>
+            <span className={cn(GRADIENT, 'block bg-clip-text text-transparent')}>
               {t('influencer.heroHeadline4', { defaultValue: 'Influencer Club.' })}
             </span>
           </h1>
