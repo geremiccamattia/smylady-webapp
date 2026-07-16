@@ -270,9 +270,6 @@ export default function InfluencerClubPage() {
       {/* Hero */}
       <section className="grid md:grid-cols-[0.86fr_1.14fr] gap-10 items-center py-6 md:py-10">
         <div>
-          <p className="mb-4 text-[13px] font-black uppercase tracking-wide text-[#e9548c]">
-            {t('influencer.eyebrow', { defaultValue: 'Share Your Party' })}
-          </p>
           <h1 className="text-4xl md:text-5xl font-bold leading-[1.05] tracking-tight">
             <span className="block">
               {t('influencer.heroHeadline1', { defaultValue: 'Create moments.' })}
