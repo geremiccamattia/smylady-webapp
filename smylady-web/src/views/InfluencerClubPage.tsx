@@ -470,7 +470,7 @@ export default function InfluencerClubPage() {
                 })}
               </div>
 
-              <form onSubmit={handleSubmit} className="pt-6">
+              <form onSubmit={handleSubmit} className="pt-6 influencer-form">
                 {currentStep === 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
