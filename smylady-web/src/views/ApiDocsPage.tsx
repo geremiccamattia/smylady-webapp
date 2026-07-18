@@ -176,9 +176,17 @@ export default function ApiDocsPage() {
         <h1 className="text-3xl sm:text-4xl font-bold mb-2">
           {t('api.heroTitle', { defaultValue: 'API-Dokumentation' })}
         </h1>
-        <p className="text-muted-foreground text-lg">
+        <p className="text-muted-foreground text-lg mb-3">
           {t('api.heroSubtitle', { defaultValue: 'Events automatisiert erstellen und verwalten' })}
         </p>
+        <a
+          href="/openapi.json"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-primary hover:underline font-medium"
+        >
+          {t('api.openApiSpecLabel', { defaultValue: 'OpenAPI-Spezifikation (openapi.json)' })} →
+        </a>
       </div>
 
       <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">

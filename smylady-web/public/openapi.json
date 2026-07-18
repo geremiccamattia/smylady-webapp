@@ -1,0 +1,364 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Share Your Party API",
+    "description": "API for event organizers to create, manage and update events on Share Your Party (shareyourparty.de).",
+    "version": "1.0.0",
+    "contact": {
+      "email": "office@shareyourparty.de",
+      "url": "https://shareyourparty.de/api"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://smylady-backend.onrender.com",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token from localStorage key 'syp_token'. Valid for 7 days."
+      }
+    },
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "6a5b3fec0a7813fc51b31908" },
+          "name": { "type": "string", "example": "Techno Night Vol. 5" },
+          "description": { "type": "string", "example": "Die beste Techno Night in Wien!" },
+          "eventDate": { "type": "string", "format": "date-time", "example": "2026-08-15T00:00:00.000Z" },
+          "eventStartTime": { "type": "string", "format": "date-time", "example": "2026-08-15T16:00:00.000Z", "description": "UTC time. For 18:00 Vienna time (CEST), send 16:00 UTC." },
+          "category": { "$ref": "#/components/schemas/EventCategory" },
+          "partyType": { "$ref": "#/components/schemas/PartyType" },
+          "musicType": { "$ref": "#/components/schemas/MusicType" },
+          "locationName": { "type": "string", "example": "Karlsplatz 1, 1010 Wien" },
+          "locationType": { "type": "string", "enum": ["physical", "online", "tba"], "default": "physical" },
+          "onlineUrl": { "type": "string", "default": "" },
+          "totalTickets": { "type": "integer", "default": 1, "example": 200 },
+          "price": { "type": "number", "default": 0, "example": 15, "description": "Price in EUR. 0 = free." },
+          "visibility": { "type": "string", "enum": ["public", "subscribers", "selected"], "default": "public" },
+          "offerings": { "type": "string", "default": "", "example": "Drinks, Food" },
+          "restrictions": { "type": "string", "default": "", "example": "Ab 18 Jahren" },
+          "paymentType": { "type": "string", "enum": ["online", "door"], "default": "online" },
+          "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected", "Cancelled"] },
+          "soldTickets": { "type": "integer" },
+          "soldOut": { "type": "boolean" },
+          "locationImages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": { "type": "string" },
+                "fileName": { "type": "string" }
+              }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "EventCategory": {
+        "type": "string",
+        "enum": ["Gastronomy", "Business", "Sports", "Nature", "Theme", "Music", "On the Roof", "Clubbing", "Workshop", "Yoga", "Other"]
+      },
+      "PartyType": {
+        "type": "string",
+        "enum": ["birthday", "wedding", "corporate", "social", "other"]
+      },
+      "MusicType": {
+        "type": "string",
+        "enum": ["pop", "rock", "jazz", "classical", "electronic", "hip_hop", "techno", "house", "rnb", "indie", "dnb", "dj_set", "live_band", "mixed", "reggae", "latin", "afrobeats", "soul", "metal", "country", "trance", "folk", "no_music", "other"]
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "integer" },
+          "message": { "type": "string" },
+          "data": {}
+        }
+      },
+      "BulkUploadResult": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "integer", "example": 200 },
+          "imported": { "type": "integer", "example": 5 },
+          "failed": { "type": "integer", "example": 1 },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "row": { "type": "integer", "example": 3 },
+                "field": { "type": "string", "example": "category" },
+                "message": { "type": "string", "example": "Invalid category" },
+                "data": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/events": {
+      "post": {
+        "tags": ["Events"],
+        "summary": "Create a single event",
+        "description": "Creates a new event. The event will have status 'Pending' until approved. Use multipart/form-data to include images.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "description", "eventDate", "eventStartTime", "category", "partyType", "musicType", "locationName", "offerings"],
+                "properties": {
+                  "name": { "type": "string", "description": "Event name", "example": "Techno Night Vol. 5" },
+                  "description": { "type": "string", "description": "Event description (Markdown supported)", "example": "Die beste Techno Night in Wien!" },
+                  "eventDate": { "type": "string", "format": "date-time", "description": "Event date (midnight UTC)", "example": "2026-08-15T00:00:00.000Z" },
+                  "eventStartTime": { "type": "string", "format": "date-time", "description": "Event start date+time in UTC. For 18:00 Vienna (CEST), send 16:00 UTC.", "example": "2026-08-15T16:00:00.000Z" },
+                  "category": { "$ref": "#/components/schemas/EventCategory" },
+                  "partyType": { "$ref": "#/components/schemas/PartyType" },
+                  "musicType": { "$ref": "#/components/schemas/MusicType" },
+                  "locationName": { "type": "string", "description": "Address (will be geocoded)", "example": "Karlsplatz 1, 1010 Wien" },
+                  "offerings": { "type": "string", "description": "What is offered (send empty string if none)", "example": "Drinks, Food" },
+                  "restrictions": { "type": "string", "description": "Restrictions", "example": "Ab 18 Jahren" },
+                  "totalTickets": { "type": "integer", "description": "Number of available tickets", "default": 1, "example": 200 },
+                  "price": { "type": "number", "description": "Ticket price in EUR (0 = free)", "default": 0, "example": 15 },
+                  "visibility": { "type": "string", "enum": ["public", "subscribers", "selected"], "default": "public" },
+                  "locationType": { "type": "string", "enum": ["physical", "online", "tba"], "default": "physical" },
+                  "onlineUrl": { "type": "string", "description": "URL for online events" },
+                  "paymentType": { "type": "string", "enum": ["online", "door"], "default": "online" },
+                  "files": { "type": "array", "items": { "type": "string", "format": "binary" }, "description": "Event images (max 5, JPG/PNG)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Event created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "integer", "example": 201 },
+                    "message": { "type": "string", "example": "Event created successfully" },
+                    "data": { "$ref": "#/components/schemas/Event" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing required field or invalid value" },
+          "401": { "description": "Missing or expired token" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/events/my-events": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Get all events created by the authenticated user",
+        "description": "Returns all events owned by the current user, including past events.",
+        "responses": {
+          "200": {
+            "description": "Events retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "integer", "example": 200 },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Event" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing or expired token" }
+        }
+      }
+    },
+    "/events/{eventId}": {
+      "patch": {
+        "tags": ["Events"],
+        "summary": "Update an event",
+        "description": "Update one or more fields of an existing event. Only send the fields you want to change. Use the full 24-character event ID from the create response or GET /events/my-events.",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Full 24-character MongoDB ObjectId",
+            "example": "6a5b3fec0a7813fc51b31908"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "eventDate": { "type": "string", "format": "date-time" },
+                  "eventStartTime": { "type": "string", "format": "date-time" },
+                  "category": { "$ref": "#/components/schemas/EventCategory" },
+                  "partyType": { "$ref": "#/components/schemas/PartyType" },
+                  "musicType": { "$ref": "#/components/schemas/MusicType" },
+                  "locationName": { "type": "string" },
+                  "totalTickets": { "type": "integer" },
+                  "price": { "type": "number" },
+                  "visibility": { "type": "string", "enum": ["public", "subscribers", "selected"] },
+                  "offerings": { "type": "string" },
+                  "restrictions": { "type": "string" },
+                  "paymentType": { "type": "string", "enum": ["online", "door"] }
+                }
+              },
+              "example": {
+                "price": 20,
+                "totalTickets": 250
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Event updated successfully" },
+          "400": { "description": "Invalid field value" },
+          "401": { "description": "Missing or expired token" },
+          "403": { "description": "Not the event owner" },
+          "404": { "description": "Event not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Events"],
+        "summary": "Delete an event",
+        "description": "Delete an event by its full 24-character ID.",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Full 24-character MongoDB ObjectId",
+            "example": "6a5b3fec0a7813fc51b31908"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Event deleted successfully" },
+          "401": { "description": "Missing or expired token" },
+          "403": { "description": "Not the event owner" },
+          "404": { "description": "Event not found" }
+        }
+      }
+    },
+    "/events/bulk-upload": {
+      "post": {
+        "tags": ["Bulk Upload"],
+        "summary": "Upload multiple events via CSV",
+        "description": "Upload a CSV file to create multiple events at once. Download the template from https://docs.google.com/spreadsheets/d/1YWqArillO-1ypGs6Yg9-q4nkhmCwUbupjQVCyUyOY-o/copy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "CSV file with columns: name, address, eventDate, eventStartTime, category, description, imageUrl, visibility, totalTickets, partyType, musicType, offerings, restrictions, price"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload processed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BulkUploadResult" }
+              }
+            }
+          },
+          "401": { "description": "Missing or expired token" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login to get a JWT token",
+        "description": "Authenticate with email/username and password to receive a Bearer token valid for 7 days.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["emailOrUsername", "password"],
+                "properties": {
+                  "emailOrUsername": { "type": "string", "example": "organizer@example.com" },
+                  "password": { "type": "string", "example": "mypassword" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "integer", "example": 200 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string", "description": "JWT Bearer token" },
+                        "userId": { "type": "string" },
+                        "email": { "type": "string" },
+                        "role": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Incorrect password" },
+          "404": { "description": "User not found" }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Authentication", "description": "Login to obtain a JWT token" },
+    { "name": "Events", "description": "Create, update, delete and list events" },
+    { "name": "Bulk Upload", "description": "Upload multiple events via CSV" }
+  ]
+}

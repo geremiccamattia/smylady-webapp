@@ -1447,6 +1447,7 @@
   "api": {
     "heroTitle": "API Documentation",
     "heroSubtitle": "Create and manage events automatically",
+    "openApiSpecLabel": "OpenAPI Specification (openapi.json)",
     "tocTitle": "Contents",
     "navAuth": "Authentication",
     "navCreateEvent": "Create Event",
