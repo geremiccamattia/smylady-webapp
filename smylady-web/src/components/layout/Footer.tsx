@@ -141,6 +141,11 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href={localePath('/contact')} className="hover:text-foreground">{t('legal.contact')}</Link></li>
               <li><a href="mailto:office@shareyourparty.de" className="hover:text-foreground">{t('home.emailSupport')}</a></li>
+              <li>
+                <Link href={localePath('/api')} className="hover:text-foreground">
+                  {t('footer.apiDocs', { defaultValue: 'API-Dokumentation' })}
+                </Link>
+              </li>
             </ul>
           </div>
 
