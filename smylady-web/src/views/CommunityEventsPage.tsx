@@ -182,7 +182,7 @@ export default function CommunityEventsPage({ communityId }: CommunityEventsPage
       {/* Create Community Event (members only) */}
       {community?.isMember && (
         <div className="flex justify-center my-6">
-          <Link href={localePath(`/create-event?communityId=${communityId}`)}>
+          <Link href={localePath(`/create-event?communityId=${community?._id}`)}>
             <Button variant="gradient">
               {t('community.createEvent', { defaultValue: 'Community Event erstellen' })}
             </Button>

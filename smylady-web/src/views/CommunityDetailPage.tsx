@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Users, Pencil, Trash2, Share2, Clock, Lock, UserCheck, Settings } from 'lucide-react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -23,7 +22,8 @@ import { categoryEmojis, categoryColors } from '@/components/community/Community
 import JoinRequestsList from '@/components/community/JoinRequestsList'
 import CommunitySettingsModal from '@/components/community/CommunitySettingsModal'
 import { CreatePostModal } from '@/views/Feed'
-import { resolveImageUrl, getInitials, formatRelativeTime, generateCommunitySlug } from '@/lib/utils'
+import { PostCard } from '@/components/PostCard'
+import { resolveImageUrl, getInitials, generateCommunitySlug } from '@/lib/utils'
 import { EVENT_CATEGORIES } from '@/lib/constants'
 
 interface CommunityDetailPageProps {
@@ -557,7 +557,7 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
             {posts.length > 0 ? (
               <div className="space-y-4">
                 {posts.map((post: any) => (
-                  <CommunityPostCard key={post._id} post={post} />
+                  <PostCard key={post._id} post={post} communityId={communityId} />
                 ))}
               </div>
             ) : (
@@ -596,7 +596,7 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
           <>
             {canCreateEvent && (
               <div className="mb-4">
-                <Link href={localePath(`/create-event?communityId=${communityId}`)}>
+                <Link href={localePath(`/create-event?communityId=${community._id}`)}>
                   <Button variant="gradient" size="sm">
                     {t('community.createEvent', { defaultValue: 'Community Event erstellen' })}
                   </Button>
@@ -700,36 +700,3 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
   )
 }
 
-// No shared PostCard component exists in this project (Feed.tsx/UserProfile.tsx each
-// define their own inline) — simple fallback render for community posts.
-function CommunityPostCard({ post }: { post: any }) {
-  const { t } = useTranslation()
-  const postUser = post.user || (typeof post.userId === 'object' ? post.userId : null) || { name: 'User' }
-
-  return (
-    <Card className="p-4">
-      <div className="flex items-center gap-3 mb-3">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={resolveImageUrl(postUser.profileImage)} />
-          <AvatarFallback>{getInitials(postUser.name)}</AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-medium text-sm">{postUser.name || 'User'}</p>
-          <p className="text-xs text-muted-foreground">{formatRelativeTime(post.createdAt)}</p>
-        </div>
-      </div>
-      {post.text && <p className="text-sm mb-3 whitespace-pre-wrap">{post.text}</p>}
-      {post.media?.[0] && (
-        <img src={resolveImageUrl(post.media[0].url)} alt="" className="w-full rounded-lg" />
-      )}
-      <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-        <span className="flex items-center gap-1">
-          👍 {post.reactions?.length || post.likes?.length || 0} {t('community.people', { defaultValue: 'Personen' })}
-        </span>
-        <span className="flex items-center gap-1">
-          💬 {post.comments?.length || 0} {t('community.comments', { defaultValue: 'Kommentare' })}
-        </span>
-      </div>
-    </Card>
-  )
-}
