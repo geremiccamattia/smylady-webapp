@@ -11,13 +11,15 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
-import { getInitials, cn, resolveImageUrl, generateEventSlug } from '@/lib/utils'
+import { getInitials, cn, resolveImageUrl, generateEventSlug, generateCommunitySlug } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { StoriesBar } from '@/components/stories/StoriesBar'
+import CommunityExplore from '@/components/community/CommunityExplore'
 import {
   EmojiReactionPicker,
   EmojiReactionDisplay,
@@ -69,6 +71,7 @@ export default function Feed() {
   const { requireAuth } = useRequireAuth()
   const { t } = useTranslation()
   const [showCreatePost, setShowCreatePost] = useState(false)
+  const [activeTab, setActiveTab] = useState<'feed' | 'communities'>('feed')
 
   useEffect(() => {
     if (window.location.hash) {
@@ -112,97 +115,129 @@ export default function Feed() {
   const posts = postsData?.pages.flatMap(page => page.posts) || []
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Stories */}
-      <Card>
-        <CardContent className="p-4">
-          <StoriesBar />
-        </CardContent>
-      </Card>
+    <div className={activeTab === 'feed' ? 'max-w-2xl mx-auto space-y-6' : 'space-y-6'}>
+      {/* Feed / Communities Sub-Tabs */}
+      <div className="flex border-b mb-4">
+        <button
+          onClick={() => setActiveTab('feed')}
+          className={cn(
+            "flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors",
+            activeTab === 'feed'
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {t('feed.feed', { defaultValue: 'Feed' })}
+        </button>
+        <button
+          onClick={() => setActiveTab('communities')}
+          className={cn(
+            "flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors",
+            activeTab === 'communities'
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {t('feed.communities', { defaultValue: 'Communities' })}
+        </button>
+      </div>
 
-      {/* Create Post */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={resolveImageUrl(user?.profileImage)} />
-              <AvatarFallback>{getInitials(user?.name || user?.username || '')}</AvatarFallback>
-            </Avatar>
-            <button
-              onClick={() => requireAuth(() => setShowCreatePost(true))}
-              className="flex-1 text-left px-4 py-2 bg-muted rounded-full text-muted-foreground hover:bg-muted/80 transition-colors"
-            >
-              {t('posts.whatsNew')}
-            </button>
-            <Button size="icon" variant="ghost" onClick={() => requireAuth(() => setShowCreatePost(true))}>
-              <ImageIcon className="h-5 w-5" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {activeTab === 'feed' ? (
+        <>
+          {/* Stories */}
+          <Card>
+            <CardContent className="p-4">
+              <StoriesBar />
+            </CardContent>
+          </Card>
 
-      {/* Posts */}
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardContent className="p-4 animate-pulse">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 bg-muted rounded-full" />
-                  <div className="flex-1">
-                    <div className="h-4 w-32 bg-muted rounded" />
-                    <div className="h-3 w-20 bg-muted rounded mt-1" />
-                  </div>
-                </div>
-                <div className="h-20 bg-muted rounded" />
+          {/* Create Post */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={resolveImageUrl(user?.profileImage)} />
+                  <AvatarFallback>{getInitials(user?.name || user?.username || '')}</AvatarFallback>
+                </Avatar>
+                <button
+                  onClick={() => requireAuth(() => setShowCreatePost(true))}
+                  className="flex-1 text-left px-4 py-2 bg-muted rounded-full text-muted-foreground hover:bg-muted/80 transition-colors"
+                >
+                  {t('posts.whatsNew')}
+                </button>
+                <Button size="icon" variant="ghost" onClick={() => requireAuth(() => setShowCreatePost(true))}>
+                  <ImageIcon className="h-5 w-5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Posts */}
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <Card key={i}>
+                  <CardContent className="p-4 animate-pulse">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-10 w-10 bg-muted rounded-full" />
+                      <div className="flex-1">
+                        <div className="h-4 w-32 bg-muted rounded" />
+                        <div className="h-3 w-20 bg-muted rounded mt-1" />
+                      </div>
+                    </div>
+                    <div className="h-20 bg-muted rounded" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : posts.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold mb-2">{t('posts.noPosts')}</h3>
+                <p className="text-muted-foreground">
+                  {t('posts.followOthers')}
+                </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      ) : posts.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold mb-2">{t('posts.noPosts')}</h3>
-            <p className="text-muted-foreground">
-              {t('posts.followOthers')}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="space-y-4">
-            {posts.map(post => (
-              <div key={post._id} id={`post-${post._id}`}>
-                <PostCard post={post} />
+          ) : (
+            <>
+              <div className="space-y-4">
+                {posts.map(post => (
+                  <div key={post._id} id={`post-${post._id}`}>
+                    <PostCard post={post} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {hasNextPage && (
-            <div className="flex justify-center py-4">
-              <Button
-                variant="outline"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t('common.loading')}
-                  </>
-                ) : (
-                  t('common.loadMore')
-                )}
-              </Button>
-            </div>
+              {hasNextPage && (
+                <div className="flex justify-center py-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {t('common.loading')}
+                      </>
+                    ) : (
+                      t('common.loadMore')
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Create Post Modal */}
+          {showCreatePost && (
+            <CreatePostModal onClose={() => setShowCreatePost(false)} />
           )}
         </>
-      )}
-
-      {/* Create Post Modal */}
-      {showCreatePost && (
-        <CreatePostModal onClose={() => setShowCreatePost(false)} />
+      ) : (
+        <CommunityExplore />
       )}
     </div>
   )
@@ -216,6 +251,7 @@ function PostCard({ post }: { post: Post }) {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const router = useRouter()
+  const localePath = useLocalePath()
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [commentMentions, setCommentMentions] = useState<string[]>([])
@@ -754,6 +790,17 @@ function PostCard({ post }: { post: Post }) {
                   locale: de,
                 })}
               </p>
+              {post.communityId && (
+                <Link href={localePath(`/communities/${
+                  typeof post.communityId === 'object' && (post.communityId as any).name
+                    ? generateCommunitySlug((post.communityId as any).name, (post.communityId as any)._id)
+                    : (post.communityId as any)._id || post.communityId
+                }`)}>
+                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-medium hover:bg-primary/20 transition-colors">
+                    🏘 {(post.communityId as any).name || 'Community'}
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -1337,18 +1384,20 @@ function PostCard({ post }: { post: Post }) {
 }
 
 // Create Post Modal
-function CreatePostModal({
+export function CreatePostModal({
   onClose,
   initialEventId,
   initialEventTitle,
   initialImages,
   initialText,
+  communityId,
 }: {
   onClose: () => void
   initialEventId?: string
   initialEventTitle?: string
   initialImages?: File[]
   initialText?: string
+  communityId?: string
 }) {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -1374,9 +1423,13 @@ function CreatePostModal({
       eventId: eventId ?? undefined,
       eventTitle: eventTitle ?? undefined,
       spotifyTrack: selectedTrack ?? undefined,
+      communityId,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] })
+      if (communityId) {
+        queryClient.invalidateQueries({ queryKey: ['communityPosts', communityId] })
+      }
       toast({ title: t('posts.postCreated') })
       setSelectedTrack(null)
       onClose()
@@ -1479,7 +1532,9 @@ function CreatePostModal({
             </Avatar>
             <div className="flex-1">
               <p className="font-medium">{user?.name || user?.username}</p>
-              <p className="text-xs text-muted-foreground">{t('common.public')}</p>
+              <p className="text-xs text-muted-foreground">
+                {communityId ? t('community.postingInCommunity', { defaultValue: 'In Community posten' }) : t('common.public')}
+              </p>
             </div>
           </div>
 

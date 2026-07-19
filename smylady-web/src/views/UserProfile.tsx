@@ -20,7 +20,7 @@ import i18n from '@/i18n'
 
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { getInitials, cn, resolveImageUrl, safeFormatDate, formatRelativeTime, generateEventSlug } from '@/lib/utils'
+import { getInitials, cn, resolveImageUrl, safeFormatDate, formatRelativeTime, generateEventSlug, generateCommunitySlug } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import {
@@ -960,6 +960,7 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
   const queryClient = useQueryClient()
   const router = useRouter()
   const { t } = useTranslation()
+  const localePath = useLocalePath()
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [commentMentions, setCommentMentions] = useState<string[]>([])
@@ -1336,6 +1337,17 @@ function PostCard({ post, wallOwnerId }: { post: Post; wallOwnerId?: string }) {
                   locale: i18n.language === 'de' ? de : enUS,
                 })}
               </p>
+              {post.communityId && (
+                <Link href={localePath(`/communities/${
+                  typeof post.communityId === 'object' && (post.communityId as any).name
+                    ? generateCommunitySlug((post.communityId as any).name, (post.communityId as any)._id)
+                    : (post.communityId as any)._id || post.communityId
+                }`)}>
+                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-medium hover:bg-primary/20 transition-colors">
+                    🏘 {(post.communityId as any).name || 'Community'}
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
 

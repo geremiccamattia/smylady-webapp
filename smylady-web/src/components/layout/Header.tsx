@@ -207,6 +207,11 @@ export default function Header() {
                 <Link href={localePath("/influencer-club")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Influencer Club</Button>
                 </Link>
+                <Link href={localePath("/influencer-events")} onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+                    {t('influencerEvents.navLabel', { defaultValue: 'Influencer Events' })}
+                  </Button>
+                </Link>
                 <Link href={localePath("/api")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">API-Dokumentation</Button>
                 </Link>
@@ -248,6 +253,11 @@ export default function Header() {
                 </Link>
                 <Link href={localePath("/influencer-club")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">Influencer Club</Button>
+                </Link>
+                <Link href={localePath("/influencer-events")} onClick={() => setShowMobileMenu(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+                    {t('influencerEvents.navLabel', { defaultValue: 'Influencer Events' })}
+                  </Button>
                 </Link>
                 <Link href={localePath("/api")} onClick={() => setShowMobileMenu(false)}>
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground">API-Dokumentation</Button>

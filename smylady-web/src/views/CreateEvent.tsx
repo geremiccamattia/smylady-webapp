@@ -14,8 +14,8 @@ import { eventsService } from '@/services/events'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
   Upload,
@@ -53,8 +53,10 @@ interface Subscriber {
   profileImage?: string
 }
 
-export default function CreateEvent() {
+function CreateEventContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const communityIdFromUrl = searchParams.get('communityId')
   const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()
@@ -682,6 +684,10 @@ export default function CreateEvent() {
       images.forEach((image) => {
         eventFormData.append('files', image)
       })
+
+      if (communityIdFromUrl) {
+        eventFormData.append('communityId', communityIdFromUrl)
+      }
 
       if (seriesConfig) {
         eventFormData.append('series', JSON.stringify(seriesConfig))
@@ -1764,5 +1770,13 @@ export default function CreateEvent() {
         title="Event-Bild zuschneiden"
       />
     </div>
+  )
+}
+
+export default function CreateEvent() {
+  return (
+    <Suspense>
+      <CreateEventContent />
+    </Suspense>
   )
 }

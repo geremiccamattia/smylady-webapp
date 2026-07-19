@@ -57,6 +57,12 @@ export interface Post {
     username?: string
   }>
   spotifyTrack?: SpotifyTrack
+  communityId?: {
+    _id: string
+    name: string
+    category?: string
+    coverImages?: { url: string }[]
+  } | string | null
   createdAt: string
   updatedAt: string
 }
@@ -159,6 +165,7 @@ export interface CreatePostPayload {
   eventId?: string
   eventTitle?: string
   spotifyTrack?: SpotifyTrack
+  communityId?: string
 }
 
 export interface UpdatePostPayload {
@@ -289,6 +296,7 @@ export const postsService = {
     eventId?: string
     eventTitle?: string
     spotifyTrack?: SpotifyTrack
+    communityId?: string
   }): Promise<Post> => {
     // Upload images first if any
     const media: Array<{ url: string; type: 'image' | 'video' }> = []
@@ -318,6 +326,9 @@ export const postsService = {
     }
     if (payload.spotifyTrack) {
       postData.spotifyTrack = payload.spotifyTrack
+    }
+    if (payload.communityId) {
+      postData.communityId = payload.communityId
     }
 
     const response = await apiClient.post('/posts', postData)

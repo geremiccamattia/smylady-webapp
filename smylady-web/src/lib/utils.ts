@@ -161,6 +161,10 @@ export function generateEventSlug(name: string, id: string): string {
   return `${slug}-${shortId}`
 }
 
+export function generateCommunitySlug(name: string, id: string): string {
+  return generateEventSlug(name, id) // Exakt gleiche Logik
+}
+
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()

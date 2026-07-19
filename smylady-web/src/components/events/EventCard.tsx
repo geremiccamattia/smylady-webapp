@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
-import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, generateEventSlug, shortenAddress } from '@/lib/utils'
+import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, generateEventSlug, generateCommunitySlug, shortenAddress } from '@/lib/utils'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { favoritesService } from '@/services/favorites'
 import { useAuth } from '@/contexts/AuthContext'
@@ -29,6 +30,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
   const tr = (event as any)?.translations?.[lang]
   const { isAuthenticated } = useAuth()
   const localePath = useLocalePath()
+  const router = useRouter()
   const { toast } = useToast()
   const { showAuthModal } = useAuthModal()
   const [isFavorite, setIsFavorite] = useState(event.isFavorite || false)
@@ -281,6 +283,20 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           {event.musicType && (
             <span className="px-2 py-1 bg-secondary/10 text-secondary rounded-md text-xs font-medium">
               {event.musicType}
+            </span>
+          )}
+          {(event as any).communityId?.name && (
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push(localePath(`/communities/${generateCommunitySlug((event as any).communityId.name, (event as any).communityId._id || (event as any).communityId)}`))
+              }}
+              className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer"
+            >
+              🏘 {(event as any).communityId.name}
             </span>
           )}
         </div>

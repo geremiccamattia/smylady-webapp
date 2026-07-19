@@ -105,6 +105,7 @@ export default function Footer() {
               <li><Link href={localePath('/grounding')} className="hover:text-foreground">Über Share Your Party</Link></li>
               <li><a href="https://blog.shareyourparty.de" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Blog</a></li>
               <li><Link href={localePath('/influencer-club')} className="hover:text-foreground">{t('footer.influencerClub', { defaultValue: 'Influencer Club' })}</Link></li>
+              <li><Link href={localePath('/influencer-events')} className="hover:text-foreground">{t('footer.influencerMarketing', { defaultValue: 'Influencer Events' })}</Link></li>
             </ul>
           </div>
 
