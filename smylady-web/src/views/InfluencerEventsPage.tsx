@@ -201,7 +201,7 @@ export default function InfluencerEventsPage() {
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 influencer-event">
               <div className="space-y-1.5">
                 <Label htmlFor="ie-name">{t('influencerEvents.nameLabel', { defaultValue: 'Name' })} *</Label>
                 <Input
