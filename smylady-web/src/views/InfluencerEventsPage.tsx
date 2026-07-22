@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { apiClient } from '@/services/api'
 
 const GRADIENT = 'bg-gradient-to-r from-[#ff720e] via-[#ff4d3c] to-[#e9548c]'
 
@@ -43,6 +44,7 @@ export default function InfluencerEventsPage() {
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [submitted, setSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -52,7 +54,7 @@ export default function InfluencerEventsPage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!form.name.trim() || !form.email.trim() || !form.company.trim()) {
@@ -63,17 +65,25 @@ export default function InfluencerEventsPage() {
       return
     }
 
-    const promotionLabel = PROMOTION_OPTIONS.find((o) => o.value === form.promotion)
-    const promotionText = promotionLabel
-      ? t(promotionLabel.labelKey, { defaultValue: promotionLabel.defaultValue })
-      : ''
-
-    const subject = encodeURIComponent(`Influencer-Anfrage: ${form.company}`)
-    const body = encodeURIComponent(
-      `Name: ${form.name}\nE-Mail: ${form.email}\nUnternehmen: ${form.company}\nBewerben: ${promotionText}\nNachricht: ${form.message}`
-    )
-    window.location.href = `mailto:office@shareyourparty.de?subject=${subject}&body=${body}`
-    setSubmitted(true)
+    setIsLoading(true)
+    try {
+      await apiClient.post('/influencer/business-inquiry', {
+        name: form.name,
+        email: form.email,
+        company: form.company,
+        promotion: form.promotion,
+        message: form.message,
+      })
+      setSubmitted(true)
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('influencerEvents.submitError', { defaultValue: 'Anfrage konnte nicht gesendet werden.' }),
+        description: error.response?.data?.message || '',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -186,7 +196,7 @@ export default function InfluencerEventsPage() {
               <p className="text-muted-foreground text-sm">
                 {t('influencerEvents.successDesc', {
                   defaultValue:
-                    'Dein E-Mail-Programm wurde geöffnet. Falls nicht, schreib uns direkt an office@shareyourparty.de.',
+                    'Wir haben deine Anfrage erhalten und melden uns in Kürze bei dir.',
                 })}
               </p>
             </div>
@@ -259,9 +269,12 @@ export default function InfluencerEventsPage() {
 
               <Button
                 type="submit"
+                disabled={isLoading}
                 className={cn('w-full rounded-full text-white hover:opacity-90 uppercase text-xs font-black tracking-wide', GRADIENT)}
               >
-                {t('influencerEvents.submit', { defaultValue: 'Anfrage senden' })} →
+                {isLoading
+                  ? t('common.loading', { defaultValue: 'Wird gesendet...' })
+                  : `${t('influencerEvents.submit', { defaultValue: 'Anfrage senden' })} →`}
               </Button>
             </form>
           )}
