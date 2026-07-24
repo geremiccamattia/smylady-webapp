@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Globe, ArrowLeft, Upload, Settings } from 'lucide-react'
+import { ImageCropModal } from '@/components/ui/image-crop-modal'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { Globe, ArrowLeft, Upload, Settings, Crop, Share2, ChevronDown } from 'lucide-react'
 import { generateCommunitySlug } from '@/lib/utils'
 
 export default function CreateCommunityPage() {
@@ -28,16 +29,27 @@ export default function CreateCommunityPage() {
   const [form, setForm] = useState({
     name: '',
     description: '',
-    category: '',
+    categories: [] as string[],
     visibility: 'public',
     location: '',
     settings: {
       requireApproval: false,
       allowMemberEvents: true,
     },
+    socialLinks: {
+      instagram: '',
+      facebook: '',
+      tiktok: '',
+      website: '',
+    },
   })
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
+  const [cropModalOpen, setCropModalOpen] = useState(false)
+  const [cropImageUrl, setCropImageUrl] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [cropIndex, setCropIndex] = useState<number | null>(null) // null = neues Bild, number = bestehendes ersetzen
+  const [showSocialLinks, setShowSocialLinks] = useState(false)
 
   if (!isAuthenticated) {
     return (
@@ -53,19 +65,68 @@ export default function CreateCommunityPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
     if (files.length + selectedFiles.length > 5) {
       toast({ variant: 'destructive', title: t('community.maxImages', { defaultValue: 'Maximal 5 Bilder erlaubt' }) })
       return
     }
-    const newFiles = [...selectedFiles, ...files].slice(0, 5)
-    setSelectedFiles(newFiles)
-    setPreviews(newFiles.map((f) => URL.createObjectURL(f)))
+
+    // Bilder werden nacheinander durch den Cropper geschickt
+    setPendingFiles(files.slice(1))
+    setCropIndex(null)
+    setCropImageUrl(URL.createObjectURL(files[0]))
+    setCropModalOpen(true)
+
+    // Input zurücksetzen damit dasselbe Bild erneut gewählt werden kann
+    e.target.value = ''
   }
 
   const removeFile = (index: number) => {
     const newFiles = selectedFiles.filter((_, i) => i !== index)
     setSelectedFiles(newFiles)
     setPreviews(newFiles.map((f) => URL.createObjectURL(f)))
+  }
+
+  const handleCropComplete = (croppedFile: File) => {
+    if (cropIndex !== null) {
+      const newFiles = [...selectedFiles]
+      newFiles[cropIndex] = croppedFile
+      setSelectedFiles(newFiles)
+      setPreviews(newFiles.map((f) => URL.createObjectURL(f)))
+    } else {
+      const newFiles = [...selectedFiles, croppedFile]
+      setSelectedFiles(newFiles)
+      setPreviews(newFiles.map((f) => URL.createObjectURL(f)))
+    }
+
+    URL.revokeObjectURL(cropImageUrl)
+
+    if (cropIndex === null && pendingFiles.length > 0) {
+      // Nächstes ausgewähltes Bild croppen, Modal bleibt offen
+      const [nextFile, ...rest] = pendingFiles
+      setPendingFiles(rest)
+      setCropImageUrl(URL.createObjectURL(nextFile))
+    } else {
+      setCropModalOpen(false)
+      setCropImageUrl('')
+      setCropIndex(null)
+      setPendingFiles([])
+    }
+  }
+
+  const handleCropClose = () => {
+    setCropModalOpen(false)
+    if (cropImageUrl) URL.revokeObjectURL(cropImageUrl)
+    setCropImageUrl('')
+    setCropIndex(null)
+    setPendingFiles([])
+  }
+
+  const openCropForExisting = (index: number) => {
+    setCropIndex(index)
+    setCropImageUrl(URL.createObjectURL(selectedFiles[index]))
+    setCropModalOpen(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,10 +140,12 @@ export default function CreateCommunityPage() {
       toast({ variant: 'destructive', title: t('community.descriptionRequired', { defaultValue: 'Beschreibung ist erforderlich' }) })
       return
     }
-    if (!form.category) {
-      toast({ variant: 'destructive', title: t('community.categoryRequired', { defaultValue: 'Kategorie ist erforderlich' }) })
+    if (form.categories.length === 0) {
+      toast({ variant: 'destructive', title: t('community.categoryRequired', { defaultValue: 'Mindestens eine Kategorie ist erforderlich' }) })
       return
     }
+
+    const hasSocialLinks = Object.values(form.socialLinks).some((v) => v.trim())
 
     setIsLoading(true)
     try {
@@ -91,20 +154,24 @@ export default function CreateCommunityPage() {
         const formData = new FormData()
         formData.append('name', form.name.trim())
         formData.append('description', form.description.trim())
-        formData.append('category', form.category)
+        formData.append('categories', JSON.stringify(form.categories))
         formData.append('visibility', form.visibility)
         if (form.location.trim()) formData.append('location', form.location.trim())
         formData.append('settings', JSON.stringify(form.settings))
+        if (hasSocialLinks) {
+          formData.append('socialLinks', JSON.stringify(form.socialLinks))
+        }
         selectedFiles.forEach((file) => formData.append('files', file))
         result = await communityService.createWithFiles(formData)
       } else {
         result = await communityService.create({
           name: form.name.trim(),
           description: form.description.trim(),
-          category: form.category,
+          categories: form.categories,
           visibility: form.visibility,
           location: form.location.trim() || undefined,
           settings: form.settings,
+          ...(hasSocialLinks && { socialLinks: form.socialLinks }),
         })
       }
       toast({ title: t('community.createSuccess', { defaultValue: 'Community erstellt!' }) })
@@ -168,43 +235,60 @@ export default function CreateCommunityPage() {
               <Label htmlFor="description">
                 {t('community.descriptionLabel', { defaultValue: 'Beschreibung der Community' })} *
               </Label>
-              <textarea
-                id="description"
+              <MarkdownEditor
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(value) => setForm({ ...form, description: value })}
                 placeholder={t('community.descriptionPlaceholder', { defaultValue: 'Beschreibung der Community' })}
                 maxLength={2000}
-                rows={4}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">
-                {t('community.categoryLabel', { defaultValue: 'Kategorie der Community' })} *
+              <Label>
+                {t('community.categoryLabel', { defaultValue: 'Kategorien der Community' })} *
               </Label>
-              <Select
-                value={form.category}
-                onValueChange={(value) => setForm({ ...form, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('community.selectCategory', { defaultValue: 'Kategorie wählen' })} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Music">{t('categories.music', { defaultValue: 'Musik' })}</SelectItem>
-                  <SelectItem value="Clubbing">{t('categories.clubbing', { defaultValue: 'Clubbing' })}</SelectItem>
-                  <SelectItem value="Business">{t('categories.business', { defaultValue: 'Business' })}</SelectItem>
-                  <SelectItem value="Nature">{t('categories.outdoor', { defaultValue: 'Outdoor' })}</SelectItem>
-                  <SelectItem value="Sports">{t('categories.sport', { defaultValue: 'Sport' })}</SelectItem>
-                  <SelectItem value="Workshop">{t('categories.workshop', { defaultValue: 'Workshop' })}</SelectItem>
-                  <SelectItem value="Gastronomy">{t('categories.gastronomy', { defaultValue: 'Gastronomie' })}</SelectItem>
-                  <SelectItem value="Yoga">{t('categories.yoga', { defaultValue: 'Yoga' })}</SelectItem>
-                  <SelectItem value="Theme">{t('categories.theme', { defaultValue: 'Themenparty' })}</SelectItem>
-                  <SelectItem value="On the Roof">{t('categories.onTheRoof', { defaultValue: 'Auf dem Dach' })}</SelectItem>
-                  <SelectItem value="Other">{t('categories.other', { defaultValue: 'Sonstiges' })}</SelectItem>
-                </SelectContent>
-              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('community.categoryHint', { defaultValue: 'Wähle eine oder mehrere Kategorien.' })}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { value: 'Music', label: t('categories.music', { defaultValue: 'Musik' }), emoji: '🎵' },
+                  { value: 'Clubbing', label: t('categories.clubbing', { defaultValue: 'Clubbing' }), emoji: '🎶' },
+                  { value: 'Business', label: t('categories.business', { defaultValue: 'Business' }), emoji: '💼' },
+                  { value: 'Nature', label: t('categories.outdoor', { defaultValue: 'Outdoor' }), emoji: '🌿' },
+                  { value: 'Sports', label: t('categories.sport', { defaultValue: 'Sport' }), emoji: '⚽' },
+                  { value: 'Workshop', label: t('categories.workshop', { defaultValue: 'Workshop' }), emoji: '🛠' },
+                  { value: 'Gastronomy', label: t('categories.gastronomy', { defaultValue: 'Gastronomie' }), emoji: '🍽' },
+                  { value: 'Yoga', label: t('categories.yoga', { defaultValue: 'Yoga' }), emoji: '🧘' },
+                  { value: 'Theme', label: t('categories.theme', { defaultValue: 'Themenparty' }), emoji: '🎭' },
+                  { value: 'On the Roof', label: t('categories.onTheRoof', { defaultValue: 'Auf dem Dach' }), emoji: '🏙' },
+                  { value: 'Other', label: t('categories.other', { defaultValue: 'Sonstiges' }), emoji: '🎉' },
+                ].map((cat) => {
+                  const isSelected = form.categories.includes(cat.value)
+                  return (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() => {
+                        setForm({
+                          ...form,
+                          categories: isSelected
+                            ? form.categories.filter((c) => c !== cat.value)
+                            : [...form.categories, cat.value],
+                        })
+                      }}
+                      className={`flex items-center gap-2 p-3 rounded-xl border text-left text-sm transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:border-muted-foreground/30'
+                      }`}
+                    >
+                      <span>{cat.emoji}</span>
+                      <span className={isSelected ? 'font-medium text-primary' : ''}>{cat.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -281,6 +365,75 @@ export default function CreateCommunityPage() {
           </CardContent>
         </Card>
 
+        {/* Social Media Links */}
+        <Card>
+          <CardContent className="pt-6">
+            <button
+              type="button"
+              onClick={() => setShowSocialLinks(!showSocialLinks)}
+              className="flex items-center justify-between w-full"
+            >
+              <h2 className="font-semibold flex items-center gap-2">
+                <Share2 className="h-5 w-5" />
+                {t('community.socialLinks', { defaultValue: 'Social Media Links' })}
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({t('common.optional', { defaultValue: 'optional' })})
+                </span>
+              </h2>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showSocialLinks ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showSocialLinks && (
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg w-6 text-center">📸</span>
+                  <Input
+                    value={form.socialLinks.instagram}
+                    onChange={(e) => setForm({
+                      ...form,
+                      socialLinks: { ...form.socialLinks, instagram: e.target.value },
+                    })}
+                    placeholder="Instagram (@handle oder URL)"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg w-6 text-center">👤</span>
+                  <Input
+                    value={form.socialLinks.facebook}
+                    onChange={(e) => setForm({
+                      ...form,
+                      socialLinks: { ...form.socialLinks, facebook: e.target.value },
+                    })}
+                    placeholder="Facebook (Seitenname oder URL)"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg w-6 text-center">🎵</span>
+                  <Input
+                    value={form.socialLinks.tiktok}
+                    onChange={(e) => setForm({
+                      ...form,
+                      socialLinks: { ...form.socialLinks, tiktok: e.target.value },
+                    })}
+                    placeholder="TikTok (@handle oder URL)"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg w-6 text-center">🌐</span>
+                  <Input
+                    value={form.socialLinks.website}
+                    onChange={(e) => setForm({
+                      ...form,
+                      socialLinks: { ...form.socialLinks, website: e.target.value },
+                    })}
+                    placeholder="Website (URL)"
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Titelbild */}
         <Card>
           <CardContent className="pt-6 space-y-4">
@@ -307,17 +460,27 @@ export default function CreateCommunityPage() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {t('community.maxImagesHint', { defaultValue: 'Du kannst bis zu 5 Bilder hochladen' })}
+              {t('community.maxImagesHint', { defaultValue: 'Du kannst bis zu 5 Bilder hochladen. Ideales Format: 21:9 (z.B. 2100 × 900 px).' })}
             </p>
 
             {previews.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
                 {previews.map((preview, index) => (
-                  <div key={index} className="relative aspect-video rounded-lg overflow-hidden">
+                  <div
+                    key={index}
+                    className="relative aspect-[21/9] rounded-lg overflow-hidden group cursor-pointer"
+                    onClick={() => openCropForExisting(index)}
+                  >
                     <img src={preview} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center gap-1">
+                      <Crop className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <span className="text-white opacity-0 group-hover:opacity-100 text-xs transition-opacity">
+                        {t('community.cropHint', { defaultValue: 'Zuschneiden' })}
+                      </span>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => removeFile(index)}
+                      onClick={(e) => { e.stopPropagation(); removeFile(index) }}
                       className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white text-xs hover:bg-black/80"
                     >
                       ✕
@@ -343,6 +506,16 @@ export default function CreateCommunityPage() {
         </Button>
 
       </form>
+
+      <ImageCropModal
+        open={cropModalOpen}
+        imageUrl={cropImageUrl}
+        onClose={handleCropClose}
+        onCropComplete={handleCropComplete}
+        aspectRatio={21 / 9}
+        freeStyle={false}
+        title={t('community.cropCoverImage', { defaultValue: 'Titelbild zuschneiden' })}
+      />
     </div>
   )
 }

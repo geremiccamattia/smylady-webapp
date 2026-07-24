@@ -13,7 +13,8 @@ interface CommunityCardProps {
     _id: string
     name: string
     description: string
-    category: string
+    category?: string
+    categories?: string[]
     coverImages?: { url: string }[]
     memberCount: number
     creatorId?: { name: string; profileImage?: string }
@@ -38,9 +39,13 @@ export default function CommunityCard({ community }: CommunityCardProps) {
   const localePath = useLocalePath()
 
   const coverUrl = community.coverImages?.[0]?.url ? resolveImageUrl(community.coverImages[0].url) : null
-  const emoji = categoryEmojis[community.category] || '🎉'
-  const bgColor = categoryColors[community.category] || '#F5F5F5'
-  const categoryLabel = EVENT_CATEGORIES.find((c) => c.value === community.category)?.label || community.category
+  const categories = (community.categories && community.categories.length > 0
+    ? community.categories
+    : [community.category]
+  ).filter((c): c is string => !!c)
+  const primaryCategory = categories[0] || 'Other'
+  const emoji = categoryEmojis[primaryCategory] || '🎉'
+  const bgColor = categoryColors[primaryCategory] || '#F5F5F5'
 
   return (
     <Link href={localePath(`/communities/${generateCommunitySlug(community.name, community._id)}`)}>
@@ -67,10 +72,12 @@ export default function CommunityCard({ community }: CommunityCardProps) {
             {community.name}
           </h3>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium">
-              {t(`categories.${community.category}`, { defaultValue: categoryLabel })}
-            </span>
+          <div className="flex flex-wrap gap-1">
+            {categories.map((cat) => (
+              <span key={cat} className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-medium">
+                {t(`categories.${cat}`, { defaultValue: EVENT_CATEGORIES.find((c) => c.value === cat)?.label || cat })}
+              </span>
+            ))}
           </div>
 
           <div className="flex items-center gap-1 text-sm text-muted-foreground">

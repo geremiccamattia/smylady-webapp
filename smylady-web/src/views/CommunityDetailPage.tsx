@@ -5,18 +5,19 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Users, Pencil, Trash2, Share2, Clock, Lock, UserCheck, Settings } from 'lucide-react'
+import { Users, Pencil, Trash2, Share2, Clock, Lock, UserCheck, Settings, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { useToast } from '@/hooks/use-toast'
 import { communityService } from '@/services/community'
+import { MarkdownContent } from '@/components/MarkdownContent'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import EventCard from '@/components/events/EventCard'
 import { categoryEmojis, categoryColors } from '@/components/community/CommunityCard'
 import JoinRequestsList from '@/components/community/JoinRequestsList'
@@ -48,11 +49,18 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
   const [editForm, setEditForm] = useState({
     name: '',
     description: '',
-    category: '',
+    categories: [] as string[],
     visibility: '',
     location: '',
+    socialLinks: {
+      instagram: '',
+      facebook: '',
+      tiktok: '',
+      website: '',
+    },
   })
   const [editLoading, setEditLoading] = useState(false)
+  const [showSocialLinks, setShowSocialLinks] = useState(false)
 
   const { data: community, isLoading, refetch } = useQuery({
     queryKey: ['community', communityId],
@@ -64,9 +72,17 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
       setEditForm({
         name: community.name || '',
         description: community.description || '',
-        category: community.category || '',
+        categories: community.categories && community.categories.length > 0
+          ? community.categories
+          : community.category ? [community.category] : [],
         visibility: community.visibility || 'public',
         location: community.location || '',
+        socialLinks: {
+          instagram: community.socialLinks?.instagram || '',
+          facebook: community.socialLinks?.facebook || '',
+          tiktok: community.socialLinks?.tiktok || '',
+          website: community.socialLinks?.website || '',
+        },
       })
     }
   }, [showEditModal, community])
@@ -124,8 +140,8 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
       toast({ variant: 'destructive', title: t('community.descriptionRequired', { defaultValue: 'Beschreibung ist erforderlich' }) })
       return
     }
-    if (!editForm.category) {
-      toast({ variant: 'destructive', title: t('community.categoryRequired', { defaultValue: 'Kategorie ist erforderlich' }) })
+    if (editForm.categories.length === 0) {
+      toast({ variant: 'destructive', title: t('community.categoryRequired', { defaultValue: 'Mindestens eine Kategorie ist erforderlich' }) })
       return
     }
     setEditLoading(true)
@@ -244,7 +260,8 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
 
   const posts = postsData?.posts || []
   const events = eventsData || []
-  const categoryLabel = EVENT_CATEGORIES.find((c) => c.value === community.category)?.label || community.category
+  const categories: string[] = (community.categories?.length > 0 ? community.categories : [community.category]).filter(Boolean)
+  const primaryCategory = categories[0] || 'Other'
   const creator = community.creatorId && typeof community.creatorId === 'object' ? community.creatorId : null
   const canSeeContent = !!community.isMember || !!community.isAdmin || !!community.isCreator
   const canCreateEvent =
@@ -327,24 +344,77 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
         ) : (
           <div
             className="aspect-[21/9] rounded-xl mb-4 flex items-center justify-center"
-            style={{ backgroundColor: categoryColors[community.category] || '#F5F5F5' }}
+            style={{ backgroundColor: categoryColors[primaryCategory] || '#F5F5F5' }}
           >
-            <span className="text-5xl">{categoryEmojis[community.category] || '🎉'}</span>
+            <span className="text-5xl">{categoryEmojis[primaryCategory] || '🎉'}</span>
           </div>
         )}
 
         <h1 className="text-2xl font-bold">{community.name}</h1>
         <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
-          <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium">
-            {t(`categories.${community.category}`, { defaultValue: categoryLabel })}
-          </span>
+          <div className="flex flex-wrap gap-1">
+            {categories.map((cat) => (
+              <span key={cat} className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium">
+                {t(`categories.${cat}`, { defaultValue: EVENT_CATEGORIES.find((c) => c.value === cat)?.label || cat })}
+              </span>
+            ))}
+          </div>
           <span className="flex items-center gap-1">
             <Users className="h-4 w-4" />
             {community.memberCount} {t('community.members', { defaultValue: 'Mitglieder' })}
           </span>
         </div>
         {community.description && (
-          <p className="text-sm text-muted-foreground mt-3">{community.description}</p>
+          <MarkdownContent content={community.description} className="text-sm text-muted-foreground mt-3" />
+        )}
+
+        {community?.socialLinks && Object.values(community.socialLinks).some((v: any) => v && v.trim()) && (
+          <div className="flex items-center gap-3 mt-3">
+            {community.socialLinks.instagram && (
+              <a
+                href={community.socialLinks.instagram.startsWith('http') ? community.socialLinks.instagram : `https://instagram.com/${community.socialLinks.instagram.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                title="Instagram"
+              >
+                <span className="text-lg">📸</span>
+              </a>
+            )}
+            {community.socialLinks.facebook && (
+              <a
+                href={community.socialLinks.facebook.startsWith('http') ? community.socialLinks.facebook : `https://facebook.com/${community.socialLinks.facebook}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                title="Facebook"
+              >
+                <span className="text-lg">👤</span>
+              </a>
+            )}
+            {community.socialLinks.tiktok && (
+              <a
+                href={community.socialLinks.tiktok.startsWith('http') ? community.socialLinks.tiktok : `https://tiktok.com/@${community.socialLinks.tiktok.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                title="TikTok"
+              >
+                <span className="text-lg">🎵</span>
+              </a>
+            )}
+            {community.socialLinks.website && (
+              <a
+                href={community.socialLinks.website.startsWith('http') ? community.socialLinks.website : `https://${community.socialLinks.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                title="Website"
+              >
+                <span className="text-lg">🌐</span>
+              </a>
+            )}
+          </div>
         )}
 
         {community?.isCreator && (
@@ -404,32 +474,57 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
             </div>
             <div className="space-y-2">
               <Label>{t('community.descriptionLabel', { defaultValue: 'Beschreibung der Community' })} *</Label>
-              <textarea
+              <MarkdownEditor
                 value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                onChange={(value) => setEditForm({ ...editForm, description: value })}
+                placeholder={t('community.descriptionPlaceholder', { defaultValue: 'Beschreibung der Community' })}
                 maxLength={2000}
-                rows={4}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('community.categoryLabel', { defaultValue: 'Kategorie der Community' })} *</Label>
-              <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Music">{t('categories.Music', { defaultValue: 'Musik' })}</SelectItem>
-                  <SelectItem value="Clubbing">{t('categories.Clubbing', { defaultValue: 'Clubbing' })}</SelectItem>
-                  <SelectItem value="Business">{t('categories.Business', { defaultValue: 'Business' })}</SelectItem>
-                  <SelectItem value="Nature">{t('categories.Nature', { defaultValue: 'Outdoor' })}</SelectItem>
-                  <SelectItem value="Sports">{t('categories.Sports', { defaultValue: 'Sport' })}</SelectItem>
-                  <SelectItem value="Workshop">{t('categories.Workshop', { defaultValue: 'Workshop' })}</SelectItem>
-                  <SelectItem value="Gastronomy">{t('categories.Gastronomy', { defaultValue: 'Gastronomie' })}</SelectItem>
-                  <SelectItem value="Yoga">{t('categories.Yoga', { defaultValue: 'Yoga' })}</SelectItem>
-                  <SelectItem value="Theme">{t('categories.Theme', { defaultValue: 'Themenparty' })}</SelectItem>
-                  <SelectItem value="On the Roof">{t('categories.On the Roof', { defaultValue: 'Auf dem Dach' })}</SelectItem>
-                  <SelectItem value="Other">{t('categories.Other', { defaultValue: 'Sonstiges' })}</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>{t('community.categoryLabel', { defaultValue: 'Kategorien der Community' })} *</Label>
+              <p className="text-xs text-muted-foreground">
+                {t('community.categoryHint', { defaultValue: 'Wähle eine oder mehrere Kategorien.' })}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { value: 'Music', label: t('categories.Music', { defaultValue: 'Musik' }), emoji: '🎵' },
+                  { value: 'Clubbing', label: t('categories.Clubbing', { defaultValue: 'Clubbing' }), emoji: '🎶' },
+                  { value: 'Business', label: t('categories.Business', { defaultValue: 'Business' }), emoji: '💼' },
+                  { value: 'Nature', label: t('categories.Nature', { defaultValue: 'Outdoor' }), emoji: '🌿' },
+                  { value: 'Sports', label: t('categories.Sports', { defaultValue: 'Sport' }), emoji: '⚽' },
+                  { value: 'Workshop', label: t('categories.Workshop', { defaultValue: 'Workshop' }), emoji: '🛠' },
+                  { value: 'Gastronomy', label: t('categories.Gastronomy', { defaultValue: 'Gastronomie' }), emoji: '🍽' },
+                  { value: 'Yoga', label: t('categories.Yoga', { defaultValue: 'Yoga' }), emoji: '🧘' },
+                  { value: 'Theme', label: t('categories.Theme', { defaultValue: 'Themenparty' }), emoji: '🎭' },
+                  { value: 'On the Roof', label: t('categories.On the Roof', { defaultValue: 'Auf dem Dach' }), emoji: '🏙' },
+                  { value: 'Other', label: t('categories.Other', { defaultValue: 'Sonstiges' }), emoji: '🎉' },
+                ].map((cat) => {
+                  const isSelected = editForm.categories.includes(cat.value)
+                  return (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() => {
+                        setEditForm({
+                          ...editForm,
+                          categories: isSelected
+                            ? editForm.categories.filter((c) => c !== cat.value)
+                            : [...editForm.categories, cat.value],
+                        })
+                      }}
+                      className={`flex items-center gap-2 p-3 rounded-xl border text-left text-sm transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:border-muted-foreground/30'
+                      }`}
+                    >
+                      <span>{cat.emoji}</span>
+                      <span className={isSelected ? 'font-medium text-primary' : ''}>{cat.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>{t('community.locationLabel', { defaultValue: 'Ort der Community' })}</Label>
@@ -438,6 +533,71 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
                 onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                 placeholder={t('community.locationPlaceholder', { defaultValue: 'Stadt eingeben' })}
               />
+            </div>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowSocialLinks(!showSocialLinks)}
+                className="flex items-center justify-between w-full"
+              >
+                <Label className="cursor-pointer flex items-center gap-2">
+                  <Share2 className="h-4 w-4" />
+                  {t('community.socialLinks', { defaultValue: 'Social Media Links' })}
+                  <span className="text-xs text-muted-foreground font-normal">
+                    ({t('common.optional', { defaultValue: 'optional' })})
+                  </span>
+                </Label>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showSocialLinks ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showSocialLinks && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg w-6 text-center">📸</span>
+                    <Input
+                      value={editForm.socialLinks.instagram}
+                      onChange={(e) => setEditForm({
+                        ...editForm,
+                        socialLinks: { ...editForm.socialLinks, instagram: e.target.value },
+                      })}
+                      placeholder="Instagram (@handle oder URL)"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg w-6 text-center">👤</span>
+                    <Input
+                      value={editForm.socialLinks.facebook}
+                      onChange={(e) => setEditForm({
+                        ...editForm,
+                        socialLinks: { ...editForm.socialLinks, facebook: e.target.value },
+                      })}
+                      placeholder="Facebook (Seitenname oder URL)"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg w-6 text-center">🎵</span>
+                    <Input
+                      value={editForm.socialLinks.tiktok}
+                      onChange={(e) => setEditForm({
+                        ...editForm,
+                        socialLinks: { ...editForm.socialLinks, tiktok: e.target.value },
+                      })}
+                      placeholder="TikTok (@handle oder URL)"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg w-6 text-center">🌐</span>
+                    <Input
+                      value={editForm.socialLinks.website}
+                      onChange={(e) => setEditForm({
+                        ...editForm,
+                        socialLinks: { ...editForm.socialLinks, website: e.target.value },
+                      })}
+                      placeholder="Website (URL)"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowEditModal(false)}>

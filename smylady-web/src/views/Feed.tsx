@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { postsService } from '@/services/posts'
@@ -28,12 +29,20 @@ import {
   Music,
 } from 'lucide-react'
 
-export default function Feed() {
+function FeedContent() {
   const { user, isAuthenticated } = useAuth()
   const { requireAuth } = useRequireAuth()
   const { t } = useTranslation()
+  const searchParams = useSearchParams()
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [activeTab, setActiveTab] = useState<'feed' | 'communities'>('feed')
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'communities') {
+      setActiveTab('communities')
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (window.location.hash) {
@@ -202,6 +211,14 @@ export default function Feed() {
         <CommunityExplore />
       )}
     </div>
+  )
+}
+
+export default function Feed() {
+  return (
+    <Suspense>
+      <FeedContent />
+    </Suspense>
   )
 }
 

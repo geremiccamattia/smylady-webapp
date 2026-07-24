@@ -11,6 +11,7 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   minHeight?: string
+  maxLength?: number
 }
 
 export function MarkdownEditor({
@@ -18,6 +19,7 @@ export function MarkdownEditor({
   onChange,
   placeholder,
   minHeight = '120px',
+  maxLength,
 }: MarkdownEditorProps) {
   const { t } = useTranslation()
   const [preview, setPreview] = useState(false)
@@ -162,6 +164,7 @@ export function MarkdownEditor({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          maxLength={maxLength}
         />
       )}
     </div>

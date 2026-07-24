@@ -1659,6 +1659,9 @@ function CreateEventContent() {
               <p className="text-sm text-muted-foreground mt-2">
                 {t('createEvent.maxImagesNote')}
               </p>
+              <p className="text-xs text-muted-foreground">
+                {t('createEvent.imageHint', { defaultValue: 'Ideales Format: 21:9 (z.B. 2100 × 900 px)' })}
+              </p>
             </CardContent>
           </Card>
         )}

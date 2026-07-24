@@ -284,6 +284,9 @@ export default function Profile() {
                     </label>
                   </div>
                   <p className="text-xs text-muted-foreground">{t('profile.tapCamera', { defaultValue: 'Klicke auf die Kamera' })}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('profile.imageHint', { defaultValue: 'Ideales Format: quadratisch (z.B. 500 × 500 px)' })}
+                  </p>
                 </div>
 
                 {/* Edit Fields */}
@@ -416,27 +419,32 @@ export default function Profile() {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-center gap-6">
               {/* Avatar */}
-              <div className="relative">
-                <div
-                  className="cursor-pointer"
-                  onClick={() => user.profileImage && setProfileImageViewerOpen(true)}
-                >
-                  <Avatar className="h-32 w-32 border-4 border-primary/20 hover:opacity-90 transition-opacity">
-                    <AvatarImage src={resolveImageUrl(user.profileImage)} alt={user.name} />
-                    <AvatarFallback className="gradient-bg text-white text-4xl">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
+              <div className="flex flex-col items-center gap-2">
+                <div className="relative">
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => user.profileImage && setProfileImageViewerOpen(true)}
+                  >
+                    <Avatar className="h-32 w-32 border-4 border-primary/20 hover:opacity-90 transition-opacity">
+                      <AvatarImage src={resolveImageUrl(user.profileImage)} alt={user.name} />
+                      <AvatarFallback className="gradient-bg text-white text-4xl">
+                        {getInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <label className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90">
+                    <Camera className="h-5 w-5" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                  </label>
                 </div>
-                <label className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90">
-                  <Camera className="h-5 w-5" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                </label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('profile.imageHint', { defaultValue: 'Ideales Format: quadratisch (z.B. 500 × 500 px)' })}
+                </p>
               </div>
 
               {/* Info */}

@@ -9,6 +9,8 @@ import { eventsService } from '@/services/events'
 import { userService } from '@/services/user'
 import { publicClient } from '@/services/api'
 import { ticketmasterService } from '@/services/ticketmaster'
+import { communityService } from '@/services/community'
+import CommunityCard from '@/components/community/CommunityCard'
 import {
   getManualLocation,
   getCurrentLocation,
@@ -244,6 +246,12 @@ function ExploreContent() {
       selectedLocation?.lng || 0,
     ),
     enabled: locationLoaded && !!selectedLocation,
+    staleTime: 10 * 60 * 1000,
+  })
+
+  const { data: topCommunities } = useQuery({
+    queryKey: ['communityTopPicks'],
+    queryFn: () => communityService.getTopPicks(3),
     staleTime: 10 * 60 * 1000,
   })
 
@@ -913,6 +921,33 @@ function ExploreContent() {
               {/* Posts Row 1 — nach Top Picks */}
               {topPicks.length > 0 && latestPosts.length > 0 && (
                 <PostRow posts={latestPosts.slice(0, 3)} />
+              )}
+
+              {/* Communities entdecken */}
+              {topCommunities && topCommunities.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold tracking-tight">
+                      🏘 {t('explore.discoverCommunities', { defaultValue: 'Communities entdecken' })}
+                    </h2>
+                    <Link
+                      href="/feed?tab=communities"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {t('explore.showAll', { defaultValue: 'Alle anzeigen' })} →
+                    </Link>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t('explore.communitiesSubline', { defaultValue: 'Finde Gleichgesinnte und verpasse kein Event mehr.' })}
+                  </p>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible">
+                    {topCommunities.map((community: any) => (
+                      <div key={community._id} className="flex-shrink-0 w-[70vw] md:w-auto">
+                        <CommunityCard community={community} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* 🎟 Abendkasse */}

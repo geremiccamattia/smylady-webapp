@@ -1398,6 +1398,9 @@ export default function EditEvent() {
             <p className="text-sm text-muted-foreground mt-2">
               {t('editEvent.maxImagesNote')}
             </p>
+            <p className="text-xs text-muted-foreground">
+              {t('createEvent.imageHint', { defaultValue: 'Ideales Format: 21:9 (z.B. 2100 × 900 px)' })}
+            </p>
           </CardContent>
         </Card>
 
