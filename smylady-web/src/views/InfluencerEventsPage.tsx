@@ -154,7 +154,7 @@ export default function InfluencerEventsPage() {
           <Button
             size="xl"
             className={cn('mt-8 rounded-full text-white hover:opacity-90 uppercase text-xs font-black tracking-wide', GRADIENT)}
-            onClick={() => scrollTo('kontakt')}
+            onClick={() => scrollTo('contact-form')}
           >
             {t('influencerEvents.ctaFind', { defaultValue: 'Influencer finden' })} →
           </Button>
@@ -185,6 +185,14 @@ export default function InfluencerEventsPage() {
               </p>
             </article>
           ))}
+        </div>
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+            className={cn('px-8 py-3 rounded-full text-sm font-semibold text-white hover:opacity-90 transition-opacity', GRADIENT)}
+          >
+            {t('influencerEvents.ctaButton', { defaultValue: 'Jetzt Anfrage senden →' })}
+          </button>
         </div>
       </section>
 
@@ -217,6 +225,14 @@ export default function InfluencerEventsPage() {
             </article>
           ))}
         </div>
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+            className={cn('px-8 py-3 rounded-full text-sm font-semibold text-white hover:opacity-90 transition-opacity', GRADIENT)}
+          >
+            {t('influencerEvents.ctaButton', { defaultValue: 'Jetzt Anfrage senden →' })}
+          </button>
+        </div>
       </section>
 
       {/* Service */}
@@ -248,6 +264,14 @@ export default function InfluencerEventsPage() {
               </p>
             </article>
           ))}
+        </div>
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+            className={cn('px-8 py-3 rounded-full text-sm font-semibold text-white hover:opacity-90 transition-opacity', GRADIENT)}
+          >
+            {t('influencerEvents.ctaButton', { defaultValue: 'Jetzt Anfrage senden →' })}
+          </button>
         </div>
       </section>
 
@@ -296,6 +320,14 @@ export default function InfluencerEventsPage() {
             })}
           </Link>
         </div>
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+            className={cn('px-8 py-3 rounded-full text-sm font-semibold text-white hover:opacity-90 transition-opacity', GRADIENT)}
+          >
+            {t('influencerEvents.ctaButton', { defaultValue: 'Jetzt Anfrage senden →' })}
+          </button>
+        </div>
       </section>
 
       {/* FAQ */}
@@ -339,10 +371,18 @@ export default function InfluencerEventsPage() {
             )
           })}
         </div>
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+            className={cn('px-8 py-3 rounded-full text-sm font-semibold text-white hover:opacity-90 transition-opacity', GRADIENT)}
+          >
+            {t('influencerEvents.ctaButton', { defaultValue: 'Jetzt Anfrage senden →' })}
+          </button>
+        </div>
       </section>
 
       {/* Contact */}
-      <section id="kontakt" className="mt-20 grid md:grid-cols-2 gap-10 items-start scroll-mt-20">
+      <section id="contact-form" className="mt-20 grid md:grid-cols-2 gap-10 items-start scroll-mt-20">
         <div>
           <p className="text-[13px] font-black uppercase tracking-wide text-[#e9548c] mb-3">
             {t('influencerEvents.contactEyebrow', { defaultValue: "Los geht's" })}
