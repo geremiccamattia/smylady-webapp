@@ -835,14 +835,6 @@ function ExploreContent() {
           >
             {t('explore.priceFree', { defaultValue: 'Gratis' })}
           </button>
-          <button
-            onClick={() => setPriceFilter(priceFilter === 'raffle' ? 'all' : 'raffle')}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-              priceFilter === 'raffle' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
-            }`}
-          >
-            🎰 {t('explore.raffles', { defaultValue: 'Gewinnspiele' })}
-          </button>
           {(() => {
             const workshopCat = EVENT_CATEGORIES.find(c => c.value === 'Workshop')
             if (!workshopCat) return null
@@ -883,6 +875,20 @@ function ExploreContent() {
                 {t(`categories.${cat.value}`, { defaultValue: cat.label })}
               </button>
             )
+            if (cat.value === 'Clubbing') {
+              return [
+                categoryButton,
+                <button
+                  key="raffle-filter"
+                  onClick={() => setPriceFilter(priceFilter === 'raffle' ? 'all' : 'raffle')}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                    priceFilter === 'raffle' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
+                  }`}
+                >
+                  🎰 {t('explore.raffles', { defaultValue: 'Gewinnspiele' })}
+                </button>,
+              ]
+            }
             if (cat.value !== 'Sports') return [categoryButton]
             return [
               categoryButton,

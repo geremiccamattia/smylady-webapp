@@ -1351,7 +1351,7 @@ export default function EventDetailClient({ id }: Props) {
                         {(event as any).boostStatus === 'active' ? 'Boost aktiv' : 'Event boosten'}
                       </Button>
                     )}
-                    {(isOwner || isAdmin) && event?.isRaffle && raffleStatus?.raffleStatus === 'drawing' && (
+                    {(isOwner || isAdmin) && event?.isRaffle && (raffleStatus?.raffleStatus === 'active' || raffleStatus?.raffleStatus === 'drawing') && (
                       <Button
                         variant="gradient"
                         className="w-full"
