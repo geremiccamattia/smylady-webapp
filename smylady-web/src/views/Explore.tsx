@@ -7,10 +7,11 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { eventsService } from '@/services/events'
 import { userService } from '@/services/user'
-import { publicClient } from '@/services/api'
+import { apiClient, publicClient } from '@/services/api'
 import { ticketmasterService } from '@/services/ticketmaster'
 import { communityService } from '@/services/community'
 import CommunityCard from '@/components/community/CommunityCard'
+import { RaffleEventCard } from '@/components/RaffleEventCard'
 import {
   getManualLocation,
   getCurrentLocation,
@@ -255,6 +256,24 @@ function ExploreContent() {
     staleTime: 10 * 60 * 1000,
   })
 
+  const { data: raffleEvents } = useQuery({
+    queryKey: ['raffleEvents', selectedLocation?.lat, selectedLocation?.lng, radius],
+    queryFn: async () => {
+      const response = await apiClient.get('/events', {
+        params: {
+          isRaffle: true,
+          upcoming: true,
+          latitude: selectedLocation?.lat,
+          longitude: selectedLocation?.lng,
+          radius,
+        },
+      })
+      return response.data?.data?.events || response.data?.data || []
+    },
+    enabled: locationLoaded && !!selectedLocation,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const filteredEvents = useMemo(() => {
     const allEvents: Event[] = [
       ...(events || []),
@@ -291,19 +310,26 @@ function ExploreContent() {
           from = startOfDay(tomorrow); to = endOfDay(tomorrow); break
         }
         case 'weekend': {
-          const day = now.getDay()
-          let saturday: Date, sunday: Date
+          const day = now.getDay() // 0=So, 1=Mo, ..., 5=Fr, 6=Sa
+          let friday: Date, sunday: Date
           if (day === 0) {
-            saturday = new Date(now); saturday.setDate(now.getDate() - 1)
+            // Sonntag: Wochenende ist Fr-So dieser Woche (Fr war vor 2 Tagen)
+            friday = new Date(now); friday.setDate(now.getDate() - 2)
             sunday = new Date(now)
           } else if (day === 6) {
-            saturday = new Date(now)
+            // Samstag: Fr war gestern, So ist morgen
+            friday = new Date(now); friday.setDate(now.getDate() - 1)
             sunday = new Date(now); sunday.setDate(now.getDate() + 1)
+          } else if (day === 5) {
+            // Freitag: heute bis Sonntag
+            friday = new Date(now)
+            sunday = new Date(now); sunday.setDate(now.getDate() + 2)
           } else {
-            saturday = new Date(now); saturday.setDate(now.getDate() + (6 - day))
-            sunday = new Date(saturday); sunday.setDate(saturday.getDate() + 1)
+            // Mo-Do: nächstes Wochenende (Fr-So)
+            friday = new Date(now); friday.setDate(now.getDate() + (5 - day))
+            sunday = new Date(friday); sunday.setDate(friday.getDate() + 2)
           }
-          from = startOfDay(saturday); to = endOfDay(sunday); break
+          from = startOfDay(friday); to = endOfDay(sunday); break
         }
         case 'this_week': {
           const day = now.getDay()
@@ -340,6 +366,7 @@ function ExploreContent() {
 
     if (priceFilter && priceFilter !== 'all') {
       result = result.filter((e: any) => {
+        if (priceFilter === 'raffle') return !!e.isRaffle
         if (e.isTicketmaster || e.isExternalEvent) return true
         switch (priceFilter) {
           case 'free': return (e.price === 0 || !e.price) && e.paymentType !== 'door'
@@ -808,6 +835,14 @@ function ExploreContent() {
           >
             {t('explore.priceFree', { defaultValue: 'Gratis' })}
           </button>
+          <button
+            onClick={() => setPriceFilter(priceFilter === 'raffle' ? 'all' : 'raffle')}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              priceFilter === 'raffle' ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'
+            }`}
+          >
+            🎰 {t('explore.raffles', { defaultValue: 'Gewinnspiele' })}
+          </button>
           {(() => {
             const workshopCat = EVENT_CATEGORIES.find(c => c.value === 'Workshop')
             if (!workshopCat) return null
@@ -944,6 +979,25 @@ function ExploreContent() {
                     {topCommunities.map((community: any) => (
                       <div key={community._id} className="flex-shrink-0 w-[70vw] md:w-auto">
                         <CommunityCard community={community} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 🎰 Gewinnspiele */}
+              {raffleEvents && raffleEvents.length > 0 && (
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold tracking-tight">
+                    🎰 {t('explore.raffles', { defaultValue: 'Gewinnspiele' })}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {t('explore.rafflesSubline', { defaultValue: 'Nimm kostenlos teil und gewinne tolle Preise.' })}
+                  </p>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible">
+                    {raffleEvents.slice(0, 3).map((event: any) => (
+                      <div key={event._id} className="flex-shrink-0 w-[70vw] md:w-auto">
+                        <RaffleEventCard event={event} />
                       </div>
                     ))}
                   </div>

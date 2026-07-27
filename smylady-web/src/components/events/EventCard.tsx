@@ -164,6 +164,12 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
             Gesponsert
           </div>
         )}
+        {/* Raffle Badge */}
+        {event.isRaffle && !isExternalEvent && (
+          <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            🎰 {t('raffle.badge', { defaultValue: 'Gewinnspiel' })}
+          </div>
+        )}
         {/* Favorite Button */}
         <Button
           variant="ghost"

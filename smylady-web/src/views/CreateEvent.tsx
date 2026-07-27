@@ -32,6 +32,7 @@ import {
   Plus,
   Trash2,
   Languages,
+  Gift,
 } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 import {
@@ -95,6 +96,9 @@ function CreateEventContent() {
 
   const [useTiers, setUseTiers] = useState(false)
   const [payAtDoor, setPayAtDoor] = useState(false)
+  const [isRaffle, setIsRaffle] = useState(false)
+  const [rafflePrize, setRafflePrize] = useState('')
+  const [raffleDrawDate, setRaffleDrawDate] = useState('')
   const [showRecurringModal, setShowRecurringModal] = useState(false)
   const [seriesConfig, setSeriesConfig] = useState<{
     recurrence: string
@@ -434,6 +438,7 @@ function CreateEventContent() {
   }
 
   const hasPaidTickets = () => {
+    if (isRaffle) return false
     if (payAtDoor) return false
     if (useTiers) {
       return ticketTiers.some(t => parseFloat(t.price) > 0)
@@ -448,6 +453,14 @@ function CreateEventContent() {
     }
     if (!formData.description) {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.enterDescription') })
+      return false
+    }
+    if (isRaffle && !rafflePrize.trim()) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: t('createEvent.rafflePrize', { defaultValue: 'Was gibt es zu gewinnen?' }),
+      })
       return false
     }
     const stripeReady = connectedAccount && connectedAccount.accountStatus === 'active'
@@ -627,8 +640,20 @@ function CreateEventContent() {
         eventFormData.append('price', '0')        // backend will override with min tier price
         eventFormData.append('totalTickets', '1') // backend will override with sum of quantities
       } else {
-        eventFormData.append('price', String(parseFloat(formData.price) || 0))
+        if (isRaffle) {
+          eventFormData.append('price', '0') // Immer kostenlos
+        } else {
+          eventFormData.append('price', String(parseFloat(formData.price) || 0))
+        }
         eventFormData.append('totalTickets', String(parseInt(formData.totalTickets) || 0))
+      }
+
+      if (isRaffle) {
+        eventFormData.append('isRaffle', 'true')
+        eventFormData.append('rafflePrize', rafflePrize)
+        if (raffleDrawDate) {
+          eventFormData.append('raffleDrawDate', new Date(raffleDrawDate).toISOString())
+        }
       }
 
       const validQuestions = questions
@@ -1313,7 +1338,7 @@ function CreateEventContent() {
                     <Label htmlFor="useTiers">{t('createEvent.multipleTicketTypes', { defaultValue: 'Mehrere Tickettypen' })}</Label>
                   </div>
 
-                  {!useTiers && (
+                  {!useTiers && !isRaffle && (
                     <div className="space-y-2">
                       <Label htmlFor="price">{t('createEvent.setPrice')}</Label>
                       <Input
@@ -1427,7 +1452,7 @@ function CreateEventContent() {
                     <Label htmlFor="useTiers">{t('createEvent.multipleTicketTypes', { defaultValue: 'Mehrere Tickettypen' })}</Label>
                   </div>
 
-                  {!useTiers && (
+                  {!useTiers && !isRaffle && (
                     <div className="space-y-2">
                       <Label htmlFor="price">{t('createEvent.doorPrice', { defaultValue: 'Preis an der Abendkasse (€)' })}</Label>
                       <Input
@@ -1606,6 +1631,72 @@ function CreateEventContent() {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Gewinnspiel-Option */}
+        {step === 2 && (
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h2 className="font-semibold flex items-center gap-2">
+                    🎰 {t('createEvent.isRaffle', { defaultValue: 'Gewinnspiel' })}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {t('createEvent.isRaffleDesc', { defaultValue: 'Teilnehmer können kostenlos mitmachen und gewinnen.' })}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRaffle(!isRaffle)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
+                    isRaffle ? 'bg-amber-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isRaffle ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+
+              {isRaffle && (
+                <div className="space-y-3 pt-2 border-t">
+                  {/* Gewinn */}
+                  <div className="space-y-2">
+                    <Label>{t('createEvent.rafflePrize', { defaultValue: 'Was gibt es zu gewinnen?' })} *</Label>
+                    <Input
+                      value={rafflePrize}
+                      onChange={(e) => setRafflePrize(e.target.value)}
+                      placeholder={t('createEvent.rafflePrizePlaceholder', { defaultValue: 'z.B. 2x VIP-Tickets, Dinner für zwei, ...' })}
+                      required
+                    />
+                  </div>
+
+                  {/* Ziehungsdatum */}
+                  <div className="space-y-2">
+                    <Label>{t('createEvent.raffleDrawDate', { defaultValue: 'Ziehungsdatum' })}</Label>
+                    <Input
+                      type="datetime-local"
+                      value={raffleDrawDate}
+                      onChange={(e) => setRaffleDrawDate(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('createEvent.raffleDrawDateHint', { defaultValue: 'Leer lassen = Ziehung nach Event-Ende' })}
+                    </p>
+                  </div>
+
+                  {/* Hinweis */}
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                    <Gift className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>{t('createEvent.raffleHint1', { defaultValue: 'Gewinnspiele sind immer kostenlos. Der Ticketpreis wird automatisch auf 0€ gesetzt.' })}</p>
+                      <p>{t('createEvent.raffleHint2', { defaultValue: 'Die Teilnahme erfolgt durch Ticket-Buchung. Es besteht kein Kaufzwang.' })}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

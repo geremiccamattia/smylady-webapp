@@ -137,6 +137,11 @@ export interface Event {
   eventSeriesId?: string
   seriesIndex?: number
   seriesRecurrence?: 'weekly' | 'monthly' | 'custom'
+  isRaffle?: boolean
+  raffleStatus?: 'active' | 'drawing' | 'completed'
+  rafflePrize?: string
+  raffleWinners?: { _id: string; name: string; profileImage?: string }[]
+  raffleDrawDate?: string
 }
 
 export interface EventFilters {

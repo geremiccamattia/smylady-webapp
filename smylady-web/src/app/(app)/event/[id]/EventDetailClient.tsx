@@ -63,6 +63,7 @@ import {
   Loader2,
   XCircle,
   Zap,
+  Gift,
 } from 'lucide-react'
 
 interface Props { id: string }
@@ -97,6 +98,7 @@ export default function EventDetailClient({ id }: Props) {
   const [pendingAnswers, setPendingAnswers] = useState<PurchaseAnswer[] | undefined>(undefined)
   const [userBalance, setUserBalance] = useState(0)
   const [useBalance, setUseBalance] = useState(true) // Default: an
+  const [drawLoading, setDrawLoading] = useState(false)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -191,6 +193,15 @@ export default function EventDetailClient({ id }: Props) {
       }
     }
   }, [event])
+
+  const { data: raffleStatus } = useQuery({
+    queryKey: ['raffleStatus', eventId],
+    queryFn: async () => {
+      const response = await apiClient.get(`/events/${eventId}/raffle/status`)
+      return response.data
+    },
+    enabled: !!event?.isRaffle,
+  })
 
   // Fetch user's ticket for this event (for uploading memories)
   // MUST be called before any conditional returns to follow React hook rules
@@ -496,6 +507,27 @@ export default function EventDetailClient({ id }: Props) {
     }
   }
 
+  const handleDrawRaffle = async () => {
+    setDrawLoading(true)
+    try {
+      const response = await apiClient.post(`/events/${eventId}/raffle/draw`, { numberOfWinners: 1 })
+      const winners = response.data?.data?.winners || []
+      toast({
+        title: t('raffle.drawSuccess', { defaultValue: '🎉 Gewinner gezogen!' }),
+        description: winners.map((w: any) => w.name).join(', '),
+      })
+      queryClient.invalidateQueries({ queryKey: ['raffleStatus', eventId] })
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: error.response?.data?.message || '',
+      })
+    } finally {
+      setDrawLoading(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -702,6 +734,95 @@ export default function EventDetailClient({ id }: Props) {
                   {t('common.chat')}
                 </Button>
               </div>
+            </div>
+          )}
+
+          {/* Raffle Info Box */}
+          {event?.isRaffle && (
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-3">
+              {/* Badge */}
+              <div className="flex items-center gap-2">
+                <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  🎰 {t('raffle.badge', { defaultValue: 'Gewinnspiel' })}
+                </span>
+                {raffleStatus?.raffleStatus === 'active' && (
+                  <span className="text-xs text-green-600 font-medium">
+                    {t('raffle.active', { defaultValue: 'Aktiv — noch teilnehmen!' })}
+                  </span>
+                )}
+                {raffleStatus?.raffleStatus === 'drawing' && (
+                  <span className="text-xs text-amber-600 font-medium animate-pulse">
+                    {t('raffle.drawingSoon', { defaultValue: 'Ziehung steht bevor...' })}
+                  </span>
+                )}
+                {raffleStatus?.raffleStatus === 'completed' && (
+                  <span className="text-xs text-green-600 font-medium">
+                    ✓ {t('raffle.completed', { defaultValue: 'Gewinner gezogen' })}
+                  </span>
+                )}
+              </div>
+
+              {/* Gewinn */}
+              {event.rafflePrize && (
+                <div className="flex items-start gap-2">
+                  <Gift className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('raffle.prize', { defaultValue: 'Gewinn' })}</p>
+                    <p className="font-semibold">{event.rafflePrize}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Teilnehmer */}
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-amber-500 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('raffle.participants', { defaultValue: 'Teilnehmer' })}</p>
+                  <p className="font-semibold">{raffleStatus?.totalParticipants || event.soldTickets || 0}</p>
+                </div>
+              </div>
+
+              {/* Ziehungsdatum */}
+              {event.raffleDrawDate && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('raffle.drawDate', { defaultValue: 'Ziehung am' })}</p>
+                    <p className="font-semibold">
+                      {new Date(event.raffleDrawDate).toLocaleDateString('de-AT', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Gewinner anzeigen (wenn gezogen) */}
+              {raffleStatus?.raffleStatus === 'completed' && raffleStatus?.raffleWinners?.length > 0 && (
+                <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    🏆 {t('raffle.winners', { defaultValue: 'Gewinner' })}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {raffleStatus.raffleWinners.map((winner: any) => (
+                      <Link key={winner._id} href={localePath(`/user/${winner._id}`)}>
+                        <div className="flex items-center gap-2 bg-white dark:bg-background rounded-full pl-1 pr-3 py-1 border">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={resolveImageUrl(winner.profileImage)} />
+                            <AvatarFallback className="text-[10px]">{winner.name?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{winner.name}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Hinweis kein Kaufzwang */}
+              <p className="text-[10px] text-muted-foreground">
+                {t('raffle.disclaimer', { defaultValue: 'Die Teilnahme ist kostenlos. Es besteht kein Kaufzwang. Der Rechtsweg ist ausgeschlossen.' })}
+              </p>
             </div>
           )}
 
@@ -1230,6 +1351,17 @@ export default function EventDetailClient({ id }: Props) {
                         {(event as any).boostStatus === 'active' ? 'Boost aktiv' : 'Event boosten'}
                       </Button>
                     )}
+                    {(isOwner || isAdmin) && event?.isRaffle && raffleStatus?.raffleStatus === 'drawing' && (
+                      <Button
+                        variant="gradient"
+                        className="w-full"
+                        onClick={handleDrawRaffle}
+                        disabled={drawLoading}
+                      >
+                        {drawLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        🎰 {t('raffle.drawNow', { defaultValue: 'Gewinner jetzt ziehen' })}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
@@ -1303,7 +1435,9 @@ export default function EventDetailClient({ id }: Props) {
                       }
                     >
                       <Ticket className="h-5 w-5" />
-                      {isDoorPayment || Number(event.price) === 0
+                      {event?.isRaffle
+                        ? t('raffle.participate', { defaultValue: 'Kostenlos teilnehmen' })
+                        : isDoorPayment || Number(event.price) === 0
                         ? t('tickets.imIn', { defaultValue: 'Bin dabei' })
                         : t('tickets.buyTicket')}
                     </Button>
