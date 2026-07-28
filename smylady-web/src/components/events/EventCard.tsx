@@ -171,7 +171,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
         )}
         {/* Raffle Badge */}
         {event.isRaffle && !isExternalEvent && (
-          <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+          <div className="absolute bottom-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
             🎰 {t('raffle.badge', { defaultValue: 'Gewinnspiel' })}
           </div>
         )}
@@ -188,15 +188,17 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
         >
           <Heart className={cn("h-5 w-5", isFavorite && "fill-current")} />
         </Button>
-        {/* Price Badge */}
-        <div className={cn(
-          "absolute bottom-2 left-2 px-3 py-1 rounded-full text-white text-sm font-semibold",
-          isExternalEvent ? "bg-blue-600" :
-          event.paymentType === 'door' ? "bg-orange-500" :
-          "gradient-bg"
-        )}>
-          {getPriceDisplay()}
-        </div>
+        {/* Price Badge - hidden for raffles, the Gewinnspiel badge already covers it */}
+        {!event.isRaffle && (
+          <div className={cn(
+            "absolute bottom-2 left-2 px-3 py-1 rounded-full text-white text-sm font-semibold",
+            isExternalEvent ? "bg-blue-600" :
+            event.paymentType === 'door' ? "bg-orange-500" :
+            "gradient-bg"
+          )}>
+            {getPriceDisplay()}
+          </div>
+        )}
         {/* Sold Out Badge */}
         {isSoldOut && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">

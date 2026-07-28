@@ -43,12 +43,8 @@ export function RaffleEventCard({ event }: RaffleEventCardProps) {
             </div>
           )}
           {/* Gewinnspiel-Badge */}
-          <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+          <div className="absolute bottom-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
             🎰 {t('raffle.badge', { defaultValue: 'Gewinnspiel' })}
-          </div>
-          {/* Kostenlos-Badge */}
-          <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">
-            {t('raffle.free', { defaultValue: 'Kostenlos' })}
           </div>
           {/* Teilnehmer-Count */}
           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
