@@ -100,6 +100,23 @@ export function formatDateTime(date: string | Date): string {
   return `${formatDate(date)} ${formatTime(date)}`
 }
 
+/**
+ * Whether an event's end genuinely falls on a different calendar day than its start.
+ * `eventEndTime` is always populated (defaults to start + 4h on the same day), so a
+ * plain truthiness check is not enough to detect a real multi-day event.
+ */
+export function isMultiDayEvent(startDate: string | Date, endDate?: string | Date | null): boolean {
+  if (!endDate) return false
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return false
+  return (
+    start.getFullYear() !== end.getFullYear() ||
+    start.getMonth() !== end.getMonth() ||
+    start.getDate() !== end.getDate()
+  )
+}
+
 export function formatPrice(price: number | string | undefined | null, currency: string = 'EUR'): string {
   // Convert string prices to number (backend may send price as string)
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price

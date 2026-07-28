@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent } from '@/lib/utils'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -1167,7 +1167,10 @@ export default function EventDetailClient({ id }: Props) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t('events.date')}</p>
-                  <p className="font-semibold">{formatDate(event.eventDate)}</p>
+                  <p className="font-semibold">
+                    {formatDate(event.eventDate)}
+                    {isMultiDayEvent(event.eventDate, event.eventEndTime) && ` – ${formatDate(event.eventEndTime)}`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">

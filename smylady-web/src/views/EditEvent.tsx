@@ -12,7 +12,7 @@ import { ToastAction } from '@/components/ui/toast'
 import { useGetConnectedAccount } from '@/hooks/useStripe'
 import { eventsService } from '@/services/events'
 import { EVENT_CATEGORIES, MUSIC_TYPES, AGE_RESTRICTIONS } from '@/lib/constants'
-import { resolveImageUrl } from '@/lib/utils'
+import { resolveImageUrl, isMultiDayEvent } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
@@ -98,6 +98,9 @@ export default function EditEvent() {
   } | null>(null)
 
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
+  const [isMultiDay, setIsMultiDay] = useState(false)
+  const [eventEndDate, setEventEndDate] = useState('')
+  const [eventEndTimeValue, setEventEndTimeValue] = useState('')
   const [payAtDoor, setPayAtDoor] = useState(false)
   const [addressDetail, setAddressDetail] = useState('')
   const [locationQuery, setLocationQuery] = useState('')
@@ -195,6 +198,19 @@ export default function EditEvent() {
       setPayAtDoor((event as any).paymentType === 'door')
       setLocationType((event as any).locationType || 'physical')
       setOnlineUrl((event as any).onlineUrl || '')
+
+      if (event.eventEndTime && isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime)) {
+        setIsMultiDay(true)
+        const endDate = new Date(event.eventEndTime)
+        setEventEndDate(endDate.toISOString().split('T')[0])
+        setEventEndTimeValue(
+          `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+        )
+      } else {
+        setIsMultiDay(false)
+        setEventEndDate('')
+        setEventEndTimeValue('')
+      }
       if ((event as any).locationType === 'physical' || !(event as any).locationType) {
         setLocationQuery(event.locationName || '')
       }
@@ -485,7 +501,17 @@ export default function EditEvent() {
       eventFormData.append('eventStartTime', startDate.toISOString())
     }
 
-    if (eventDate && eventEndTime) {
+    if (isMultiDay && eventEndDate) {
+      // Mehrtägiges Event: Enddatum überschreibt die einfache Uhrzeit-Berechnung unten
+      const multiDayEnd = new Date(eventEndDate + 'T00:00:00')
+      if (eventEndTimeValue) {
+        const [hours, minutes] = eventEndTimeValue.split(':').map(Number)
+        multiDayEnd.setHours(hours, minutes, 0, 0)
+      } else {
+        multiDayEnd.setHours(23, 59, 0, 0)
+      }
+      eventFormData.append('eventEndTime', multiDayEnd.toISOString())
+    } else if (eventDate && eventEndTime) {
       const [hours, minutes] = eventEndTime.split(':').map(Number)
       const endDate = new Date(eventDate)
       endDate.setHours(hours, minutes, 0, 0)
@@ -859,6 +885,50 @@ export default function EditEvent() {
                 />
               </div>
             </div>
+
+            <div className="flex items-center gap-3 mt-4">
+              <input
+                type="checkbox"
+                id="multiDay"
+                checked={isMultiDay}
+                onChange={(e) => {
+                  setIsMultiDay(e.target.checked)
+                  if (!e.target.checked) {
+                    setEventEndDate('')
+                    setEventEndTimeValue('')
+                  }
+                }}
+                className="rounded"
+              />
+              <Label htmlFor="multiDay">
+                {t('createEvent.multiDay', { defaultValue: 'Mehrtägiges Event' })}
+              </Label>
+            </div>
+
+            {isMultiDay && (
+              <div className="grid grid-cols-2 gap-4 mt-3">
+                <div className="space-y-2">
+                  <Label htmlFor="eventEndDate">{t('createEvent.endDate', { defaultValue: 'Enddatum' })} *</Label>
+                  <Input
+                    id="eventEndDate"
+                    type="date"
+                    value={eventEndDate}
+                    onChange={(e) => setEventEndDate(e.target.value)}
+                    min={formData.eventDate || undefined}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="eventEndDateTime">{t('createEvent.endTime', { defaultValue: 'Endzeit' })}</Label>
+                  <Input
+                    id="eventEndDateTime"
+                    type="time"
+                    value={eventEndTimeValue}
+                    onChange={(e) => setEventEndTimeValue(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

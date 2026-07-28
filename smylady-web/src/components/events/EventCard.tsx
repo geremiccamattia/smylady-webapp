@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
-import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, generateEventSlug, generateCommunitySlug, shortenAddress } from '@/lib/utils'
+import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -35,6 +35,11 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
   const { showAuthModal } = useAuthModal()
   const [isFavorite, setIsFavorite] = useState(event.isFavorite || false)
   const [isLoading, setIsLoading] = useState(false)
+
+  const formatDateShort = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+  }
 
   const eventId = event.id || event._id
   // Handle different image structures: locationImages array with url property, or direct images array
@@ -212,7 +217,13 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
-            <span>{event.eventDate ? formatDate(event.eventDate) : '-'}</span>
+            <span>
+              {event.eventDate
+                ? isMultiDayEvent(event.eventDate, event.eventEndTime)
+                  ? `${formatDateShort(event.eventDate)} – ${formatDate(event.eventEndTime)}`
+                  : formatDate(event.eventDate)
+                : '-'}
+            </span>
           </div>
           {event.eventStartTime && (
             <div className="flex items-center gap-1">

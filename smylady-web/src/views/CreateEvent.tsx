@@ -241,6 +241,9 @@ function CreateEventContent() {
   })
 
   const [allowGuestMemories, setAllowGuestMemories] = useState(true)
+  const [isMultiDay, setIsMultiDay] = useState(false)
+  const [eventEndDate, setEventEndDate] = useState('')
+  const [eventEndTimeValue, setEventEndTimeValue] = useState('')
   const [translating, setTranslating] = useState(false)
   const [translatedPreview, setTranslatedPreview] = useState<{
     lang: string; name: string; description: string; restrictions: string
@@ -587,6 +590,18 @@ function CreateEventContent() {
         eventEndTime = new Date(eventStartTime.getTime() + 4 * 60 * 60 * 1000)
       }
 
+      // Mehrtägiges Event: Enddatum überschreibt die einfache Uhrzeit-Berechnung oben
+      if (isMultiDay && eventEndDate) {
+        const multiDayEnd = new Date(eventEndDate + 'T00:00:00')
+        if (eventEndTimeValue) {
+          const [endHours, endMinutes] = eventEndTimeValue.split(':').map(Number)
+          multiDayEnd.setHours(endHours, endMinutes, 0, 0)
+        } else {
+          multiDayEnd.setHours(23, 59, 0, 0)
+        }
+        eventEndTime = multiDayEnd
+      }
+
       // Add all form fields
       eventFormData.append('name', formData.name)
       eventFormData.append('description', formData.description)
@@ -870,6 +885,50 @@ function CreateEventContent() {
                     />
                   </div>
                 </div>
+
+                <div className="flex items-center gap-3 mt-4">
+                  <input
+                    type="checkbox"
+                    id="multiDay"
+                    checked={isMultiDay}
+                    onChange={(e) => {
+                      setIsMultiDay(e.target.checked)
+                      if (!e.target.checked) {
+                        setEventEndDate('')
+                        setEventEndTimeValue('')
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <Label htmlFor="multiDay">
+                    {t('createEvent.multiDay', { defaultValue: 'Mehrtägiges Event' })}
+                  </Label>
+                </div>
+
+                {isMultiDay && (
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="eventEndDate">{t('createEvent.endDate', { defaultValue: 'Enddatum' })} *</Label>
+                      <Input
+                        id="eventEndDate"
+                        type="date"
+                        value={eventEndDate}
+                        onChange={(e) => setEventEndDate(e.target.value)}
+                        min={formData.eventDate || undefined}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="eventEndDateTime">{t('createEvent.endTime', { defaultValue: 'Endzeit' })}</Label>
+                      <Input
+                        id="eventEndDateTime"
+                        type="time"
+                        value={eventEndTimeValue}
+                        onChange={(e) => setEventEndTimeValue(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
