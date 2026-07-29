@@ -1207,7 +1207,13 @@
     "participate": "Participate for free",
     "drawNow": "Draw winner now",
     "drawSuccess": "🎉 Winner drawn!",
-    "disclaimer": "Participation is free. No purchase required. Legal recourse is excluded."
+    "disclaimer": "Participation is free. No purchase required. Legal recourse is excluded.",
+    "heroBanner": "RAFFLE — Participate for free and win!",
+    "stickySubline": "Join the raffle for free.",
+    "participateNow": "Participate now",
+    "ctaButton": "Join the raffle",
+    "ctaSubline": "Prize:",
+    "prizeFallback": "Amazing prizes to win!"
   },
   "footer": {
     "blog": "Blog",

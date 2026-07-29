@@ -1069,7 +1069,13 @@
     "participate": "Kostenlos teilnehmen",
     "drawNow": "Gewinner jetzt ziehen",
     "drawSuccess": "🎉 Gewinner gezogen!",
-    "disclaimer": "Die Teilnahme ist kostenlos. Es besteht kein Kaufzwang. Der Rechtsweg ist ausgeschlossen."
+    "disclaimer": "Die Teilnahme ist kostenlos. Es besteht kein Kaufzwang. Der Rechtsweg ist ausgeschlossen.",
+    "heroBanner": "GEWINNSPIEL — Kostenlos teilnehmen und gewinnen!",
+    "stickySubline": "Nimm kostenlos am Gewinnspiel teil.",
+    "participateNow": "Jetzt teilnehmen",
+    "ctaButton": "Am Gewinnspiel teilnehmen",
+    "ctaSubline": "Gewinn:",
+    "prizeFallback": "Tolle Preise zu gewinnen!"
   },
   "footer": {
     "blog": "Blog",

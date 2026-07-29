@@ -80,6 +80,7 @@ export default function EventDetailClient({ id }: Props) {
   const [imageViewerOpen, setImageViewerOpen] = useState(false)
   const [imageViewerIndex, setImageViewerIndex] = useState(0)
   const [fullscreenMemoryIndex, setFullscreenMemoryIndex] = useState<number | null>(null)
+  const [showRaffleBanner, setShowRaffleBanner] = useState(true)
   const memoriesRef = useRef<HTMLDivElement>(null)
 
   // Stripe payment hooks
@@ -198,7 +199,10 @@ export default function EventDetailClient({ id }: Props) {
     queryKey: ['raffleStatus', eventId],
     queryFn: async () => {
       const response = await apiClient.get(`/events/${eventId}/raffle/status`)
-      return response.data
+      // Backend wraps payloads as { success, data }, like every other endpoint in this app
+      // (see eventsService.ts) — unwrap it here so every consumer of raffleStatus below
+      // (info box, draw button, sticky bar) sees the same flat shape.
+      return response.data?.data ?? response.data
     },
     enabled: !!event?.isRaffle,
   })
@@ -613,6 +617,14 @@ export default function EventDetailClient({ id }: Props) {
             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/1200x500?text=Event'
           }}
         />
+        {/* Raffle Hero Banner */}
+        {event?.isRaffle && (
+          <div className="absolute inset-x-0 top-0 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2.5 px-4">
+            <p className="text-sm font-bold flex items-center justify-center gap-2">
+              🎰 {t('raffle.heroBanner', { defaultValue: 'GEWINNSPIEL — Kostenlos teilnehmen und gewinnen!' })}
+            </p>
+          </div>
+        )}
         {/* Actions Overlay */}
         <div className="absolute top-4 right-4 flex gap-2">
           <Button
@@ -1158,7 +1170,7 @@ export default function EventDetailClient({ id }: Props) {
 
         {/* Sidebar - Ticket Purchase */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24 p-6 bg-card rounded-xl border shadow-lg space-y-4">
+          <div id="ticket-section" className="sticky top-24 p-6 bg-card rounded-xl border shadow-lg space-y-4">
             {/* Date & Time */}
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -1426,24 +1438,37 @@ export default function EventDetailClient({ id }: Props) {
                         </span>
                       </div>
                     )}
-                    <Button
-                      variant="gradient"
-                      size="lg"
-                      className="w-full gap-2"
-                      onClick={handlePurchaseTicket}
-                      loading={isPurchasing}
-                      disabled={
-                        isPurchasing ||
-                        ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
-                      }
-                    >
-                      <Ticket className="h-5 w-5" />
-                      {event?.isRaffle
-                        ? t('raffle.participate', { defaultValue: 'Kostenlos teilnehmen' })
-                        : isDoorPayment || Number(event.price) === 0
-                        ? t('tickets.imIn', { defaultValue: 'Bin dabei' })
-                        : t('tickets.buyTicket')}
-                    </Button>
+                    {event?.isRaffle ? (
+                      <Button
+                        variant="default"
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold"
+                        onClick={handlePurchaseTicket}
+                        loading={isPurchasing}
+                        disabled={
+                          isPurchasing ||
+                          ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
+                        }
+                      >
+                        🎰 {t('raffle.ctaButton', { defaultValue: 'Am Gewinnspiel teilnehmen' })}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="gradient"
+                        size="lg"
+                        className="w-full gap-2"
+                        onClick={handlePurchaseTicket}
+                        loading={isPurchasing}
+                        disabled={
+                          isPurchasing ||
+                          ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
+                        }
+                      >
+                        <Ticket className="h-5 w-5" />
+                        {isDoorPayment || Number(event.price) === 0
+                          ? t('tickets.imIn', { defaultValue: 'Bin dabei' })
+                          : t('tickets.buyTicket')}
+                      </Button>
+                    )}
                   </>
                 )}
               </>
@@ -1457,6 +1482,40 @@ export default function EventDetailClient({ id }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Sticky Raffle Bar */}
+      {event?.isRaffle && showRaffleBanner && raffleStatus?.raffleStatus === 'active' && !purchasedTicket && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white shadow-lg border-t border-amber-400">
+          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm flex items-center gap-1.5">
+                🎁 {event.rafflePrize || t('raffle.prizeFallback', { defaultValue: 'Tolle Preise zu gewinnen!' })}
+              </p>
+              <p className="text-xs text-white/80">
+                {t('raffle.stickySubline', { defaultValue: 'Nimm kostenlos am Gewinnspiel teil.' })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="bg-white text-amber-600 hover:bg-white/90 font-bold"
+                onClick={() => {
+                  document.getElementById('ticket-section')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                🎰 {t('raffle.participateNow', { defaultValue: 'Jetzt teilnehmen' })}
+              </Button>
+              <button
+                onClick={() => setShowRaffleBanner(false)}
+                className="text-white/70 hover:text-white p-1"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image Viewer Modal */}
       <ImageViewer
