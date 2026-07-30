@@ -101,20 +101,19 @@ export function formatDateTime(date: string | Date): string {
 }
 
 /**
- * Whether an event's end genuinely falls on a different calendar day than its start.
- * `eventEndTime` is always populated (defaults to start + 4h on the same day), so a
- * plain truthiness check is not enough to detect a real multi-day event.
+ * Whether an event genuinely spans more than one day, measured by its duration
+ * rather than by calendar days: a party from 22:00 to 04:00 crosses midnight but
+ * is still a single-day event. `eventEndTime` is always populated (defaults to
+ * start + 4h), so a plain truthiness check is not enough either.
  */
 export function isMultiDayEvent(startDate: string | Date, endDate?: string | Date | null): boolean {
   if (!endDate) return false
   const start = new Date(startDate)
   const end = new Date(endDate)
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return false
-  return (
-    start.getFullYear() !== end.getFullYear() ||
-    start.getMonth() !== end.getMonth() ||
-    start.getDate() !== end.getDate()
-  )
+  const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+  // Bis zu 24 Stunden = eintägig (auch wenn über Mitternacht)
+  return diffHours > 24
 }
 
 export function formatPrice(price: number | string | undefined | null, currency: string = 'EUR'): string {
