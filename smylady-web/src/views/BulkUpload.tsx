@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { apiClient } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Upload, Download, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
@@ -24,8 +25,10 @@ interface BulkUploadProps {
 
 const TEMPLATE_URL = 'https://docs.google.com/spreadsheets/d/1YWqArillO-1ypGs6Yg9-q4nkhmCwUbupjQVCyUyOY-o/copy'
 
-export default function BulkUpload({ onBack }: BulkUploadProps) {
+function BulkUploadContent({ onBack }: BulkUploadProps) {
   const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const communityIdFromUrl = searchParams.get('communityId')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -49,6 +52,9 @@ export default function BulkUpload({ onBack }: BulkUploadProps) {
     try {
       const formData = new FormData()
       formData.append('file', selectedFile)
+      if (communityIdFromUrl) {
+        formData.append('communityId', communityIdFromUrl)
+      }
 
       const response = await apiClient.post('/events/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -152,5 +158,13 @@ export default function BulkUpload({ onBack }: BulkUploadProps) {
         </div>
       )}
     </div>
+  )
+}
+
+export default function BulkUpload({ onBack }: BulkUploadProps) {
+  return (
+    <Suspense>
+      <BulkUploadContent onBack={onBack} />
+    </Suspense>
   )
 }
