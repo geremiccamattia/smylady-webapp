@@ -790,7 +790,7 @@ export default function EventDetailClient({ id }: Props) {
                 <Users className="h-5 w-5 text-amber-500 shrink-0" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t('raffle.participants', { defaultValue: 'Teilnehmer' })}</p>
-                  <p className="font-semibold">{raffleStatus?.totalParticipants || event.soldTickets || 0}</p>
+                  <p className="font-semibold">{Math.max(0, raffleStatus?.totalParticipants || event.soldTickets || 0)}</p>
                 </div>
               </div>
 
