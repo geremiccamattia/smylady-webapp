@@ -287,7 +287,9 @@ export default function EventDetailClient({ id }: Props) {
       })
       return ticket || null
     },
-    enabled: !!id && !!user && !isOwner && !!event,
+    // Auch für Creator/Admin laden — sie sehen denselben Ticket-CTA wie normale User
+    // und sollen nach dem Kauf "Ticket anzeigen" statt erneut "Bin dabei" bekommen.
+    enabled: !!id && !!user && !!event,
   })
 
   const { data: refundPreview, isLoading: isRefundPreviewLoading } = useQuery({
@@ -1332,71 +1334,8 @@ export default function EventDetailClient({ id }: Props) {
                   </div>
                 )}
 
-                {/* Purchase Button */}
-                {(isOwner || isAdmin) ? (
-                  <div className="space-y-2">
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link href={`/edit-event/${id}`}>{t('events.editEvent')}</Link>
-                    </Button>
-                    <Button variant="gradient" className="w-full gap-2" asChild>
-                      <Link href={`/scan/${eventId}`}>
-                        <ScanLine className="h-4 w-4" />
-                        {t('tickets.scanTickets')}
-                      </Link>
-                    </Button>
-                    <Button variant="outline" className="w-full gap-2" asChild>
-                      <Link href={`/scan/${eventId}/statistics?name=${encodeURIComponent(event?.name || '')}`}>
-                        <Users className="h-4 w-4" />
-                        {t('tickets.scanStatistics')}
-                      </Link>
-                    </Button>
-                    <Button variant="outline" className="w-full gap-2" asChild>
-                      <Link href={`/event/${id}/guests`}>
-                        <Users className="h-4 w-4" />
-                        {t('manageGuests.title', { defaultValue: 'Gästeliste' })}
-                      </Link>
-                    </Button>
-                    {new Date(event.eventStartTime || event.eventDate) > new Date() && (
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2 text-amber-500 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                        onClick={() => setShowBoostModal(true)}
-                      >
-                        <Zap className="h-4 w-4" />
-                        {(event as any).boostStatus === 'active' ? 'Boost aktiv' : 'Event boosten'}
-                      </Button>
-                    )}
-                    {(isOwner || isAdmin) && event?.isRaffle && (raffleStatus?.raffleStatus === 'active' || raffleStatus?.raffleStatus === 'drawing') && (
-                      <Button
-                        variant="gradient"
-                        className="w-full"
-                        onClick={handleDrawRaffle}
-                        disabled={drawLoading}
-                      >
-                        {drawLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        🎰 {t('raffle.drawNow', { defaultValue: 'Gewinner jetzt ziehen' })}
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
-                      onClick={() => setShowDeleteDialog(true)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {t('events.deleteEvent', { defaultValue: 'Event löschen' })}
-                    </Button>
-                    {(event as any).eventSeriesId && (
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
-                        onClick={() => setShowDeleteSeriesDialog(true)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {t('events.deleteEventSeries', { defaultValue: 'Event Serie löschen' })}
-                      </Button>
-                    )}
-                  </div>
-                ) : purchasedTicket ? (
+                {/* Purchase Button — für ALLE sichtbar, auch für Creator/Admin */}
+                {purchasedTicket ? (
                   <Button variant="gradient" className="w-full gap-2" asChild>
                     <Link href={`/ticket/${purchasedTicket._id || purchasedTicket.id}`}>
                       <CheckCircle className="h-5 w-5" />
@@ -1470,6 +1409,72 @@ export default function EventDetailClient({ id }: Props) {
                       </Button>
                     )}
                   </>
+                )}
+
+                {/* Verwaltungs-Buttons — zusätzlich, nur für Creator/Admin */}
+                {(isOwner || isAdmin) && (
+                  <div className="space-y-2 pt-4 border-t">
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href={`/edit-event/${id}`}>{t('events.editEvent')}</Link>
+                    </Button>
+                    <Button variant="gradient" className="w-full gap-2" asChild>
+                      <Link href={`/scan/${eventId}`}>
+                        <ScanLine className="h-4 w-4" />
+                        {t('tickets.scanTickets')}
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="w-full gap-2" asChild>
+                      <Link href={`/scan/${eventId}/statistics?name=${encodeURIComponent(event?.name || '')}`}>
+                        <Users className="h-4 w-4" />
+                        {t('tickets.scanStatistics')}
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="w-full gap-2" asChild>
+                      <Link href={`/event/${id}/guests`}>
+                        <Users className="h-4 w-4" />
+                        {t('manageGuests.title', { defaultValue: 'Gästeliste' })}
+                      </Link>
+                    </Button>
+                    {new Date(event.eventStartTime || event.eventDate) > new Date() && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 text-amber-500 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                        onClick={() => setShowBoostModal(true)}
+                      >
+                        <Zap className="h-4 w-4" />
+                        {(event as any).boostStatus === 'active' ? 'Boost aktiv' : 'Event boosten'}
+                      </Button>
+                    )}
+                    {(isOwner || isAdmin) && event?.isRaffle && (raffleStatus?.raffleStatus === 'active' || raffleStatus?.raffleStatus === 'drawing') && (
+                      <Button
+                        variant="gradient"
+                        className="w-full"
+                        onClick={handleDrawRaffle}
+                        disabled={drawLoading}
+                      >
+                        {drawLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        🎰 {t('raffle.drawNow', { defaultValue: 'Gewinner jetzt ziehen' })}
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
+                      onClick={() => setShowDeleteDialog(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {t('events.deleteEvent', { defaultValue: 'Event löschen' })}
+                    </Button>
+                    {(event as any).eventSeriesId && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
+                        onClick={() => setShowDeleteSeriesDialog(true)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t('events.deleteEventSeries', { defaultValue: 'Event Serie löschen' })}
+                      </Button>
+                    )}
+                  </div>
                 )}
               </>
             )}
