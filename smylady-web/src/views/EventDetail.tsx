@@ -574,7 +574,7 @@ export default function EventDetail() {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="animate-pulse">
-          <div className="aspect-[21/9] bg-muted rounded-xl" />
+          <div className="aspect-[16/9] bg-muted rounded-xl" />
           <div className="h-8 bg-muted rounded mt-4 w-3/4" />
           <div className="h-4 bg-muted rounded mt-4 w-1/2" />
         </div>
@@ -634,7 +634,7 @@ export default function EventDetail() {
       </Button>
 
       {/* Hero Image */}
-      <div className="relative aspect-[21/9] rounded-xl overflow-hidden mb-6">
+      <div className="relative aspect-[16/9] rounded-xl overflow-hidden mb-6">
         <NextImage
           src={resolveImageUrl(event.locationImages?.[0]?.url || event.thumbnailUrl || event.images?.[0]) || 'https://via.placeholder.com/1200x500?text=Event'}
           alt={event.name}
