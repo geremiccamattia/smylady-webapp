@@ -2,6 +2,7 @@
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { CONFIG, STORAGE_KEYS } from '@/lib/constants'
+import { replaceWithPath } from '@/lib/navigation'
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -51,7 +52,9 @@ apiClient.interceptors.response.use(
       if (!isPublicPath) {
         // Sprache beim Redirect halten — sonst landen EN-Nutzer auf der deutschen Seite
         const localePrefix = /^\/en(?=\/|$)/.test(window.location.pathname) ? '/en' : ''
-        window.location.href = `${localePrefix}/login`
+        // replace statt assign: die abgelaufene Seite soll nicht im Verlauf bleiben,
+        // sonst landet der Zurück-Button direkt wieder im 401.
+        replaceWithPath(`${localePrefix}/login`)
       }
     }
     return Promise.reject(error)

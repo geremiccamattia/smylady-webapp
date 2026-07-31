@@ -4,13 +4,20 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Home, ArrowLeft } from 'lucide-react'
+import { navigateToExternalUrl } from '@/lib/navigation'
+
+const BLOG_HOST = 'blog.shareyourparty.de'
 
 export default function NotFound() {
   useEffect(() => {
-    if (window.location.pathname.startsWith('/blog')) {
-      const blogPath = window.location.pathname.replace('/blog', '') || '/'
-      window.location.href = `https://blog.shareyourparty.de${blogPath}`
-    }
+    const { pathname } = window.location
+    // Nur echte /blog-Segmente: startsWith('/blog') hätte auch /blogfoo erfasst und den
+    // Rest ohne führenden "/" angehängt — aus "/blog@evil.com" wäre
+    // "https://blog.shareyourparty.de@evil.com" geworden, also ein Redirect zu evil.com.
+    if (pathname !== '/blog' && !pathname.startsWith('/blog/')) return
+
+    const blogPath = pathname.slice('/blog'.length) || '/'
+    navigateToExternalUrl(`https://${BLOG_HOST}${blogPath}`, [BLOG_HOST])
   }, [])
 
   return (

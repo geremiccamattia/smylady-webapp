@@ -7,11 +7,13 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Instagram } from 'lucide-react'
+import { navigateToExternalUrl } from '@/lib/navigation'
 
 const REFERRAL_BONUS_AMOUNT = 20 // Euro
 const REFERRAL_CODE_STORAGE_KEY = 'referral_code'
 const APP_STORE_URL = 'https://apps.apple.com/at/app/share-your-party/id6748308083'
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.shareyourparty.app'
+const STORE_HOSTS = ['apps.apple.com', 'play.google.com']
 
 interface InvitePageProps {
   code: string
@@ -41,7 +43,7 @@ export default function InvitePage({ code }: InvitePageProps) {
   const handleCTA = () => {
     if (isMobileDevice()) {
       const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-      window.location.href = isIOS ? APP_STORE_URL : PLAY_STORE_URL
+      navigateToExternalUrl(isIOS ? APP_STORE_URL : PLAY_STORE_URL, STORE_HOSTS)
     } else {
       router.push(isEnglish ? '/en/register' : '/register')
     }

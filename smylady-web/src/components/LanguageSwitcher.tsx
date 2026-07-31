@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { navigateToPath } from '@/lib/navigation'
 
 const languages = [
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
@@ -40,8 +41,10 @@ export default function LanguageSwitcher() {
 
     // Nur navigieren wenn sich der Pfad ändert
     if (newPath !== pathname) {
-      // search + hash mitnehmen, sonst geht z.B. /explore?search=techno beim Wechsel verloren
-      window.location.href = `${newPath}${search}${hash}`
+      // search + hash mitnehmen, sonst geht z.B. /explore?search=techno beim Wechsel verloren.
+      // navigateToPath lässt ausschließlich origin-interne Pfade durch — pathname kann per
+      // Adresszeile "//evil.com" lauten und wäre als Redirect-Ziel sonst protokoll-relativ.
+      navigateToPath(`${newPath}${search}${hash}`)
     }
   }
 

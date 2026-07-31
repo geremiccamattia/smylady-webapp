@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { User } from '@/types'
 import { authService } from '@/services/auth'
 import { STORAGE_KEYS } from '@/lib/constants'
+import { navigateToPath } from '@/lib/navigation'
 
 interface LoginWithCredentials {
   (email: string, password: string): Promise<void>
@@ -129,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService.logout()
     setToken(null)
     setUser(null)
-    window.location.href = '/explore'
+    navigateToPath('/explore')
   }
 
   const updateUser = (updatedUser: User) => {

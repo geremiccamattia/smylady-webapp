@@ -38,6 +38,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { navigateToExternalUrl } from '@/lib/navigation'
+
+const STRIPE_HOSTS = ['stripe.com']
 
 function StripeConnectCardContent() {
   const { t } = useTranslation()
@@ -92,11 +95,18 @@ function StripeConnectCardContent() {
     createAccountLink(undefined, {
       onSuccess: (data) => {
         if (data.url) {
-          const url = new URL(data.url)
-          if (url.protocol === "https:") {
-            window.location.href = url.toString()
-          } else {
-            console.error("Redirect zu unsicherer URL blockiert:", data.url)
+          // Stripe liefert je nach Flow connect.stripe.com oder eine *.stripe.com-Subdomain.
+          // navigateToExternalUrl erzwingt HTTPS + diese Hosts, damit ein manipulierter
+          // Backend-Response nicht auf eine fremde Domain umleiten kann.
+          const redirected = navigateToExternalUrl(data.url, STRIPE_HOSTS)
+          if (!redirected) {
+            // Ohne Reset bliebe der Button dauerhaft im Ladezustand hängen
+            toast({
+              variant: 'destructive',
+              title: t('common.error'),
+              description: 'Stripe-Verbindung konnte nicht erstellt werden.',
+            })
+            setIsConnecting(false)
           }
         } else {
           toast({
