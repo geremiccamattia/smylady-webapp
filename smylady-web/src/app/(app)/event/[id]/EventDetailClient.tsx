@@ -655,8 +655,9 @@ export default function EventDetailClient({ id }: Props) {
             </p>
           </div>
         )}
-        {/* Actions Overlay */}
-        <div className="absolute top-4 right-4 flex gap-2">
+        {/* Actions Overlay — unten rechts, damit sie nicht mit dem Raffle-Banner
+            (inset-x-0 top-0) kollidieren; das Preis-Badge sitzt unten links. */}
+        <div className="absolute bottom-4 right-4 flex gap-2">
           <Button
             variant="secondary"
             size="icon"

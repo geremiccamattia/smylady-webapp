@@ -180,7 +180,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           variant="ghost"
           size="icon"
           className={cn(
-            "absolute top-2 right-2 bg-white/80 hover:bg-white",
+            "absolute bottom-2 right-2 bg-white/80 hover:bg-white",
             isFavorite && "text-red-500"
           )}
           onClick={handleFavoriteClick}
