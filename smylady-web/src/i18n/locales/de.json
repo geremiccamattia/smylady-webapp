@@ -179,7 +179,18 @@
     "settings": "Einstellungen",
     "myEvents": "Meine Events",
     "createEvent": "Event erstellen",
-    "searchUsers": "Benutzer suchen"
+    "searchUsers": "Benutzer suchen",
+    "login": "Anmelden",
+    "register": "Sei dabei",
+    "welcome": "Willkommen bei Share Your Party",
+    "welcomeSubline": "Melde dich an um alle Features zu nutzen.",
+    "contact": "Kontakt",
+    "influencerClub": "Influencer Club",
+    "apiDocs": "API-Dokumentation",
+    "emailSupport": "E-Mail Support",
+    "privacy": "Datenschutz",
+    "terms": "AGB",
+    "imprint": "Impressum"
   },
   "events": {
     "title": "Events",
@@ -284,6 +295,7 @@
     "buyNow": "Jetzt kaufen",
     "buyTicket": "Ticket kaufen",
     "imIn": "Bin dabei",
+    "viewTicket": "Ticket anzeigen",
     "reserveSpot": "Platz reservieren",
     "calculatingRefund": "Rückerstattung wird berechnet...",
     "cancelAnytime": "Jederzeit stornierbar",
@@ -968,6 +980,8 @@
     "externalEvent": "Externes Event",
     "externalEventDescription": "Dieses Event wird von einem externen Anbieter gehostet",
     "externalEventInfo": "Weitere Informationen auf der externen Website",
+    "doorPayment": "Abendkasse",
+    "priceFrom": "ab",
     "free": "Kostenlos",
     "joinOnline": "Zum Online-Event",
     "online": "Online-Event",
@@ -1620,5 +1634,25 @@
     "faq5Q": "Bekomme ich ein Reporting nach der Kampagne?",
     "faq5A": "Ja, du erhältst einen Überblick über Reichweite, Impressions, Engagement und erstellten Content.",
     "ctaButton": "Jetzt Anfrage senden →"
+  },
+  "drawer": {
+    "explore": "Entdecken",
+    "myTickets": "Meine Tickets",
+    "myCreatedEvents": "Erstellte Events",
+    "drafts": "Entwürfe",
+    "createEvent": "Event erstellen",
+    "chats": "Chats",
+    "favorites": "Favoriten",
+    "searchUsers": "Personen suchen",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "blockedUsers": "Blockierte Nutzer",
+    "safetyCompanion": "Safety Companion",
+    "advertising": "Werbung",
+    "spotlight": "Spotlight",
+    "greeting": "Hallo {{name}}!",
+    "subGreeting": "Schön, dass du da bist",
+    "myBalance": "Mein Guthaben",
+    "balanceHint": "Einlösbar beim nächsten Ticketkauf."
   }
 }

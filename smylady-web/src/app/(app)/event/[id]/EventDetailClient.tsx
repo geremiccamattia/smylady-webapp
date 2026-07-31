@@ -292,6 +292,16 @@ export default function EventDetailClient({ id }: Props) {
     enabled: !!id && !!user && !!event,
   })
 
+  // Einmal berechnet, zweifach genutzt: das Sticky-Banner selbst und das Bottom-Padding
+  // des Seiteninhalts müssen zwingend dieselbe Bedingung teilen, sonst entsteht entweder
+  // toter Leerraum oder das Banner verdeckt den Ticket-Button.
+  const showStickyRaffleBar = !!(
+    event?.isRaffle &&
+    showRaffleBanner &&
+    raffleStatus?.raffleStatus === 'active' &&
+    !purchasedTicket
+  )
+
   const { data: refundPreview, isLoading: isRefundPreviewLoading } = useQuery({
     queryKey: ['refundPreview', purchasedTicket?._id || purchasedTicket?.id],
     queryFn: () => ticketsService.getRefundPreview(
@@ -593,8 +603,26 @@ export default function EventDetailClient({ id }: Props) {
     return typeof event?.price === 'string' ? parseFloat(event.price) : (event?.price || 0)
   })()
 
+  // Günstigster Tier-Preis für die "ab X €"-Anzeige in der Sticky-Leiste.
+  // Anders als displayPrice hängt der nicht an der aktuellen Tier-Auswahl.
+  const lowestTicketPrice = event?.ticketTiers?.length
+    ? Math.min(...event.ticketTiers.map((tier: any) => Number(tier.price) || 0))
+    : (typeof event?.price === 'string' ? parseFloat(event.price) || 0 : (event?.price || 0))
+
+  // Sticky-CTA nur für eigene Events: externe (Ticketmaster) haben keinen Kauf-Flow in
+  // dieser App, sie leiten direkt auf den Anbieter weiter.
+  const showStickyCta = !isExternalEvent
+
   return (
-    <div className="max-w-4xl mx-auto">
+    // Bottom-Padding für die fixierten Leisten. Layout gibt bereits pb-20 (Bottombar) mit,
+    // hier kommt nur die Höhe der Sticky-CTA (~57px) bzw. zusätzlich des Raffle-Banners
+    // (~50px) dazu. twMerge behält jeweils die letzte pb-Klasse, daher gewinnt die
+    // Banner-Variante, wenn beide Leisten stehen.
+    <div className={cn(
+      "max-w-4xl mx-auto",
+      showStickyCta && "pb-20",
+      showStickyRaffleBar && "pb-32 md:pb-24",
+    )}>
       {/* Back Button */}
       <Button
         variant="ghost"
@@ -1489,35 +1517,121 @@ export default function EventDetailClient({ id }: Props) {
       </div>
 
       {/* Sticky Raffle Bar */}
-      {event?.isRaffle && showRaffleBanner && raffleStatus?.raffleStatus === 'active' && !purchasedTicket && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white shadow-lg border-t border-amber-400">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      {/* bottom-32 = Bottombar (64px) + Sticky-CTA (~57px); auf Desktop (keine der beiden
+          Leisten) bündig unten.
+          z-40 hält die Leiste unter Dialogen/Modals (z-50), aber über dem Seiteninhalt.
+          overflow-hidden + truncate: ein langer rafflePrize hat die Zeile sonst über den
+          Viewport hinaus gedehnt und die Seite horizontal scrollbar gemacht. */}
+      {showStickyRaffleBar && (
+        <div className="fixed bottom-32 md:bottom-0 left-0 right-0 z-40 overflow-hidden bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white shadow-lg border-t border-amber-400">
+          <div className="max-w-4xl mx-auto px-3 py-2 flex items-center gap-2">
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm flex items-center gap-1.5">
+              <p className="font-bold text-xs truncate">
                 🎁 {event.rafflePrize || t('raffle.prizeFallback', { defaultValue: 'Tolle Preise zu gewinnen!' })}
               </p>
-              <p className="text-xs text-white/80">
+              <p className="text-[10px] text-white/80 truncate">
                 {t('raffle.stickySubline', { defaultValue: 'Nimm kostenlos am Gewinnspiel teil.' })}
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="bg-white text-amber-600 hover:bg-white/90 font-bold"
-                onClick={() => {
-                  document.getElementById('ticket-section')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-              >
-                🎰 {t('raffle.participateNow', { defaultValue: 'Jetzt teilnehmen' })}
-              </Button>
-              <button
-                onClick={() => setShowRaffleBanner(false)}
-                className="text-white/70 hover:text-white p-1"
-              >
-                ✕
-              </button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="shrink-0 h-8 px-3 rounded-full bg-white text-amber-600 hover:bg-white/90 font-bold text-xs"
+              onClick={() => {
+                document.getElementById('ticket-section')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+            >
+              🎰 {t('raffle.participateNow', { defaultValue: 'Jetzt teilnehmen' })}
+            </Button>
+            <button
+              onClick={() => setShowRaffleBanner(false)}
+              aria-label={t('common.close', { defaultValue: 'Schließen' })}
+              className="shrink-0 text-white/70 hover:text-white p-1 text-sm"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky CTA — nur Mobile, zusätzlich zum Button im Ticket-Bereich.
+          z-30: unter dem Raffle-Banner (z-40) und unter Dialogen (z-50).
+          Zustände und Texte spiegeln exakt den Ticket-Bereich weiter oben. */}
+      {showStickyCta && (
+        <div className="fixed bottom-16 left-0 right-0 z-30 md:hidden bg-background/95 backdrop-blur border-t px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            {/* Preis-Info links */}
+            <div className="min-w-0">
+              {isSoldOut ? (
+                <p className="font-bold text-sm text-muted-foreground truncate">
+                  {t('events.soldOut')}
+                </p>
+              ) : isDoorPayment ? (
+                <p className="font-bold text-sm truncate">
+                  {t('event.doorPayment', { defaultValue: 'Abendkasse' })}
+                </p>
+              ) : lowestTicketPrice > 0 ? (
+                <>
+                  {(event.ticketTiers?.length ?? 0) > 0 && (
+                    <p className="text-xs text-muted-foreground leading-none">
+                      {t('event.priceFrom', { defaultValue: 'ab' })}
+                    </p>
+                  )}
+                  <p className="font-bold text-sm truncate">{formatPrice(lowestTicketPrice)}</p>
+                </>
+              ) : (
+                <p className={cn(
+                  "font-bold text-sm truncate",
+                  event.isRaffle ? "text-amber-600" : "text-green-600"
+                )}>
+                  {t('events.free')}
+                </p>
+              )}
             </div>
+
+            {/* CTA rechts */}
+            {purchasedTicket ? (
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5" asChild>
+                <Link href={`/ticket/${purchasedTicket._id || purchasedTicket.id}`}>
+                  <CheckCircle className="h-4 w-4" />
+                  {t('tickets.viewTicket', { defaultValue: 'Ticket anzeigen' })}
+                </Link>
+              </Button>
+            ) : isSoldOut ? (
+              <Button variant="secondary" size="sm" className="shrink-0" disabled>
+                {t('events.soldOut')}
+              </Button>
+            ) : event.isRaffle ? (
+              <Button
+                size="sm"
+                className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold"
+                onClick={handlePurchaseTicket}
+                loading={isPurchasing}
+                disabled={
+                  isPurchasing ||
+                  ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
+                }
+              >
+                🎰 {t('raffle.ctaButton', { defaultValue: 'Am Gewinnspiel teilnehmen' })}
+              </Button>
+            ) : (
+              <Button
+                variant="gradient"
+                size="sm"
+                className="shrink-0 gap-1.5 font-bold"
+                onClick={handlePurchaseTicket}
+                loading={isPurchasing}
+                disabled={
+                  isPurchasing ||
+                  ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
+                }
+              >
+                <Ticket className="h-4 w-4" />
+                {isDoorPayment || Number(event.price) === 0
+                  ? t('tickets.imIn', { defaultValue: 'Bin dabei' })
+                  : t('tickets.buyTicket')}
+              </Button>
+            )}
           </div>
         </div>
       )}

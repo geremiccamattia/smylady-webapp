@@ -1,7 +1,6 @@
 'use client'
 
 import { useTranslation } from 'react-i18next'
-import { useRouter, usePathname } from 'next/navigation'
 import { Globe } from 'lucide-react'
 import {
   DropdownMenu,
@@ -18,26 +17,31 @@ const languages = [
 
 export default function LanguageSwitcher() {
   const { i18n } = useTranslation()
-  const router = useRouter()
-  const pathname = usePathname()
 
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0]
 
   const handleLanguageChange = (langCode: string) => {
-    // 1. i18next Sprache ändern (setzt Cookie)
+    // 1. i18next-Sprache umstellen. Der languageChanged-Handler in src/i18n/index.ts
+    //    schreibt syp_language synchron in den localStorage — steht also vor dem Reload.
     i18n.changeLanguage(langCode)
 
-    // 2. Zur richtigen URL navigieren
+    // 2. Navigieren über window.location statt router.push: der harte Reload verlässt die
+    //    Seite sofort. Ein Client-Side-Push hat den React-Baum stattdessen weiterlaufen
+    //    lassen, während das Menü noch offen war — Folge-Events konnten dann noch auf
+    //    Elementen landen, die durch den Sprachwechsel neu gerendert wurden.
+    const { pathname, search, hash } = window.location
+
+    let newPath: string
     if (langCode === 'en') {
-      // Zu /en/... navigieren falls noch nicht dort
-      if (!pathname.startsWith('/en')) {
-        router.push(`/en${pathname}`)
-      }
+      newPath = pathname.startsWith('/en') ? pathname : `/en${pathname}`
     } else {
-      // /en/... entfernen für Deutsch
-      if (pathname.startsWith('/en')) {
-        router.push(pathname.replace(/^\/en/, '') || '/')
-      }
+      newPath = pathname.startsWith('/en') ? (pathname.replace(/^\/en/, '') || '/') : pathname
+    }
+
+    // Nur navigieren wenn sich der Pfad ändert
+    if (newPath !== pathname) {
+      // search + hash mitnehmen, sonst geht z.B. /explore?search=techno beim Wechsel verloren
+      window.location.href = `${newPath}${search}${hash}`
     }
   }
 

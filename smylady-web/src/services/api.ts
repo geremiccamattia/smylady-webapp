@@ -37,12 +37,21 @@ apiClient.interceptors.response.use(
         localStorage.removeItem(STORAGE_KEYS.TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER)
       }
-      const publicPaths = ['/explore', '/login', '/register', '/event/', '/user/', '/feed', '/post/']
-      const isPublicPath = publicPaths.some(path =>
-        window.location.pathname.startsWith(path)
-      )
+      const publicPaths = [
+        '/explore', '/login', '/register', '/event/', '/user/', '/feed', '/post/',
+        '/influencer', '/api', '/communities',
+      ]
+      // Locale-Prefix abschneiden, sonst gilt /en/explore nicht als public und ein 401
+      // einer Nebenanfrage wirft den Besucher von einer öffentlichen Seite auf /login.
+      // Lookahead, damit nur ein echtes Segment matcht (/en/... oder /en), nicht /events.
+      const pathWithoutLocale = window.location.pathname.replace(/^\/(en|de)(?=\/|$)/, '') || '/'
+      const isPublicPath =
+        pathWithoutLocale === '/' ||
+        publicPaths.some(path => pathWithoutLocale.startsWith(path))
       if (!isPublicPath) {
-        window.location.href = '/login'
+        // Sprache beim Redirect halten — sonst landen EN-Nutzer auf der deutschen Seite
+        const localePrefix = /^\/en(?=\/|$)/.test(window.location.pathname) ? '/en' : ''
+        window.location.href = `${localePrefix}/login`
       }
     }
     return Promise.reject(error)

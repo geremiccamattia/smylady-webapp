@@ -2,7 +2,8 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Search, Plus, Ticket, User, Newspaper } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Home, Search, Plus, Ticket, User, Newspaper, LogIn, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -14,18 +15,24 @@ const navItems = [
   { icon: Plus, label: 'Erstellen', path: '/create-event', requiresAuth: true, key: 'create' },
   { icon: Ticket, label: 'Tickets', path: '/my-tickets', requiresAuth: true, key: 'tickets' },
   { icon: User, label: 'Profil', path: '/profile', requiresAuth: true, key: 'profile' },
+  // Gäste-Einstieg — entspricht den Tabs "Login" und "Sei Dabei" in der Mobile-App.
+  // Ohne diese Tabs sieht ein neuer Nutzer auf Mobile keinen Weg zur Anmeldung.
+  { icon: LogIn, label: 'Anmelden', path: '/login', guestOnly: true, key: 'login', i18nKey: 'nav.login' },
+  { icon: UserPlus, label: 'Sei dabei', path: '/register', guestOnly: true, key: 'register', i18nKey: 'nav.register', highlight: true },
 ]
 
 export default function MobileNav() {
   const pathname = usePathname()
   const { isAuthenticated } = useAuth()
+  const { t } = useTranslation()
   const localePath = useLocalePath()
 
   // /en Prefix für isActive Vergleich entfernen
   const cleanPath = pathname.replace(/^\/en/, '') || '/'
 
   const visibleItems = navItems.filter(item =>
-    !item.requiresAuth || isAuthenticated
+    (!item.requiresAuth || isAuthenticated) &&
+    (!item.guestOnly || !isAuthenticated)
   )
 
   return (
@@ -34,6 +41,7 @@ export default function MobileNav() {
         {visibleItems.map((item) => {
           const isActive = cleanPath === item.path
           const Icon = item.icon
+          const label = item.i18nKey ? t(item.i18nKey, { defaultValue: item.label }) : item.label
 
           return (
             <Link
@@ -41,7 +49,7 @@ export default function MobileNav() {
               href={localePath(item.path)}
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors",
-                isActive
+                isActive || item.highlight
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
@@ -52,8 +60,8 @@ export default function MobileNav() {
                 </div>
               ) : (
                 <>
-                  <Icon className={cn("h-5 w-5", isActive && "text-primary")} />
-                  <span className="text-xs">{item.label}</span>
+                  <Icon className={cn("h-5 w-5", (isActive || item.highlight) && "text-primary")} />
+                  <span className={cn("text-xs", item.highlight && "font-medium")}>{label}</span>
                 </>
               )}
             </Link>
