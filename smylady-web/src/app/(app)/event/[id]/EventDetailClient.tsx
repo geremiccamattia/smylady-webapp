@@ -863,7 +863,10 @@ export default function EventDetailClient({ id }: Props) {
 
               {/* Hinweis kein Kaufzwang */}
               <p className="text-[10px] text-muted-foreground">
-                {t('raffle.disclaimer', { defaultValue: 'Die Teilnahme ist kostenlos. Es besteht kein Kaufzwang. Der Rechtsweg ist ausgeschlossen.' })}
+                {t('raffle.disclaimer', { defaultValue: 'Die Teilnahme ist kostenlos. Es besteht kein Kaufzwang. Der Rechtsweg ist ausgeschlossen.' })}{' '}
+                <Link href={localePath(`/event/${id}/teilnahmebedingungen`)} className="text-primary underline">
+                  {t('raffle.termsLink', { defaultValue: 'Teilnahmebedingungen' })}
+                </Link>
               </p>
             </div>
           )}
