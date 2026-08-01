@@ -1158,7 +1158,7 @@ export default function EventDetail() {
                   <p className="text-sm text-muted-foreground">{t('events.location')}</p>
                   {event.location?.coordinates?.[0] && event.location?.coordinates?.[1] ? (
                     <a
-                      href={getMapsSearchUrl(event.locationName)}
+                      href={getMapsSearchUrl(event.locationName, event.location?.coordinates)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-semibold text-primary hover:underline"

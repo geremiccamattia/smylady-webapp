@@ -255,9 +255,36 @@ export function shortenAddress(fullAddress: string): string {
   return detail ? `${short} Top ${detail[1]}` : short
 }
 
-export function getMapsSearchUrl(locationName: string): string {
+/**
+ * Google-Maps-Link für einen Veranstaltungsort.
+ *
+ * Mit Koordinaten wird das Pfad-Format `maps/search/{Name}/@{lat},{lng},17z`
+ * genutzt: Google sucht nach dem Venue-Namen, zentriert die Karte aber auf die
+ * exakte Position (17z = Straßenebene). In die Suche geht nur der erste Teil des
+ * Namens — die volle Geocoder-Adresse ("Club U, Obj. U26, Textilviertel, …")
+ * liefert spürbar schlechtere Treffer.
+ *
+ * Ohne (brauchbare) Koordinaten bleibt es bei der reinen Textsuche.
+ *
+ * @param coordinates GeoJSON-Reihenfolge [lng, lat], so wie das Backend sie liefert.
+ */
+export function getMapsSearchUrl(locationName: string, coordinates?: number[] | null): string {
   const short = shortenAddress(locationName)
   const withoutDetail = short.replace(/\s*Top\s+.+$/, '')
+
+  const lng = coordinates?.[0]
+  const lat = coordinates?.[1]
+  // [0, 0] ist der Default eines nicht gesetzten GeoJSON-Punkts und läge im Atlantik
+  const hasCoordinates =
+    typeof lat === 'number' && typeof lng === 'number' &&
+    Number.isFinite(lat) && Number.isFinite(lng) &&
+    !(lat === 0 && lng === 0)
+
+  if (hasCoordinates) {
+    const venue = withoutDetail.split(',')[0].trim() || withoutDetail
+    return `https://www.google.com/maps/search/${encodeURIComponent(venue)}/@${lat},${lng},17z`
+  }
+
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(withoutDetail)}`
 }
 
