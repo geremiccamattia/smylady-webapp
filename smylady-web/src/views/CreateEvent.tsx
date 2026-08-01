@@ -1810,7 +1810,7 @@ function CreateEventContent() {
                 {t('createEvent.maxImagesNote')}
               </p>
               <p className="text-xs text-muted-foreground">
-                {t('createEvent.imageHint', { defaultValue: 'Ideales Format: 21:9 (z.B. 2100 × 900 px)' })}
+                {t('createEvent.imageHint', { defaultValue: 'Ideales Format: 16:9 (z.B. 1920 × 1080 px)' })}
               </p>
             </CardContent>
           </Card>

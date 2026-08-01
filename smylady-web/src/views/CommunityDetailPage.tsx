@@ -241,7 +241,7 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
   if (isLoading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        <div className="aspect-[21/9] rounded-xl bg-muted animate-pulse" />
+        <div className="aspect-[16/9] rounded-xl bg-muted animate-pulse" />
         <div className="h-8 w-1/2 bg-muted rounded animate-pulse" />
         <div className="h-4 w-1/3 bg-muted rounded animate-pulse" />
       </div>
@@ -334,7 +334,7 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
       {/* Header */}
       <div className="px-4 py-6">
         {community.coverImages?.[0]?.url ? (
-          <div className="aspect-[21/9] rounded-xl overflow-hidden mb-4">
+          <div className="aspect-[16/9] rounded-xl overflow-hidden mb-4">
             <img
               src={resolveImageUrl(community.coverImages[0].url)}
               alt=""
@@ -343,7 +343,7 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
           </div>
         ) : (
           <div
-            className="aspect-[21/9] rounded-xl mb-4 flex items-center justify-center"
+            className="aspect-[16/9] rounded-xl mb-4 flex items-center justify-center"
             style={{ backgroundColor: categoryColors[primaryCategory] || '#F5F5F5' }}
           >
             <span className="text-5xl">{categoryEmojis[primaryCategory] || '🎉'}</span>

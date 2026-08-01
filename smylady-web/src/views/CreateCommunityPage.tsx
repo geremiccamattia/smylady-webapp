@@ -460,7 +460,7 @@ export default function CreateCommunityPage() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {t('community.maxImagesHint', { defaultValue: 'Du kannst bis zu 5 Bilder hochladen. Ideales Format: 21:9 (z.B. 2100 × 900 px).' })}
+              {t('community.maxImagesHint', { defaultValue: 'Du kannst bis zu 5 Bilder hochladen. Ideales Format: 16:9 (z.B. 1920 × 1080 px).' })}
             </p>
 
             {previews.length > 0 && (
@@ -468,7 +468,7 @@ export default function CreateCommunityPage() {
                 {previews.map((preview, index) => (
                   <div
                     key={index}
-                    className="relative aspect-[21/9] rounded-lg overflow-hidden group cursor-pointer"
+                    className="relative aspect-[16/9] rounded-lg overflow-hidden group cursor-pointer"
                     onClick={() => openCropForExisting(index)}
                   >
                     <img src={preview} alt="" className="w-full h-full object-cover" />
@@ -512,7 +512,7 @@ export default function CreateCommunityPage() {
         imageUrl={cropImageUrl}
         onClose={handleCropClose}
         onCropComplete={handleCropComplete}
-        aspectRatio={21 / 9}
+        aspectRatio={16 / 9}
         freeStyle={false}
         title={t('community.cropCoverImage', { defaultValue: 'Titelbild zuschneiden' })}
       />
