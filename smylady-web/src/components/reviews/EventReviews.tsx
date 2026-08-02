@@ -272,7 +272,7 @@ export function EventReviews({ eventId, eventEnded = false }: EventReviewsProps)
 
         {/* Write Review Form */}
         {(canReview || isEditing) && (
-          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+          <div id="review-form" className="space-y-4 p-4 bg-muted/50 rounded-lg">
             <div>
               <p className="font-medium mb-2">
                 {isEditing ? t('reviews.edit') : t('reviews.rateEvent')}

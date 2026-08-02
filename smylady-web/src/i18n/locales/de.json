@@ -1237,6 +1237,8 @@
     "organizerNoReviews": "Dieser Veranstalter hat noch keine Bewertungen",
     "organizerReviewsTitle": "Veranstalter-Bewertungen",
     "pleaseSelectRating": "Bitte wähle eine Bewertung",
+    "ratePrompt": "Warst du dabei? Bewerte das Event!",
+    "rateSubline": "Deine Bewertung hilft anderen bei der Entscheidung.",
     "required": "Erforderlich",
     "reviewCount": "{{count}} Bewertungen",
     "reviewsTitle": "Bewertungen",
@@ -1250,6 +1252,7 @@
     "totalReviewsBadge": "{{count}} Bewertungen",
     "update": "Aktualisieren",
     "updated": "Bewertung aktualisiert",
+    "writeReview": "Jetzt bewerten",
     "yourReview": "Deine Bewertung"
   },
   "scanStatistics": {

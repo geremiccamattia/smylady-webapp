@@ -20,6 +20,11 @@ export interface Notification {
   commentId?: string
   commentIndex?: number
   image?: string
+  data?: {
+    type?: string
+    eventId?: string
+    [key: string]: unknown
+  }
   sender?: {
     id?: string
     name?: string

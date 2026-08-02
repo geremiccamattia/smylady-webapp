@@ -1380,6 +1380,8 @@
     "organizerNoReviews": "This organizer has no reviews yet",
     "organizerReviewsTitle": "Organizer reviews",
     "pleaseSelectRating": "Please select a rating",
+    "ratePrompt": "Were you there? Rate this event!",
+    "rateSubline": "Your review helps others decide.",
     "required": "Required",
     "reviewCount": "{{count}} reviews",
     "reviewsTitle": "Reviews",
@@ -1393,6 +1395,7 @@
     "totalReviewsBadge": "{{count}} reviews",
     "update": "Update",
     "updated": "Review updated",
+    "writeReview": "Write a review",
     "yourReview": "Your review"
   },
   "scanStatistics": {

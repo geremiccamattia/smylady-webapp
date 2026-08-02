@@ -176,6 +176,16 @@ export default function EventDetailClient({ id }: Props) {
     window.dataLayer.push({ event: 'event_detail_view', event_id: id })
   }, [id])
 
+  // Auto-scroll to reviews section when linked via #reviews (e.g. review reminder notification)
+  useEffect(() => {
+    if (window.location.hash === '#reviews' && !isLoading) {
+      const timer = setTimeout(() => {
+        document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 500) // Warten bis die Seite geladen ist
+      return () => clearTimeout(timer)
+    }
+  }, [isLoading])
+
   useEffect(() => {
     if (isExternalEvent && externalUrl) {
       window.open(externalUrl, '_blank', 'noopener,noreferrer')
@@ -1057,6 +1067,27 @@ export default function EventDetailClient({ id }: Props) {
                   <p className="text-muted-foreground">{t('memories.noMemories')}</p>
                 </div>
               ) : null}
+            </div>
+          )}
+
+          {/* Bewertungs-Prompt — immer wenn Event vorbei, auch bei 0 Bewertungen */}
+          {!isExternalEvent && eventHasStarted && (
+            <div id="reviews" className="p-6 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl text-center">
+              <p className="text-3xl mb-3">⭐</p>
+              <h3 className="text-lg font-semibold mb-1">
+                {t('reviews.ratePrompt', { defaultValue: 'Warst du dabei? Bewerte das Event!' })}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('reviews.rateSubline', { defaultValue: 'Deine Bewertung hilft anderen bei der Entscheidung.' })}
+              </p>
+              <Button
+                variant="gradient"
+                onClick={() => {
+                  document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                {t('reviews.writeReview', { defaultValue: 'Jetzt bewerten' })}
+              </Button>
             </div>
           )}
 

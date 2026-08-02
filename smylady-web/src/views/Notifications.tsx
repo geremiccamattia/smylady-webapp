@@ -11,6 +11,7 @@ import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { useTranslation } from 'react-i18next'
 import {
   Bell,
@@ -25,6 +26,7 @@ import {
   AlertTriangle,
   Star,
   PartyPopper,
+  Camera,
 } from 'lucide-react'
 
 const getNotificationIcon = (type: string) => {
@@ -65,6 +67,8 @@ const getNotificationIcon = (type: string) => {
     story_mention: <MessageCircle className="h-5 w-5 text-blue-500" />,
     comment_reaction: <Heart className="h-5 w-5 text-pink-500" />,
     review_received: <Star className="h-5 w-5 text-yellow-500" />,
+    review_reminder: <Star className="h-5 w-5 text-yellow-500" />,
+    profile_photo_reminder: <Camera className="h-5 w-5 text-purple-500" />,
     Announcement: <Bell className="h-5 w-5 text-blue-500" />,
   }
   return iconMap[type] || <Bell className="h-5 w-5 text-gray-500" />
@@ -74,6 +78,7 @@ export default function Notifications() {
   const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const router = useRouter()
+  const localePath = useLocalePath()
   const queryClient = useQueryClient()
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
 
@@ -129,6 +134,18 @@ export default function Notifications() {
     // Organizer new subscriber → Navigate to the new follower's profile
     if (notification.type === 'organizer_new_subscriber' && notification.sender?.id) {
       router.push(`/user/${notification.sender.id}`)
+      return
+    }
+
+    // Profile photo reminder → Navigate to own profile page
+    if (notification.type === 'profile_photo_reminder' || notification.data?.type === 'profile_photo_reminder') {
+      router.push(localePath('/profile'))
+      return
+    }
+
+    // Review reminder → Navigate straight to the reviews section on the event page
+    if (notification.type === 'review_reminder' && notification.eventId) {
+      router.push(`/event/${notification.eventId}#reviews`)
       return
     }
 
