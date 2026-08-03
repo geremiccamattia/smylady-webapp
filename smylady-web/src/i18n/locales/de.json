@@ -1090,7 +1090,11 @@
     "ctaButton": "Am Gewinnspiel teilnehmen",
     "ctaSubline": "Gewinn:",
     "prizeFallback": "Tolle Preise zu gewinnen!",
-    "termsLink": "Teilnahmebedingungen"
+    "termsLink": "Teilnahmebedingungen",
+    "promoPrize": "Gewinne: {{prize}}",
+    "promoGeneric": "Gewinnspiel — Tolle Preise zu gewinnen!",
+    "promoFree": "Kostenlos teilnehmen",
+    "promoButton": "Teilnehmen →"
   },
   "raffleTerms": {
     "title": "Gewinnspiel-Teilnahmebedingungen",

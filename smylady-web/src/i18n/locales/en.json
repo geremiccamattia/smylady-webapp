@@ -1226,7 +1226,11 @@
     "ctaButton": "Join the raffle",
     "ctaSubline": "Prize:",
     "prizeFallback": "Amazing prizes to win!",
-    "termsLink": "Terms and conditions"
+    "termsLink": "Terms and conditions",
+    "promoPrize": "Win: {{prize}}",
+    "promoGeneric": "Raffle — Amazing prizes to win!",
+    "promoFree": "Participate for free",
+    "promoButton": "Join →"
   },
   "raffleTerms": {
     "title": "Raffle Terms and Conditions",

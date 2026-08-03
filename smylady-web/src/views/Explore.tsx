@@ -12,6 +12,7 @@ import { ticketmasterService } from '@/services/ticketmaster'
 import { communityService } from '@/services/community'
 import CommunityCard from '@/components/community/CommunityCard'
 import { RaffleEventCard } from '@/components/RaffleEventCard'
+import { RafflePromoBanner } from '@/components/RafflePromoBanner'
 import {
   getManualLocation,
   getCurrentLocation,
@@ -720,7 +721,7 @@ function ExploreContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-32 md:pb-0">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">
@@ -1217,6 +1218,9 @@ function ExploreContent() {
       )}
 
       <ScrollSignupPrompt />
+
+      {/* Gewinnspiel-Promo — nur auf Explore und Feed, nicht global im Layout */}
+      <RafflePromoBanner />
     </div>
   )
 }

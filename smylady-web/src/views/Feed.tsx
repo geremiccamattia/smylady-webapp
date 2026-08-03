@@ -16,6 +16,7 @@ import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
 import { StoriesBar } from '@/components/stories/StoriesBar'
 import CommunityExplore from '@/components/community/CommunityExplore'
 import { PostCard } from '@/components/PostCard'
+import { RafflePromoBanner } from '@/components/RafflePromoBanner'
 import MentionInput from '@/components/mentionInput/MentionInput'
 import { SpotifyTrackSearch } from '@/components/SpotifyTrackSearch'
 import { SpotifyTrackPreview } from '@/components/SpotifyTrackPreview'
@@ -86,7 +87,10 @@ function FeedContent() {
   const posts = postsData?.pages.flatMap(page => page.posts) || []
 
   return (
-    <div className={activeTab === 'feed' ? 'max-w-2xl mx-auto space-y-6' : 'space-y-6'}>
+    <div className={cn(
+      'space-y-6 pb-32 md:pb-0',
+      activeTab === 'feed' && 'max-w-2xl mx-auto'
+    )}>
       {/* Feed / Communities Sub-Tabs */}
       <div className="flex border-b mb-4">
         <button
@@ -210,6 +214,9 @@ function FeedContent() {
       ) : (
         <CommunityExplore />
       )}
+
+      {/* Gewinnspiel-Promo — nur auf Explore und Feed, nicht global im Layout */}
+      <RafflePromoBanner />
     </div>
   )
 }
