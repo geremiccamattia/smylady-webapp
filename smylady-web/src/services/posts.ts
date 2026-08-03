@@ -33,10 +33,15 @@ export interface Post {
   content?: string
   media?: Array<{ url: string; type: 'image' | 'video' }>
   images?: string[]
+  // String wenn das Backend eventId nicht populiert, sonst das Event-Objekt.
+  // Die Felder ab eventDate liefert nur die populierte Variante (siehe Rich-Preview in PostCard).
   eventId?: string | {
     _id: string
     name: string
     thumbnailUrl?: string
+    eventDate?: string
+    locationName?: string
+    locationImages?: Array<{ url: string }>
   }
   eventTitle?: string
   likeCount: number

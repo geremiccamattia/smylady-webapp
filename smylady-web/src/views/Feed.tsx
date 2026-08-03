@@ -2,13 +2,15 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { postsService } from '@/services/posts'
+import { apiClient } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
@@ -27,16 +29,21 @@ import {
   X,
   Loader2,
   Calendar,
+  CalendarPlus,
   Music,
 } from 'lucide-react'
 
 function FeedContent() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth()
   const { requireAuth } = useRequireAuth()
   const { t } = useTranslation()
   const searchParams = useSearchParams()
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [activeTab, setActiveTab] = useState<'feed' | 'communities'>('feed')
+
+  // "Als Post teilen" von der Event-Detail-Seite: Event steckt in der URL
+  const shareEventId = searchParams.get('shareEvent')
+  const shareEventTitle = searchParams.get('shareEventTitle')
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -44,6 +51,29 @@ function FeedContent() {
       setActiveTab('communities')
     }
   }, [searchParams])
+
+  useEffect(() => {
+    // isAuthLoading abwarten: beim ersten Render ist isAuthenticated noch false,
+    // während der Token aus dem localStorage gelesen wird — sonst bekämen
+    // eingeloggte Nutzer fälschlich das Login-Modal zu sehen.
+    if (!shareEventId || isAuthLoading) return
+    setActiveTab('feed')
+    // Gäste bekommen erst das Login-Modal — Posten geht nur eingeloggt.
+    requireAuth(() => setShowCreatePost(true))
+  }, [shareEventId, isAuthLoading])
+
+  // Nach dem Schließen die share-Parameter aus der URL nehmen, sonst öffnet sich
+  // das Modal bei jedem Reload oder Zurück-Navigieren wieder mit dem alten Event.
+  const handleCloseCreatePost = () => {
+    setShowCreatePost(false)
+    if (shareEventId || shareEventTitle) {
+      const params = new URLSearchParams(window.location.search)
+      params.delete('shareEvent')
+      params.delete('shareEventTitle')
+      const query = params.toString()
+      window.history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''))
+    }
+  }
 
   useEffect(() => {
     if (window.location.hash) {
@@ -208,7 +238,11 @@ function FeedContent() {
 
           {/* Create Post Modal */}
           {showCreatePost && (
-            <CreatePostModal onClose={() => setShowCreatePost(false)} />
+            <CreatePostModal
+              onClose={handleCloseCreatePost}
+              initialEventId={shareEventId || undefined}
+              initialEventTitle={shareEventTitle || undefined}
+            />
           )}
         </>
       ) : (
@@ -229,6 +263,14 @@ export default function Feed() {
   )
 }
 
+interface SelectedEvent {
+  id: string
+  title: string
+  image?: string
+  date?: string
+  location?: string
+}
+
 // Create Post Modal
 export function CreatePostModal({
   onClose,
@@ -247,13 +289,24 @@ export function CreatePostModal({
 }) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
+
+  const formatEventDate = (dateStr?: string) => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr)
+    return isNaN(date.getTime())
+      ? ''
+      : date.toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'de-AT')
+  }
   const [content, setContent] = useState(initialText ?? '')
   const [mentions, setMentions] = useState<string[]>([])
   const [images, setImages] = useState<File[]>(initialImages ?? [])
-  const [eventId] = useState(initialEventId)
-  const [eventTitle] = useState(initialEventTitle)
+  const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(
+    initialEventId ? { id: initialEventId, title: initialEventTitle || '' } : null
+  )
+  const [showEventSearch, setShowEventSearch] = useState(false)
+  const [eventSearchQuery, setEventSearchQuery] = useState('')
   const [previews, setPreviews] = useState<string[]>([])
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
@@ -261,13 +314,26 @@ export function CreatePostModal({
   const [showSongSearch, setShowSongSearch] = useState(false)
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null)
 
+  // Event-Suche — erst ab 2 Zeichen, max. 5 Treffer
+  const { data: eventSearchResults } = useQuery({
+    queryKey: ['eventSearch', eventSearchQuery],
+    queryFn: async () => {
+      const response = await apiClient.get('/events', {
+        params: { search: eventSearchQuery, limit: 5, upcoming: true },
+      })
+      const events = response.data?.data?.events || response.data?.data || []
+      return Array.isArray(events) ? events.slice(0, 5) : []
+    },
+    enabled: eventSearchQuery.trim().length >= 2,
+  })
+
   const createMutation = useMutation({
     mutationFn: () => postsService.create({
       content,
       images,
       mentions: mentions.length > 0 ? mentions : undefined,
-      eventId: eventId ?? undefined,
-      eventTitle: eventTitle ?? undefined,
+      eventId: selectedEvent?.id ?? undefined,
+      eventTitle: selectedEvent?.title ?? undefined,
       spotifyTrack: selectedTrack ?? undefined,
       communityId,
     }),
@@ -394,10 +460,96 @@ export function CreatePostModal({
             autoFocus
           />
 
-          {eventTitle && (
-            <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-muted rounded-lg">
-              <Calendar className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">{eventTitle}</span>
+          {/* Angehängtes Event */}
+          {selectedEvent && (
+            <div className="mt-3 p-3 border rounded-xl flex items-center gap-3 bg-muted/30">
+              {selectedEvent.image ? (
+                <img
+                  src={resolveImageUrl(selectedEvent.image)}
+                  alt=""
+                  className="w-16 h-10 rounded-lg object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-10 rounded-lg bg-muted shrink-0 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{selectedEvent.title}</p>
+                {selectedEvent.date && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {formatEventDate(selectedEvent.date)}
+                    {selectedEvent.location && ` · ${selectedEvent.location}`}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEvent(null)}
+                aria-label={t('common.remove', { defaultValue: 'Entfernen' })}
+                className="text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Event-Suche */}
+          {showEventSearch && !selectedEvent && (
+            <div className="mt-3 border rounded-xl p-3 space-y-2">
+              <Input
+                placeholder={t('posts.searchEvent', { defaultValue: 'Event suchen...' })}
+                value={eventSearchQuery}
+                onChange={(e) => setEventSearchQuery(e.target.value)}
+                className="text-sm"
+                autoFocus
+              />
+              {eventSearchResults && eventSearchResults.length > 0 && (
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {eventSearchResults.map((event: any) => (
+                    <button
+                      key={event._id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedEvent({
+                          id: event._id,
+                          title: event.name,
+                          image: event.locationImages?.[0]?.url,
+                          date: event.eventDate,
+                          location: event.locationName?.split(',')[0],
+                        })
+                        setShowEventSearch(false)
+                        setEventSearchQuery('')
+                      }}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted text-left"
+                    >
+                      {event.locationImages?.[0]?.url ? (
+                        <img
+                          src={resolveImageUrl(event.locationImages[0].url)}
+                          alt=""
+                          className="w-12 h-8 rounded object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-8 rounded bg-muted shrink-0 flex items-center justify-center">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{event.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {formatEventDate(event.eventDate)}
+                          {event.locationName && ` · ${event.locationName.split(',')[0]}`}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {eventSearchQuery.trim().length >= 2 && eventSearchResults?.length === 0 && (
+                <p className="text-xs text-muted-foreground px-1">
+                  {t('posts.noEventsFound', { defaultValue: 'Keine Events gefunden.' })}
+                </p>
+              )}
             </div>
           )}
 
@@ -470,6 +622,18 @@ export function CreatePostModal({
                 }`}
               >
                 <Music className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEventSearch(!showEventSearch)}
+                className={`p-2 rounded-lg transition-colors ${
+                  selectedEvent || showEventSearch
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+                title={t('posts.attachEvent', { defaultValue: 'Event anhängen' })}
+              >
+                <CalendarPlus className="h-5 w-5" />
               </button>
             </div>
             <Button

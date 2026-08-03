@@ -737,17 +737,48 @@ export function PostCard({ post, communityId }: PostCardProps) {
           </div>
         )}
 
-        {/* Event Reference */}
-        {post.eventTitle && post.eventId && (
-          <a
-            href={`/event/${generateEventSlug(post.eventTitle, typeof post.eventId === 'string' ? post.eventId : '')}#memories`}
-            className="flex items-center gap-2 mt-2 px-3 py-2 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
-            onClick={e => e.stopPropagation()}
-          >
-            <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
-            <p className="font-medium text-sm text-primary truncate">{post.eventTitle}</p>
-          </a>
-        )}
+        {/* Event Reference — Rich-Preview wenn das Backend eventId populiert,
+            sonst Fallback auf den mitgespeicherten eventTitle. */}
+        {post.eventId && (() => {
+          const populated = typeof post.eventId === 'object' ? post.eventId : null
+          const eventRefId = populated?._id || (typeof post.eventId === 'string' ? post.eventId : '')
+          if (!eventRefId) return null
+
+          const eventName = populated?.name || post.eventTitle
+          // Ohne Namen lässt sich kein Slug bilden — dann die rohe ID, die Route akzeptiert beides.
+          const href = eventName ? `/event/${generateEventSlug(eventName, eventRefId)}` : `/event/${eventRefId}`
+          const cover = populated?.locationImages?.[0]?.url
+
+          return (
+            <Link href={localePath(href)} onClick={e => e.stopPropagation()}>
+              <div className="mt-2 mb-3 p-3 border rounded-xl flex items-center gap-3 hover:bg-muted/30 transition-colors cursor-pointer">
+                {cover ? (
+                  <img
+                    src={resolveImageUrl(cover)}
+                    alt=""
+                    className="w-20 h-14 rounded-lg object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-20 h-14 rounded-lg bg-muted shrink-0 flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">
+                    {eventName || t('posts.eventFallback', { defaultValue: 'Event' })}
+                  </p>
+                  {populated?.eventDate && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      📅 {new Date(populated.eventDate).toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'de-AT')}
+                      {populated.locationName && ` · 📍 ${populated.locationName.split(',')[0]}`}
+                    </p>
+                  )}
+                </div>
+                <span className="text-xs text-primary shrink-0">→</span>
+              </div>
+            </Link>
+          )
+        })()}
 
         {/* Reactions/Likes Summary + Comment Count Row (like Facebook/Mobile) */}
         {(() => {

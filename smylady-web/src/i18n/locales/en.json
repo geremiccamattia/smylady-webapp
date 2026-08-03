@@ -446,6 +446,10 @@
   },
   "posts": {
     "title": "Posts",
+    "attachEvent": "Attach event",
+    "searchEvent": "Search event...",
+    "noEventsFound": "No events found.",
+    "eventFallback": "Event",
     "createPost": "Create Post",
     "whatAreYouThinking": "What are you thinking?",
     "like": "Like",
@@ -1107,6 +1111,7 @@
     "updateSuccess": "Event updated"
   },
   "event": {
+    "shareAsPost": "Share as post",
     "accessDeniedDescription": "You do not have access to this event",
     "accessDeniedTitle": "Access denied",
     "createdBy": "Created by",

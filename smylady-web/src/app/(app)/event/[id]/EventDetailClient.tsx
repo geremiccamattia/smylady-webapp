@@ -64,6 +64,7 @@ import {
   XCircle,
   Zap,
   Gift,
+  PenSquare,
 } from 'lucide-react'
 
 interface Props { id: string }
@@ -1474,6 +1475,21 @@ export default function EventDetailClient({ id }: Props) {
                       </Button>
                     )}
                   </>
+                )}
+
+                {/* Als Post teilen — nur für interne Events, da post.eventId auf ein
+                    echtes Event referenziert (Ticketmaster-IDs sind keine ObjectIds). */}
+                {!isExternalEvent && eventId && event?.name && (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 mt-2"
+                    onClick={() => router.push(localePath(
+                      `/feed?shareEvent=${eventId}&shareEventTitle=${encodeURIComponent(event.name)}`
+                    ))}
+                  >
+                    <PenSquare className="h-4 w-4" />
+                    {t('event.shareAsPost', { defaultValue: 'Als Post teilen' })}
+                  </Button>
                 )}
 
                 {/* Verwaltungs-Buttons — zusätzlich, nur für Creator/Admin */}

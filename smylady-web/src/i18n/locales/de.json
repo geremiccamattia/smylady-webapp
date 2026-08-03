@@ -418,6 +418,10 @@
   },
   "posts": {
     "title": "Beiträge",
+    "attachEvent": "Event anhängen",
+    "searchEvent": "Event suchen...",
+    "noEventsFound": "Keine Events gefunden.",
+    "eventFallback": "Event",
     "createPost": "Beitrag erstellen",
     "whatAreYouThinking": "Was denkst du gerade?",
     "like": "Gefällt mir",
@@ -973,6 +977,7 @@
     "updateSuccess": "Event aktualisiert"
   },
   "event": {
+    "shareAsPost": "Als Post teilen",
     "accessDeniedDescription": "Du hast keinen Zugang zu diesem Event",
     "accessDeniedTitle": "Zugang verweigert",
     "createdBy": "Erstellt von",
