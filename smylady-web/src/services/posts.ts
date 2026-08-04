@@ -44,6 +44,8 @@ export interface Post {
     locationImages?: Array<{ url: string }>
   }
   eventTitle?: string
+  // Kennzeichnung durch den Autor, dass der Inhalt mit KI erzeugt wurde
+  isAiGenerated?: boolean
   likeCount: number
   commentCount: number
   hasLiked: boolean
@@ -169,6 +171,7 @@ export interface CreatePostPayload {
   mentions?: string[]
   eventId?: string
   eventTitle?: string
+  isAiGenerated?: boolean
   spotifyTrack?: SpotifyTrack
   communityId?: string
 }
@@ -300,6 +303,7 @@ export const postsService = {
     mentions?: string[]
     eventId?: string
     eventTitle?: string
+    isAiGenerated?: boolean
     spotifyTrack?: SpotifyTrack
     communityId?: string
   }): Promise<Post> => {
@@ -328,6 +332,9 @@ export const postsService = {
     }
     if (payload.eventTitle) {
       postData.eventTitle = payload.eventTitle
+    }
+    if (payload.isAiGenerated) {
+      postData.isAiGenerated = true
     }
     if (payload.spotifyTrack) {
       postData.spotifyTrack = payload.spotifyTrack

@@ -307,6 +307,7 @@ export function CreatePostModal({
   )
   const [showEventSearch, setShowEventSearch] = useState(false)
   const [eventSearchQuery, setEventSearchQuery] = useState('')
+  const [isAiGenerated, setIsAiGenerated] = useState(false)
   const [previews, setPreviews] = useState<string[]>([])
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
@@ -334,6 +335,7 @@ export function CreatePostModal({
       mentions: mentions.length > 0 ? mentions : undefined,
       eventId: selectedEvent?.id ?? undefined,
       eventTitle: selectedEvent?.title ?? undefined,
+      isAiGenerated: isAiGenerated || undefined,
       spotifyTrack: selectedTrack ?? undefined,
       communityId,
     }),
@@ -599,6 +601,26 @@ export function CreatePostModal({
               </button>
             </div>
           )}
+
+          {/* KI-Kennzeichnung */}
+          <div className="mt-3">
+            <label className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAiGenerated}
+                onChange={(e) => setIsAiGenerated(e.target.checked)}
+                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 shrink-0"
+              />
+              <div>
+                <p className="text-sm font-medium">
+                  🤖 {t('posts.aiGenerated', { defaultValue: 'Mit KI erstellt' })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('posts.aiGeneratedHint', { defaultValue: 'Aktivieren, wenn Bilder oder Texte mit KI erzeugt wurden.' })}
+                </p>
+              </div>
+            </label>
+          </div>
 
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="flex gap-2">

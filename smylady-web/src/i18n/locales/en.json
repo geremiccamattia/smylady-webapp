@@ -1,5 +1,7 @@
 {
   "common": {
+    "aiShort": "AI",
+    "remove": "Remove",
     "optional": "optional",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -446,6 +448,9 @@
   },
   "posts": {
     "title": "Posts",
+    "aiGenerated": "Created with AI",
+    "aiGeneratedHint": "Enable if images or texts were generated with AI.",
+    "aiLabel": "AI-generated content",
     "attachEvent": "Attach event",
     "searchEvent": "Search event...",
     "noEventsFound": "No events found.",
@@ -978,6 +983,8 @@
     "Workshop": "Workshop"
   },
   "createEvent": {
+    "aiGenerated": "Created with AI",
+    "aiGeneratedHint": "Enable if images or texts were generated with AI.",
     "add": "Add",
     "addDetails": "Add details",
     "addImage": "Add image",
@@ -1111,6 +1118,7 @@
     "updateSuccess": "Event updated"
   },
   "event": {
+    "aiGenerated": "Contains AI-generated content",
     "shareAsPost": "Share as post",
     "accessDeniedDescription": "You do not have access to this event",
     "accessDeniedTitle": "Access denied",

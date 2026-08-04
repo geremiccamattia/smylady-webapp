@@ -188,6 +188,12 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
         >
           <Heart className={cn("h-5 w-5", isFavorite && "fill-current")} />
         </Button>
+        {/* KI-Badge — right-12 hält Abstand zum Favoriten-Button (bottom-2 right-2) */}
+        {event.isAiGenerated && (
+          <div className="absolute bottom-2 right-12 bg-black/50 text-white text-[9px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5">
+            🤖 {t('common.aiShort', { defaultValue: 'KI' })}
+          </div>
+        )}
         {/* Price Badge - hidden for raffles, the Gewinnspiel badge already covers it */}
         {!event.isRaffle && (
           <div className={cn(

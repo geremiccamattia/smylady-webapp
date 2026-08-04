@@ -142,6 +142,8 @@ export interface Event {
   rafflePrize?: string
   raffleWinners?: { _id: string; name: string; profileImage?: string }[]
   raffleDrawDate?: string
+  // Kennzeichnung durch den Veranstalter, dass Bilder oder Texte mit KI erzeugt wurden
+  isAiGenerated?: boolean
 }
 
 export interface EventFilters {

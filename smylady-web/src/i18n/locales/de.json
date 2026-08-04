@@ -1,5 +1,7 @@
 {
   "common": {
+    "aiShort": "KI",
+    "remove": "Entfernen",
     "optional": "optional",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
@@ -418,6 +420,9 @@
   },
   "posts": {
     "title": "Beiträge",
+    "aiGenerated": "Mit KI erstellt",
+    "aiGeneratedHint": "Aktivieren, wenn Bilder oder Texte mit KI erzeugt wurden.",
+    "aiLabel": "KI-generierter Inhalt",
     "attachEvent": "Event anhängen",
     "searchEvent": "Event suchen...",
     "noEventsFound": "Keine Events gefunden.",
@@ -874,6 +879,8 @@
     "previewBtn": "Ticket anzeigen"
   },
   "createEvent": {
+    "aiGenerated": "Mit KI erstellt",
+    "aiGeneratedHint": "Aktivieren, wenn Bilder oder Texte mit KI erzeugt wurden.",
     "add": "Hinzufügen",
     "addDetails": "Details hinzufügen",
     "addImage": "Bild hinzufügen",
@@ -977,6 +984,7 @@
     "updateSuccess": "Event aktualisiert"
   },
   "event": {
+    "aiGenerated": "Enthält KI-generierte Inhalte",
     "shareAsPost": "Als Post teilen",
     "accessDeniedDescription": "Du hast keinen Zugang zu diesem Event",
     "accessDeniedTitle": "Zugang verweigert",

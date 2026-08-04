@@ -586,6 +586,10 @@ export function PostCard({ post, communityId }: PostCardProps) {
     return reply.user || (typeof reply.userId === 'object' ? reply.userId : null) || { _id: reply.userId, name: 'User', profileImage: undefined }
   }
 
+  // Posts liefern Bilder je nach Alter in media[] ODER images[] — beides zählt,
+  // damit das KI-Badge und der Text-Fallback sich nie widersprechen.
+  const hasPostMedia = (post.media?.length || 0) > 0 || (post.images?.length || 0) > 0
+
   const formatTime = (date: string) => {
     return formatDistanceToNow(new Date(date), {
       addSuffix: true,
@@ -684,10 +688,17 @@ export function PostCard({ post, communityId }: PostCardProps) {
           </div>
         )}
 
+        {/* KI-Hinweis ohne Bild — als Text unter dem Post-Inhalt */}
+        {post.isAiGenerated && !hasPostMedia && (
+          <p className="text-[10px] text-blue-500 mb-4 -mt-2 flex items-center gap-1">
+            🤖 {t('posts.aiLabel', { defaultValue: 'KI-generierter Inhalt' })}
+          </p>
+        )}
+
         {/* Media/Images */}
-        {((post.media && post.media.length > 0) || (post.images && post.images.length > 0)) && (
+        {hasPostMedia && (
           <div className={cn(
-            'grid gap-2 mb-4',
+            'relative grid gap-2 mb-4',
             (post.media?.length || post.images?.length || 0) === 1 ? 'grid-cols-1' : 'grid-cols-2'
           )}>
             {post.media ? (
@@ -733,6 +744,12 @@ export function PostCard({ post, communityId }: PostCardProps) {
                   />
                 </div>
               ))
+            )}
+            {/* KI-Badge auf dem Bild — unten rechts über dem letzten Medium */}
+            {post.isAiGenerated && (
+              <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[9px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5 pointer-events-none">
+                🤖 {t('common.aiShort', { defaultValue: 'KI' })}
+              </div>
             )}
           </div>
         )}

@@ -65,6 +65,7 @@ function CreateEventContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [isAiGenerated, setIsAiGenerated] = useState(false)
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -709,6 +710,9 @@ function CreateEventContent() {
       }
       eventFormData.append('allowGuestMemories', String(allowGuestMemories))
       eventFormData.append('paymentType', payAtDoor ? 'door' : 'online')
+      if (isAiGenerated) {
+        eventFormData.append('isAiGenerated', 'true')
+      }
 
       if (locationType === 'physical') {
         eventFormData.append(
@@ -1812,6 +1816,32 @@ function CreateEventContent() {
               <p className="text-xs text-muted-foreground">
                 {t('createEvent.imageHint', { defaultValue: 'Ideales Format: 16:9 (z.B. 1920 × 1080 px)' })}
               </p>
+
+              {/* KI-Kennzeichnung */}
+              <div className="flex items-center justify-between mt-3 p-3 bg-muted/30 rounded-lg">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    🤖 {t('createEvent.aiGenerated', { defaultValue: 'Mit KI erstellt' })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('createEvent.aiGeneratedHint', { defaultValue: 'Aktivieren, wenn Bilder oder Texte mit KI erzeugt wurden.' })}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isAiGenerated}
+                  aria-label={t('createEvent.aiGenerated', { defaultValue: 'Mit KI erstellt' })}
+                  onClick={() => setIsAiGenerated(!isAiGenerated)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
+                    isAiGenerated ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isAiGenerated ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
             </CardContent>
           </Card>
         )}

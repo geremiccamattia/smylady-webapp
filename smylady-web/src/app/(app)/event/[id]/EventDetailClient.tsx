@@ -742,6 +742,11 @@ export default function EventDetailClient({ id }: Props) {
                   {event.musicType}
                 </span>
               )}
+              {event?.isAiGenerated && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-medium">
+                  🤖 {t('event.aiGenerated', { defaultValue: 'Enthält KI-generierte Inhalte' })}
+                </span>
+              )}
             </div>
             <h1 className="text-3xl md:text-4xl font-bold">{tr?.name || event.name}</h1>
           </div>

@@ -51,6 +51,13 @@ export function RaffleEventCard({ event }: RaffleEventCardProps) {
             <Users className="h-3 w-3" />
             {event.soldTickets || 0}
           </div>
+          {/* KI-Badge — oben rechts, da unten bereits Gewinnspiel-Badge und
+              Teilnehmer-Count sitzen */}
+          {event.isAiGenerated && (
+            <div className="absolute top-2 right-2 bg-black/50 text-white text-[9px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5">
+              🤖 {t('common.aiShort', { defaultValue: 'KI' })}
+            </div>
+          )}
         </div>
 
         <CardContent className="p-3 space-y-2">
