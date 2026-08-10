@@ -112,7 +112,7 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
             {t('raffleTerms.organizerText', {
               organizer: organizerName,
               defaultValue:
-                'Veranstalter des Gewinnspiels ist {{organizer}} (nachfolgend „Veranstalter“). Die technische Abwicklung erfolgt über die Plattform Share Your Party (shareyourparty.de).',
+                'Veranstalter des Gewinnspiels ist Share Your Party (nachfolgend „Veranstalter“). Der Gewinn wird von {{organizer}} bereitgestellt.',
             })}
           </p>
         </section>
@@ -178,7 +178,7 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.notificationText', {
               defaultValue:
-                'Der Gewinner wird direkt auf der Veranstaltung bekannt gegeben und zusätzlich über die Share Your Party Plattform (Push-Benachrichtigung und/oder E-Mail) informiert. Meldet sich der Gewinner nicht innerhalb von 14 Tagen nach Benachrichtigung, verfällt der Gewinnanspruch und es wird ein Ersatzgewinner gezogen.',
+                'Der Gewinner wird direkt auf der Veranstaltung per Zufallsziehung ermittelt und bekannt gegeben. Zusätzlich wird der Gewinner über die Share Your Party Plattform (Push-Benachrichtigung und/oder E-Mail) informiert.',
             })}
           </p>
         </section>
@@ -189,16 +189,14 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.privacyText', {
+              organizer: organizerName,
               defaultValue:
-                'Die im Rahmen der Teilnahme erhobenen personenbezogenen Daten (Name, E-Mail-Adresse, Profilbild) werden ausschließlich zum Zweck der Durchführung des Gewinnspiels und der Gewinnbenachrichtigung verarbeitet. Es gelten die ',
+                'Die im Rahmen der Teilnahme erhobenen personenbezogenen Daten (Name, E-Mail-Adresse sowie beantwortete Fragen) werden zum Zweck der Durchführung des Gewinnspiels und der Gewinnbenachrichtigung verarbeitet und an {{organizer}} weitergegeben. Es gelten die ',
             })}
             <Link href={localePath('/privacy')} className="text-primary underline">
               {t('raffleTerms.privacyLink', { defaultValue: 'Datenschutzbestimmungen von Share Your Party' })}
             </Link>
-            {t('raffleTerms.privacyText2', {
-              defaultValue:
-                '. Eine Weitergabe an Dritte erfolgt nicht, sofern dies nicht zur Gewinnabwicklung erforderlich ist.',
-            })}
+            {t('raffleTerms.privacyText2', { defaultValue: '.' })}
           </p>
         </section>
 
@@ -252,8 +250,7 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
         <section className="pt-2">
           <p className="text-sm text-muted-foreground">
             {t('raffleTerms.footer', {
-              organizer: organizerName,
-              defaultValue: 'Stand: August 2026 | Veranstalter: {{organizer}}',
+              defaultValue: 'Stand: August 2026 | Veranstalter: Share Your Party',
             })}
           </p>
         </section>

@@ -53,6 +53,7 @@ export default function Privacy() {
                 <li>Usage data (e.g. interactions within the app)</li>
                 <li>Device and technical data (e.g. app version, browser)</li>
                 <li>Payment data only in the case of a ticket purchase (via external payment providers)</li>
+                <li>Answers to questions set by the event organizer (e.g. during ticket purchase or raffle participation)</li>
               </ul>
             </section>
 
@@ -88,8 +89,8 @@ export default function Privacy() {
                 <li>Google LLC (Firebase, Google Analytics, Google Login)</li>
                 <li>Apple Inc. (Sign in with Apple)</li>
                 <li>Payment service providers (only for ticket purchases)</li>
+                <li>Event organizers and partners (e.g. for the fulfillment of events, raffles, or collaborations — only data necessary for the respective fulfillment such as name, email address, and answered questions)</li>
               </ul>
-              <p className="text-muted-foreground leading-relaxed mt-2">Data processing agreements are in place with all service providers.</p>
             </section>
 
             <section>
@@ -162,6 +163,7 @@ export default function Privacy() {
               <li>Nutzungsdaten (z. B. Interaktionen innerhalb der App)</li>
               <li>Geräte- und technische Daten (z. B. App-Version, Browser)</li>
               <li>Zahlungsdaten nur im Falle eines Ticketkaufs (über externe Zahlungsanbieter)</li>
+              <li>Antworten auf vom Veranstalter gestellte Fragen (z. B. bei Ticketkauf oder Gewinnspiel-Teilnahme)</li>
             </ul>
           </section>
           <section>
@@ -193,8 +195,8 @@ export default function Privacy() {
               <li>Google LLC (Firebase, Google Analytics, Google Login)</li>
               <li>Apple Inc. (Sign in with Apple)</li>
               <li>Zahlungsdienstleister (nur beim Ticketkauf)</li>
+              <li>Veranstalter und Partner (z. B. zur Abwicklung von Events, Gewinnspielen oder Kooperationen — nur die für die jeweilige Abwicklung notwendigen Daten wie Name, E-Mail-Adresse und beantwortete Fragen)</li>
             </ul>
-            <p className="text-muted-foreground leading-relaxed mt-2">Mit allen Dienstleistern bestehen entsprechende Auftragsverarbeitungsverträge.</p>
           </section>
           <section>
             <h2 className="text-xl font-semibold mb-3">8. Speicherdauer</h2>

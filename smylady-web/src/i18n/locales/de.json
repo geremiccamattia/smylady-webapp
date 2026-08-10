@@ -1115,7 +1115,7 @@
     "backToEvent": "Zurück zum Event",
     "organizerFallback": "Veranstalter",
     "organizer": "Veranstalter",
-    "organizerText": "Veranstalter des Gewinnspiels ist {{organizer}} (nachfolgend „Veranstalter“). Die technische Abwicklung erfolgt über die Plattform Share Your Party (shareyourparty.de).",
+    "organizerText": "Veranstalter des Gewinnspiels ist Share Your Party (nachfolgend „Veranstalter“). Der Gewinn wird von {{organizer}} bereitgestellt.",
     "eligibility": "Teilnahmeberechtigung",
     "eligibilityText": "Teilnahmeberechtigt sind natürliche Personen ab 18 Jahren mit Wohnsitz in Österreich. Die Teilnahme setzt eine kostenlose Registrierung auf shareyourparty.de sowie die kostenlose Buchung eines Tickets für das Event „{{eventName}}“ voraus. Pro Person ist nur eine Teilnahme zulässig. Die Teilnahme ist kostenlos — es besteht kein Kaufzwang.",
     "period": "Teilnahmezeitraum",
@@ -1125,11 +1125,11 @@
     "drawing": "Ermittlung des Gewinners",
     "drawingText": "Die Verlosung findet auf der Veranstaltung „{{eventName}}“ statt. Der Gewinner wird per Zufallsauswahl unter allen gültigen Teilnehmern ermittelt, die bis zum Zeitpunkt der Verlosung ein kostenloses Ticket über shareyourparty.de gebucht haben.",
     "notification": "Benachrichtigung des Gewinners",
-    "notificationText": "Der Gewinner wird direkt auf der Veranstaltung bekannt gegeben und zusätzlich über die Share Your Party Plattform (Push-Benachrichtigung und/oder E-Mail) informiert. Meldet sich der Gewinner nicht innerhalb von 14 Tagen nach Benachrichtigung, verfällt der Gewinnanspruch und es wird ein Ersatzgewinner gezogen.",
+    "notificationText": "Der Gewinner wird direkt auf der Veranstaltung per Zufallsziehung ermittelt und bekannt gegeben. Zusätzlich wird der Gewinner über die Share Your Party Plattform (Push-Benachrichtigung und/oder E-Mail) informiert.",
     "privacy": "Datenschutz",
-    "privacyText": "Die im Rahmen der Teilnahme erhobenen personenbezogenen Daten (Name, E-Mail-Adresse, Profilbild) werden ausschließlich zum Zweck der Durchführung des Gewinnspiels und der Gewinnbenachrichtigung verarbeitet. Es gelten die ",
+    "privacyText": "Die im Rahmen der Teilnahme erhobenen personenbezogenen Daten (Name, E-Mail-Adresse sowie beantwortete Fragen) werden zum Zweck der Durchführung des Gewinnspiels und der Gewinnbenachrichtigung verarbeitet und an {{organizer}} weitergegeben. Es gelten die ",
     "privacyLink": "Datenschutzbestimmungen von Share Your Party",
-    "privacyText2": ". Eine Weitergabe an Dritte erfolgt nicht, sofern dies nicht zur Gewinnabwicklung erforderlich ist.",
+    "privacyText2": ".",
     "liability": "Haftung",
     "liabilityText": "Der Veranstalter haftet nicht für technische Störungen, die eine Teilnahme beeinträchtigen. Für Sach- und Rechtsmängel des Gewinns wird keine Haftung übernommen.",
     "termination": "Vorzeitige Beendigung",
@@ -1138,7 +1138,7 @@
     "legalText": "Der Rechtsweg ist ausgeschlossen. Es gilt österreichisches Recht.",
     "facebook": "Facebook/Meta-Disclaimer",
     "facebookText": "Dieses Gewinnspiel steht in keiner Verbindung zu Facebook/Meta und wird in keiner Weise von Facebook/Meta gesponsert, unterstützt oder organisiert. Ansprechpartner und Verantwortlicher ist ausschließlich der oben genannte Veranstalter. Die von den Teilnehmern bereitgestellten Daten werden nicht an Facebook/Meta übermittelt.",
-    "footer": "Stand: August 2026 | Veranstalter: {{organizer}}"
+    "footer": "Stand: August 2026 | Veranstalter: Share Your Party"
   },
   "footer": {
     "blog": "Blog",
