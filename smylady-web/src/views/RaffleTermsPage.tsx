@@ -57,15 +57,6 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
     )
   }
 
-  // userId/creator kann populated sein oder ein reiner ObjectId-String — nur im
-  // ersten Fall gibt es einen Namen (siehe EventDetailClient).
-  const creatorData = (event as any).creator || (event as any).userId
-  const creator = creatorData && typeof creatorData !== 'string' ? creatorData : null
-  const organizerName =
-    creator?.name ||
-    creator?.username ||
-    t('raffleTerms.organizerFallback', { defaultValue: 'Veranstalter' })
-
   const dateLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'de-AT'
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString(dateLocale, {
@@ -110,9 +101,8 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.organizerText', {
-              organizer: organizerName,
               defaultValue:
-                'Veranstalter des Gewinnspiels ist Share Your Party (nachfolgend „Veranstalter“). Der Gewinn wird von {{organizer}} bereitgestellt.',
+                'Veranstalter des Gewinnspiels ist Share Your Party (nachfolgend „Veranstalter“). Der Gewinn wird von Volxfest bereitgestellt.',
             })}
           </p>
         </section>
@@ -140,7 +130,7 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
               eventDate: eventDateRange,
               location,
               defaultValue:
-                'Das Gewinnspiel beginnt mit der Veröffentlichung des Events auf shareyourparty.de und endet mit der Verlosung auf der Veranstaltung „{{eventName}}“ am {{eventDate}} in {{location}}.',
+                'Das Gewinnspiel beginnt mit der Veröffentlichung des Events auf shareyourparty.de und endet mit der Verlosung auf der Veranstaltung „{{eventName}}“ am {{eventDate}}, {{location}}.',
             })}
           </p>
         </section>
@@ -160,49 +150,56 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
 
         <section className="bg-card rounded-lg p-6 border">
           <h2 className="text-xl font-semibold mb-3">
-            5. {t('raffleTerms.drawing', { defaultValue: 'Ermittlung des Gewinners' })}
+            5. {t('raffleTerms.drawing', { defaultValue: 'Ermittlung und Übergabe des Gewinns' })}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.drawingText', {
-              eventName,
               defaultValue:
-                'Die Verlosung findet auf der Veranstaltung „{{eventName}}“ statt. Der Gewinner wird per Zufallsauswahl unter allen gültigen Teilnehmern ermittelt, die bis zum Zeitpunkt der Verlosung ein kostenloses Ticket über shareyourparty.de gebucht haben.',
+                'Die Ziehung des Gewinners findet ausschließlich vor Ort im Rahmen der Stammersdorfer Weintage statt. Eine Ziehung außerhalb der Veranstaltung ist ausgeschlossen, der Gewinn wird nicht nachträglich übermittelt.',
+            })}
+          </p>
+          <p className="text-muted-foreground leading-relaxed mt-3">
+            {t('raffleTerms.drawingPresenceText', {
+              defaultValue:
+                'Der gezogene Gewinner muss zum Zeitpunkt der Ziehung persönlich anwesend sein und den Gewinn unmittelbar vor Ort entgegennehmen. Ist der gezogene Gewinner nicht anwesend, verfällt der Gewinnanspruch ersatzlos und es wird sofort ein neuer Gewinner gezogen. Dieser Vorgang wiederholt sich so lange, bis ein anwesender Gewinner ermittelt wurde.',
+            })}
+          </p>
+          <p className="text-muted-foreground leading-relaxed mt-3">
+            {t('raffleTerms.drawingNoNotificationText', {
+              defaultValue:
+                'Eine Benachrichtigung des Gewinners per E-Mail, Telefon oder über die App erfolgt nicht.',
             })}
           </p>
         </section>
 
         <section className="bg-card rounded-lg p-6 border">
           <h2 className="text-xl font-semibold mb-3">
-            6. {t('raffleTerms.notification', { defaultValue: 'Benachrichtigung des Gewinners' })}
-          </h2>
-          <p className="text-muted-foreground leading-relaxed">
-            {t('raffleTerms.notificationText', {
-              defaultValue:
-                'Der Gewinner wird direkt auf der Veranstaltung per Zufallsziehung ermittelt und bekannt gegeben. Zusätzlich wird der Gewinner über die Share Your Party Plattform (Push-Benachrichtigung und/oder E-Mail) informiert.',
-            })}
-          </p>
-        </section>
-
-        <section className="bg-card rounded-lg p-6 border">
-          <h2 className="text-xl font-semibold mb-3">
-            7. {t('raffleTerms.privacy', { defaultValue: 'Datenschutz' })}
+            6. {t('raffleTerms.privacy', { defaultValue: 'Datenschutz' })}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.privacyText', {
-              organizer: organizerName,
               defaultValue:
-                'Die im Rahmen der Teilnahme erhobenen personenbezogenen Daten (Name, E-Mail-Adresse sowie beantwortete Fragen) werden zum Zweck der Durchführung des Gewinnspiels und der Gewinnbenachrichtigung verarbeitet und an {{organizer}} weitergegeben. Es gelten die ',
+                'Die im Rahmen der Teilnahme erhobenen personenbezogenen Daten (Name, E-Mail-Adresse sowie beantwortete Fragen) werden zum Zweck der Durchführung des Gewinnspiels sowie zur Weitergabe an Volxfest verarbeitet. Die Ermittlung und Übergabe des Gewinns erfolgt ausschließlich vor Ort; eine Benachrichtigung des Gewinners per E-Mail findet nicht statt.',
             })}
+          </p>
+          <p className="text-muted-foreground leading-relaxed mt-3">
             <Link href={localePath('/privacy')} className="text-primary underline">
-              {t('raffleTerms.privacyLink', { defaultValue: 'Datenschutzbestimmungen von Share Your Party' })}
+              {t('raffleTerms.privacyLink', {
+                defaultValue: 'Datenschutzbestimmungen von Share Your Party',
+              })}
             </Link>
-            {t('raffleTerms.privacyText2', { defaultValue: '.' })}
+          </p>
+          <p className="text-muted-foreground leading-relaxed mt-3">
+            {t('raffleTerms.marketingText', {
+              defaultValue:
+                'Mit der Teilnahme willigst du ein, dass Volxfest deine E-Mail-Adresse zu Marketingzwecken verwenden darf, insbesondere zur Zusendung von Informationen zu Veranstaltungen, Angeboten und Neuigkeiten.',
+            })}
           </p>
         </section>
 
         <section className="bg-card rounded-lg p-6 border">
           <h2 className="text-xl font-semibold mb-3">
-            8. {t('raffleTerms.liability', { defaultValue: 'Haftung' })}
+            7. {t('raffleTerms.liability', { defaultValue: 'Haftung' })}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.liabilityText', {
@@ -214,7 +211,7 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
 
         <section className="bg-card rounded-lg p-6 border">
           <h2 className="text-xl font-semibold mb-3">
-            9. {t('raffleTerms.termination', { defaultValue: 'Vorzeitige Beendigung' })}
+            8. {t('raffleTerms.termination', { defaultValue: 'Vorzeitige Beendigung' })}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.terminationText', {
@@ -226,7 +223,7 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
 
         <section className="bg-card rounded-lg p-6 border">
           <h2 className="text-xl font-semibold mb-3">
-            10. {t('raffleTerms.legal', { defaultValue: 'Ausschluss des Rechtswegs' })}
+            9. {t('raffleTerms.legal', { defaultValue: 'Ausschluss des Rechtswegs' })}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.legalText', {
@@ -237,7 +234,7 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
 
         <section className="bg-card rounded-lg p-6 border">
           <h2 className="text-xl font-semibold mb-3">
-            11. {t('raffleTerms.facebook', { defaultValue: 'Facebook/Meta-Disclaimer' })}
+            10. {t('raffleTerms.facebook', { defaultValue: 'Facebook/Meta-Disclaimer' })}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {t('raffleTerms.facebookText', {

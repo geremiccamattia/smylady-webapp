@@ -858,6 +858,23 @@ export default function EventDetailClient({ id }: Props) {
                 </div>
               )}
 
+              {/* Anwesenheitspflicht — stand bisher nur in den Teilnahmebedingungen */}
+              <div className="flex items-start gap-2 pt-3 border-t border-amber-200 dark:border-amber-800">
+                <MapPin className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                    {t('raffle.attendanceTitle', { defaultValue: 'Anwesenheit erforderlich' })}
+                  </p>
+                  <p className="text-xs text-amber-800/90 dark:text-amber-200/90 leading-relaxed">
+                    {t('raffle.attendanceText', {
+                      eventName: event.name,
+                      defaultValue:
+                        'Der Gewinner wird ausschließlich vor Ort bei {{eventName}} gezogen und muss zum Zeitpunkt der Ziehung persönlich anwesend sein. Ist der gezogene Gewinner nicht anwesend, wird sofort ein neuer Gewinner gezogen.',
+                    })}
+                  </p>
+                </div>
+              </div>
+
               {/* Gewinner anzeigen (wenn gezogen) */}
               {raffleStatus?.raffleStatus === 'completed' && raffleStatus?.raffleWinners?.length > 0 && (
                 <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
@@ -1449,18 +1466,25 @@ export default function EventDetailClient({ id }: Props) {
                       </div>
                     )}
                     {event?.isRaffle ? (
-                      <Button
-                        variant="default"
-                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold"
-                        onClick={handlePurchaseTicket}
-                        loading={isPurchasing}
-                        disabled={
-                          isPurchasing ||
-                          ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
-                        }
-                      >
-                        🎰 {t('raffle.ctaButton', { defaultValue: 'Am Gewinnspiel teilnehmen' })}
-                      </Button>
+                      <>
+                        <Button
+                          variant="default"
+                          className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold"
+                          onClick={handlePurchaseTicket}
+                          loading={isPurchasing}
+                          disabled={
+                            isPurchasing ||
+                            ((event?.ticketTiers?.length ?? 0) > 0 && !selectedTierId)
+                          }
+                        >
+                          🎰 {t('raffle.ctaButton', { defaultValue: 'Am Gewinnspiel teilnehmen' })}
+                        </Button>
+                        <p className="mt-2 text-center text-xs text-muted-foreground">
+                          {t('raffle.attendanceHint', {
+                            defaultValue: 'Ziehung vor Ort — Anwesenheit erforderlich',
+                          })}
+                        </p>
+                      </>
                     ) : (
                       <Button
                         variant="gradient"
