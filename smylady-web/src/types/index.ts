@@ -144,6 +144,15 @@ export interface Event {
   raffleDrawDate?: string
   // Kennzeichnung durch den Veranstalter, dass Bilder oder Texte mit KI erzeugt wurden
   isAiGenerated?: boolean
+  // Wird vom Backend nur angereichert, wenn der Veranstalter populiert wird.
+  // display steuert server-seitig, ob der Schnitt gezeigt werden darf (erst ab
+  // 3 Bewertungen); darunter kommt average gar nicht erst mit. Alle Felder
+  // optional, damit ältere Responses ohne das Feld nicht brechen.
+  organizerRating?: {
+    average?: number | null
+    count?: number
+    display?: boolean
+  }
 }
 
 export interface EventFilters {

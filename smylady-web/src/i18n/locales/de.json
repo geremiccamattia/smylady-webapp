@@ -1255,6 +1255,8 @@
     "noReviews": "Noch keine Bewertungen",
     "oneReview": "1 Bewertung",
     "organizerNoReviews": "Dieser Veranstalter hat noch keine Bewertungen",
+    "organizerReviewCount_one": "{{count}} Bewertung",
+    "organizerReviewCount_other": "{{count}} Bewertungen",
     "organizerReviewsTitle": "Veranstalter-Bewertungen",
     "pleaseSelectRating": "Bitte wähle eine Bewertung",
     "rateEvent": "Bewerte dieses Event",

@@ -65,6 +65,7 @@ import {
   Zap,
   Gift,
   PenSquare,
+  Star,
 } from 'lucide-react'
 
 interface Props { id: string }
@@ -158,6 +159,19 @@ export default function EventDetailClient({ id }: Props) {
         ? creatorData
         : ((creatorData as any)._id || (creatorData as any).id || null))
     : null
+  // Veranstalter-Bewertung: Das Backend entscheidet über `display`, ob der
+  // Durchschnitt gezeigt werden darf (erst ab 3 Bewertungen) und liefert average
+  // darunter gar nicht mit. Die Schwelle wird hier bewusst NICHT nachgebaut.
+  const organizerRating = event?.organizerRating
+  const organizerReviewCount = organizerRating?.count ?? 0
+  const organizerAverage =
+    organizerRating?.display === true && typeof organizerRating.average === 'number'
+      ? organizerRating.average
+      : null
+  // Gleiches Muster wie in RaffleTermsPage: EN bekommt den Punkt als
+  // Dezimaltrennzeichen, sonst die österreichische Variante.
+  const numberLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'de-AT'
+
   const currentUserId = user ? (user._id || user.id) : null
   const isOwner = !!(currentUserId && creatorId && currentUserId === creatorId)
   const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')
@@ -501,8 +515,13 @@ export default function EventDetailClient({ id }: Props) {
       await eventsService.deleteEventSeries(id!)
       toast({ title: 'Event-Serie gelöscht' })
       router.push('/my-events')
-    } catch {
-      toast({ variant: 'destructive', title: t('common.error'), description: 'Serie konnte nicht gelöscht werden.' })
+    } catch (error: any) {
+      // Das Backend lehnt das Löschen bei offenen Tickets mit 400 ab und benennt in
+      // message, welche Termine blockieren. Diese Meldung ist bereits fertig
+      // formuliert und wird unverändert durchgereicht (nicht über i18n).
+      const message =
+        error.response?.data?.message || error.message || 'Serie konnte nicht gelöscht werden.'
+      toast({ variant: 'destructive', title: t('common.error'), description: message })
     } finally {
       setIsDeletingSeries(false)
       setShowDeleteSeriesDialog(false)
@@ -763,6 +782,30 @@ export default function EventDetailClient({ id }: Props) {
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">{t('events.organizer')}</p>
                 <p className="font-semibold">{creator.name}</p>
+                {organizerReviewCount > 0 && (
+                  <div className="flex items-center gap-1.5 mt-0.5 text-sm">
+                    {organizerAverage !== null && (
+                      <>
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-medium">
+                          {new Intl.NumberFormat(numberLocale, {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          }).format(organizerAverage)}
+                        </span>
+                        <span className="text-muted-foreground">·</span>
+                      </>
+                    )}
+                    <span className="text-muted-foreground">
+                      {t('reviews.organizerReviewCount', {
+                        count: organizerReviewCount,
+                        defaultValue_one: '{{count}} Bewertung',
+                        defaultValue_other: '{{count}} Bewertungen',
+                        defaultValue: '{{count}} Bewertungen',
+                      })}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Link href={localePath(`/user/${creatorId}`)}>

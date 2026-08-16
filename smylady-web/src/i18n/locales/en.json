@@ -1398,6 +1398,8 @@
     "noReviews": "No reviews yet",
     "oneReview": "1 review",
     "organizerNoReviews": "This organizer has no reviews yet",
+    "organizerReviewCount_one": "{{count}} review",
+    "organizerReviewCount_other": "{{count}} reviews",
     "organizerReviewsTitle": "Organizer reviews",
     "pleaseSelectRating": "Please select a rating",
     "rateEvent": "Rate this event",
