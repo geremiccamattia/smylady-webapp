@@ -57,7 +57,8 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
     )
   }
 
-  const dateLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'de-AT'
+  const isEnglish = !!i18n.language?.startsWith('en')
+  const dateLocale = isEnglish ? 'en-GB' : 'de-AT'
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString(dateLocale, {
       day: '2-digit',
@@ -71,6 +72,27 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
   const eventDateRange = isMultiDayEvent(event.eventDate, event.eventEndTime)
     ? `${formatDate(event.eventDate)} – ${formatDate(event.eventEndTime)}`
     : formatDate(event.eventDate)
+
+  // Der Ziehungstermin kommt ausschließlich aus dem Event-Feld raffleDrawDate.
+  // Die Bedingungen sind rechtlich relevant — ein zweiter, fest verdrahteter Termin
+  // könnte von der Event-Anzeige abweichen. Zeitzone fix Europe/Vienna, damit der
+  // Termin nicht je nach Gerät des Lesers wandert.
+  const drawDate = event.raffleDrawDate
+    ? t('raffleTerms.drawDateFormat', {
+        date: new Date(event.raffleDrawDate).toLocaleDateString(dateLocale, {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'Europe/Vienna',
+        }),
+        time: new Date(event.raffleDrawDate).toLocaleTimeString(isEnglish ? 'en-US' : 'de-AT', {
+          hour: isEnglish ? 'numeric' : '2-digit',
+          minute: '2-digit',
+          timeZone: 'Europe/Vienna',
+        }),
+        defaultValue: '{{date}} um {{time}} Uhr',
+      })
+    : null
 
   const eventName = event.name
   const prize = event.rafflePrize || t('raffle.prizeFallback', { defaultValue: 'Tolle Preise zu gewinnen!' })
@@ -153,10 +175,16 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
             5. {t('raffleTerms.drawing', { defaultValue: 'Ermittlung und Übergabe des Gewinns' })}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
-            {t('raffleTerms.drawingText', {
-              defaultValue:
-                'Die Ziehung des Gewinners findet ausschließlich vor Ort im Rahmen der Stammersdorfer Weintage statt. Eine Ziehung außerhalb der Veranstaltung ist ausgeschlossen, der Gewinn wird nicht nachträglich übermittelt.',
-            })}
+            {drawDate
+              ? t('raffleTerms.drawingText', {
+                  drawDate,
+                  defaultValue:
+                    'Die Ziehung des Gewinners findet ausschließlich vor Ort im Rahmen der Stammersdorfer Weintage am {{drawDate}} statt. Eine Ziehung außerhalb der Veranstaltung ist ausgeschlossen, der Gewinn wird nicht nachträglich übermittelt.',
+                })
+              : t('raffleTerms.drawingTextNoDate', {
+                  defaultValue:
+                    'Die Ziehung des Gewinners findet ausschließlich vor Ort im Rahmen der Stammersdorfer Weintage statt. Eine Ziehung außerhalb der Veranstaltung ist ausgeschlossen, der Gewinn wird nicht nachträglich übermittelt.',
+                })}
           </p>
           <p className="text-muted-foreground leading-relaxed mt-3">
             {t('raffleTerms.drawingPresenceText', {
