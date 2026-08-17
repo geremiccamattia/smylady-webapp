@@ -25,6 +25,7 @@ import CommunitySettingsModal from '@/components/community/CommunitySettingsModa
 import { CreatePostModal } from '@/views/Feed'
 import { PostCard } from '@/components/PostCard'
 import { resolveImageUrl, getInitials, generateCommunitySlug } from '@/lib/utils'
+import { safeExternalUrl } from '@/lib/safeUrl'
 import { EVENT_CATEGORIES } from '@/lib/constants'
 
 interface CommunityDetailPageProps {
@@ -267,6 +268,48 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
   const canCreateEvent =
     !!community.isAdmin || !!community.isCreator || (!!community.isMember && !!community.settings?.allowMemberEvents)
 
+  // Social-Links kommen aus dem Community-Profil und sind damit frei eingetippt.
+  // Bei den Plattform-Feldern darf sowohl ein Handle („@name“) als auch eine volle
+  // URL drinstehen; das Handle wird zur Profil-URL ergänzt. Was danach nicht als
+  // http(s)-URL durchgeht, fliegt raus und wird gar nicht erst verlinkt.
+  const socialLinks = ([
+    {
+      key: 'instagram',
+      title: 'Instagram',
+      icon: '📸',
+      raw: community.socialLinks?.instagram,
+      toProfileUrl: (v: string) => `https://instagram.com/${v.replace('@', '')}`,
+    },
+    {
+      key: 'facebook',
+      title: 'Facebook',
+      icon: '👤',
+      raw: community.socialLinks?.facebook,
+      toProfileUrl: (v: string) => `https://facebook.com/${v}`,
+    },
+    {
+      key: 'tiktok',
+      title: 'TikTok',
+      icon: '🎵',
+      raw: community.socialLinks?.tiktok,
+      toProfileUrl: (v: string) => `https://tiktok.com/@${v.replace('@', '')}`,
+    },
+    {
+      key: 'website',
+      title: 'Website',
+      icon: '🌐',
+      raw: community.socialLinks?.website,
+      // safeExternalUrl ergänzt bei schemalosen Werten selbst https://
+      toProfileUrl: (v: string) => v,
+    },
+  ] as const)
+    .flatMap(({ key, title, icon, raw, toProfileUrl }) => {
+      if (typeof raw !== 'string' || !raw.trim()) return []
+      const value = raw.trim()
+      const href = safeExternalUrl(value.startsWith('http') ? value : toProfileUrl(value))
+      return href ? [{ key, title, icon, href }] : []
+    })
+
   return (
     <div className="max-w-2xl mx-auto pb-8">
       {/* Sticky Join/Leave/Pending (non-admin, non-creator) */}
@@ -368,52 +411,20 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
           <MarkdownContent content={community.description} className="text-sm text-muted-foreground mt-3" />
         )}
 
-        {community?.socialLinks && Object.values(community.socialLinks).some((v: any) => v && v.trim()) && (
+        {socialLinks.length > 0 && (
           <div className="flex items-center gap-3 mt-3">
-            {community.socialLinks.instagram && (
+            {socialLinks.map(({ key, href, title, icon }) => (
               <a
-                href={community.socialLinks.instagram.startsWith('http') ? community.socialLinks.instagram : `https://instagram.com/${community.socialLinks.instagram.replace('@', '')}`}
+                key={key}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-primary transition-colors"
-                title="Instagram"
+                title={title}
               >
-                <span className="text-lg">📸</span>
+                <span className="text-lg">{icon}</span>
               </a>
-            )}
-            {community.socialLinks.facebook && (
-              <a
-                href={community.socialLinks.facebook.startsWith('http') ? community.socialLinks.facebook : `https://facebook.com/${community.socialLinks.facebook}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                title="Facebook"
-              >
-                <span className="text-lg">👤</span>
-              </a>
-            )}
-            {community.socialLinks.tiktok && (
-              <a
-                href={community.socialLinks.tiktok.startsWith('http') ? community.socialLinks.tiktok : `https://tiktok.com/@${community.socialLinks.tiktok.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                title="TikTok"
-              >
-                <span className="text-lg">🎵</span>
-              </a>
-            )}
-            {community.socialLinks.website && (
-              <a
-                href={community.socialLinks.website.startsWith('http') ? community.socialLinks.website : `https://${community.socialLinks.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                title="Website"
-              >
-                <span className="text-lg">🌐</span>
-              </a>
-            )}
+            ))}
           </div>
         )}
 

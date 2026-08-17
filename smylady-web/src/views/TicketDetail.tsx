@@ -8,6 +8,7 @@ import { ticketsService } from '@/services/tickets'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug } from '@/lib/utils'
+import { safeExternalUrl } from '@/lib/safeUrl'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import {
@@ -228,6 +229,9 @@ export default function TicketDetail() {
   // Event has started (for memories)
   const eventHasStarted = event ? new Date(event.eventDate) <= new Date() : false
 
+  // Der Veranstalter tippt onlineUrl frei ein — geprüft, bevor daraus ein Link wird.
+  const onlineUrl = safeExternalUrl((event as any)?.onlineUrl)
+
   // Organizer display info
   const organizerName = event && typeof (event as any).userId === 'object' ? (event as any).userId.name : null
   const organizerProfileImage = event && typeof (event as any).userId === 'object' ? (event as any).userId.profileImage : null
@@ -440,13 +444,13 @@ export default function TicketDetail() {
               <span className="text-muted-foreground">Gekauft am</span>
               <span>{format(new Date(ticket.purchaseDate || ticket.createdAt), 'dd.MM.yyyy', { locale: de })}</span>
             </div>
-            {(event as any)?.locationType === 'online' && (event as any)?.onlineUrl && (
+            {(event as any)?.locationType === 'online' && onlineUrl && (
               <div className="flex justify-between items-center py-2">
                 <span className="text-muted-foreground">
                   {t('ticket.eventLink', { defaultValue: 'Event-Link' })}
                 </span>
                 <a
-                  href={(event as any).onlineUrl}
+                  href={onlineUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline font-medium"

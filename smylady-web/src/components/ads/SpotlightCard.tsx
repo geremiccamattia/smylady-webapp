@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { ExternalLink, MapPin } from 'lucide-react'
 import { resolveImageUrl } from '@/lib/utils'
+import { safeExternalUrl } from '@/lib/safeUrl'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { CONFIG } from '@/lib/constants'
@@ -33,6 +34,10 @@ export function SpotlightCard({ ad }: SpotlightCardProps) {
 
   const headline = (isEnglish && ad.headlineEn) ? ad.headlineEn : ad.headline
   const description = (isEnglish && ad.descriptionEn) ? ad.descriptionEn : ad.description
+
+  // targetUrl wird vom Werbekunden frei eingetragen — ohne Prüfung wäre das ein
+  // Skript-Sink auf der Explore-Seite, also vor jedem Besucher.
+  const targetUrl = safeExternalUrl(ad.targetUrl)
 
   return (
     <div className="bg-card rounded-xl overflow-hidden shadow-sm border flex flex-col">
@@ -74,15 +79,17 @@ export function SpotlightCard({ ad }: SpotlightCardProps) {
         {/* Gesponsert label + CTA */}
         <div className="mt-auto pt-2 flex flex-col gap-2">
           <span className="text-xs text-muted-foreground">{t('spotlight.sponsored', { defaultValue: 'Gesponsert' })}</span>
-          <a
-            href={ad.targetUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full bg-foreground text-background text-sm font-semibold py-2.5 px-4 rounded-lg hover:opacity-90 transition-opacity"
-          >
-            {t('spotlight.visitWebsite', { defaultValue: 'Website besuchen' })}
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          {targetUrl && (
+            <a
+              href={targetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full bg-foreground text-background text-sm font-semibold py-2.5 px-4 rounded-lg hover:opacity-90 transition-opacity"
+            >
+              {t('spotlight.visitWebsite', { defaultValue: 'Website besuchen' })}
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
         </div>
       </div>
     </div>

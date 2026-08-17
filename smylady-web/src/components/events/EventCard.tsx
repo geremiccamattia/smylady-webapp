@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
 import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
+import { safeExternalUrl } from '@/lib/safeUrl'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -52,7 +53,8 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
 
   // Check if this is a Ticketmaster/external event
   const isExternalEvent = event.isTicketmaster || event.isExternalEvent || event.source === 'ticketmaster'
-  const externalUrl = event.ticketmasterUrl || event.externalUrl
+  // Ohne brauchbare externe URL fällt die Karte unten auf den internen Link zurück.
+  const externalUrl = safeExternalUrl(event.ticketmasterUrl || event.externalUrl)
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault()

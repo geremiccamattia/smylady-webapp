@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { safeExternalUrl } from '@/lib/safeUrl'
 import {
   Eye,
   EyeOff,
@@ -889,6 +890,8 @@ export default function Login() {
                 // Is this a user-created event or a Ticketmaster event?
                 const isUserEvent = event._isUserCreated
                 const eventId = event._id || event.id
+                // Kommt aus dem Event-Import und damit nicht aus vertrauenswürdiger Hand
+                const externalUrl = safeExternalUrl(event.externalUrl)
 
                 // Insert CTA card after 5th event (index 4) - between user and TM events
                 const ctaCard = index === 5 ? (
@@ -995,10 +998,10 @@ export default function Login() {
                       >
                         {cardContent}
                       </Link>
-                    ) : (
+                    ) : externalUrl ? (
                       // Ticketmaster events: open external URL
                       <a
-                        href={event.externalUrl || '#'}
+                        href={externalUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`group relative overflow-hidden rounded-3xl ${sizeClass} bento-item`}
@@ -1006,6 +1009,14 @@ export default function Login() {
                       >
                         {cardContent}
                       </a>
+                    ) : (
+                      // Ohne brauchbare Ziel-URL bleibt die Kachel sichtbar, aber ohne Link
+                      <div
+                        className={`group relative overflow-hidden rounded-3xl ${sizeClass} bento-item`}
+                        style={{ animationDelay: `${index * 70}ms` }}
+                      >
+                        {cardContent}
+                      </div>
                     )}
                   </React.Fragment>
                 )

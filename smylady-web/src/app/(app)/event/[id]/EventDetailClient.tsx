@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent } from '@/lib/utils'
+import { safeExternalUrl } from '@/lib/safeUrl'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -183,7 +184,9 @@ export default function EventDetailClient({ id }: Props) {
   // Check if this is an external/Ticketmaster event
   const isExternalEvent = event?.isTicketmaster || event?.isExternalEvent || event?.source === 'ticketmaster'
   const isDoorPayment = event?.paymentType === 'door'
-  const externalUrl = event?.ticketmasterUrl || event?.externalUrl
+  // Geprüft, bevor daraus ein window.open() wird: Der useEffect unten feuert ohne
+  // Zutun des Besuchers, ein javascript:-Wert liefe also allein beim Seitenaufruf.
+  const externalUrl = safeExternalUrl(event?.ticketmasterUrl || event?.externalUrl)
 
   // Redirect to external URL if this is a Ticketmaster/external event
   useEffect(() => {
@@ -1394,15 +1397,17 @@ export default function EventDetailClient({ id }: Props) {
                   </p>
                 </div>
 
-                <Button
-                  variant="gradient"
-                  size="lg"
-                  className="w-full gap-2"
-                  onClick={() => externalUrl && window.open(externalUrl, '_blank', 'noopener,noreferrer')}
-                >
-                  <ExternalLink className="h-5 w-5" />
-                  {t('event.viewOnTicketmaster', { defaultValue: 'Auf Ticketmaster ansehen' })}
-                </Button>
+                {externalUrl && (
+                  <Button
+                    variant="gradient"
+                    size="lg"
+                    className="w-full gap-2"
+                    onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                    {t('event.viewOnTicketmaster', { defaultValue: 'Auf Ticketmaster ansehen' })}
+                  </Button>
+                )}
               </div>
             ) : (
               <>
