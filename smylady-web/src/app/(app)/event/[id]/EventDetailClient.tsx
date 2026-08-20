@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent, isEventOver } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
@@ -355,7 +355,7 @@ export default function EventDetailClient({ id }: Props) {
     },
   })
 
-  const isPastEvent = event ? new Date(event.eventDate) < new Date() : false
+  const isPastEvent = isEventOver(event?.eventEndTime, event?.eventDate)
   const eventStartTime = event?.eventStartTime ? new Date(event.eventStartTime) : null
   const canCancelTicket =
     purchasedTicket &&
@@ -1164,7 +1164,7 @@ export default function EventDetailClient({ id }: Props) {
           {!isExternalEvent && (
             <EventReviews
               eventId={eventId!}
-              eventEnded={new Date(event.eventDate) < new Date()}
+              eventEnded={isPastEvent}
             />
           )}
 
@@ -1593,7 +1593,7 @@ export default function EventDetailClient({ id }: Props) {
                         {t('manageGuests.title', { defaultValue: 'Gästeliste' })}
                       </Link>
                     </Button>
-                    {new Date(event.eventStartTime || event.eventDate) > new Date() && (
+                    {!isEventOver(event.eventEndTime, event.eventStartTime || event.eventDate) && (
                       <Button
                         variant="outline"
                         className="w-full gap-2 text-amber-500 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"

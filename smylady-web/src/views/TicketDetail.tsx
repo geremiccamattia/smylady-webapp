@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { ticketsService } from '@/services/tickets'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug } from '@/lib/utils'
+import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug, isEventOver } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -199,7 +199,7 @@ export default function TicketDetail() {
   const isCancelled = ticket.status === 'cancelled' || ticket.status === 'refunded'
 
   // Check if ticket can be cancelled (same logic as mobile app)
-  const isPastEvent = event ? new Date(event.eventDate) < new Date() : false
+  const isPastEvent = isEventOver(event?.eventEndTime, event?.eventDate)
   const eventStartTime = event?.eventStartTime ? new Date(event.eventStartTime) : null
   const canCancelTicket =
     isValid &&

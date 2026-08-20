@@ -17,7 +17,7 @@ import { organizerSubscriptionService } from '@/services/organizerSubscription'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { getInitials, resolveImageUrl } from '@/lib/utils'
+import { getInitials, resolveImageUrl, isEventOver } from '@/lib/utils'
 import type { Event } from '@/types'
 
 function HostEventsContent() {
@@ -105,16 +105,14 @@ function HostEventsContent() {
 
   // Split events into upcoming and past
   const { upcomingEvents, pastEvents } = useMemo(() => {
-    const now = new Date()
     const upcoming: Event[] = []
     const past: Event[] = []
 
     events.forEach((event: Event) => {
-      const eventTime = new Date(event.eventStartTime || event.eventDate)
-      if (eventTime >= now) {
-        upcoming.push(event)
-      } else {
+      if (isEventOver(event.eventEndTime, event.eventStartTime || event.eventDate)) {
         past.push(event)
+      } else {
+        upcoming.push(event)
       }
     })
 

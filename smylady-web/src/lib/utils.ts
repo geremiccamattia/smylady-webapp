@@ -103,8 +103,12 @@ export function formatDateTime(date: string | Date): string {
 /**
  * Whether an event genuinely spans more than one day, measured by its duration
  * rather than by calendar days: a party from 22:00 to 04:00 crosses midnight but
- * is still a single-day event. `eventEndTime` is always populated (defaults to
- * start + 4h), so a plain truthiness check is not enough either.
+ * is still a single-day event — that is what the >24h check is for.
+ *
+ * `eventEndTime` is optional and missing on the large majority of events (the
+ * backend schema default is explicitly null, and bulk-uploaded events never get
+ * the field), so the early return for a missing value is the common path, not
+ * the edge case.
  */
 export function isMultiDayEvent(startDate: string | Date, endDate?: string | Date | null): boolean {
   if (!endDate) return false
@@ -114,6 +118,38 @@ export function isMultiDayEvent(startDate: string | Date, endDate?: string | Dat
   const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
   // Bis zu 24 Stunden = eintägig (auch wenn über Mitternacht)
   return diffHours > 24
+}
+
+/**
+ * Whether an event is over. `eventEndTime` decides on its own when it is a
+ * usable timestamp; otherwise `fallbackDate` (normally `eventDate`) takes over.
+ *
+ * Both arguments are validated instead of merely checked for truthiness. Time
+ * fields in this codebase are sometimes ISO strings and sometimes bare "HH:mm"
+ * values, and `new Date("19:00")` yields an Invalid Date — truthy, but every
+ * comparison against it is false. A truthiness check would therefore silently
+ * accept it and mark a running event as over.
+ *
+ * With nothing usable left the answer is `false`: treating an event as upcoming
+ * is the harmless mistake, hiding one that is still running is not.
+ */
+export function isEventOver(
+  eventEndTime?: string | Date | null,
+  fallbackDate?: string | Date | null,
+): boolean {
+  const now = Date.now()
+
+  if (eventEndTime) {
+    const end = new Date(eventEndTime).getTime()
+    if (!isNaN(end)) return end < now
+  }
+
+  if (fallbackDate) {
+    const fallback = new Date(fallbackDate).getTime()
+    if (!isNaN(fallback)) return fallback < now
+  }
+
+  return false
 }
 
 export function formatPrice(price: number | string | undefined | null, currency: string = 'EUR'): string {

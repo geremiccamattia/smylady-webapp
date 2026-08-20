@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus, PartyPopper, Zap } from 'lucide-react'
 import { Event } from '@/types'
+import { isEventOver } from '@/lib/utils'
 
 export default function MyEvents() {
   const { data: events, isLoading } = useQuery({
@@ -57,7 +58,7 @@ export default function MyEvents() {
             return (
               <div key={eventId} className="flex flex-col gap-2">
                 <EventCard event={event} />
-                {new Date(event.eventStartTime || event.eventDate) > new Date() && (
+                {!isEventOver(event.eventEndTime, event.eventStartTime || event.eventDate) && (
                   <Button
                     variant={event.boostStatus === 'active' ? 'outline' : 'ghost'}
                     size="sm"

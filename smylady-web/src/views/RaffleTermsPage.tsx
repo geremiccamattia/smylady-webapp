@@ -66,9 +66,9 @@ export default function RaffleTermsPage({ eventSlug }: RaffleTermsPageProps) {
       year: 'numeric',
     })
 
-  // eventEndTime ist immer gesetzt (Default: Start + 4h). Ein Datumsbereich wird
-  // deshalb nur bei echten Mehrtages-Events ausgegeben, sonst stünde dort zweimal
-  // dasselbe Datum.
+  // eventEndTime ist optional und bei den meisten Events gar nicht gesetzt; fehlt
+  // es, liefert isMultiDayEvent false. Ein Datumsbereich wird deshalb nur bei
+  // echten Mehrtages-Events ausgegeben, sonst stünde dort zweimal dasselbe Datum.
   const eventDateRange = isMultiDayEvent(event.eventDate, event.eventEndTime)
     ? `${formatDate(event.eventDate)} – ${formatDate(event.eventEndTime)}`
     : formatDate(event.eventDate)
