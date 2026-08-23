@@ -26,6 +26,37 @@ Sentry.init({
     // httpBodies: [],
   },
 
+  // Verwirft Events, deren Fehler-Frame (der Stackframe am tatsächlichen
+  // Fehlerort) aus einer dieser URLs stammt — ausgewertet von Sentrys
+  // eingebauter eventFiltersIntegration (Teil der Default-Integrationen,
+  // siehe node_modules/@sentry/core/.../integrations/eventFilters.js).
+  // Das ist der zuverlässigste Filter für Fehler, die nicht aus unserem
+  // eigenen Code stammen: er trifft die QUELLE, nicht den Wortlaut der
+  // Meldung, und greift daher auch bei Varianten mit anderem Wortlaut.
+  denyUrls: [
+    // In-App-Browser (Instagram, Facebook, ...): eigener nativer WebView-Code,
+    // z.B. "app://navigation_performance_logger_android". Wir schalten
+    // bezahlte Anzeigen, die dort landen — ohne diesen Filter würde das
+    // unser Sentry-Kontingent aufbrauchen. NICHT als überflüssig entfernen.
+    "app://",
+    // Fehler aus Browser-Erweiterungen der Nutzer — nicht unser Code.
+    "chrome-extension://",
+    "moz-extension://",
+    "safari-extension://",
+    "safari-web-extension://",
+  ],
+
+  // Zusätzliches Wortlaut-Netz für dieselbe Familie von In-App-Browser-
+  // Fehlern: greift auch, wenn der Stacktrace fehlt oder aus anderen Gründen
+  // nicht auf app:// zeigt (z.B. bei degradierten WebView-Fehlerberichten),
+  // die Meldung aber eindeutig zuordenbar ist. Siehe denyUrls oben für die
+  // Begründung, warum diese Events überhaupt gefiltert werden.
+  ignoreErrors: [
+    "Java object is gone",
+    "Error invoking postMessage",
+    "JavaScript interface is gone",
+  ],
+
   beforeSend(event, hint) {
     // 401 = ein Gast ruft einen geschützten Endpoint auf, 429 = Rate-Limit des
     // ThrottlerGuard. Beides sind erwartete Antworten unseres eigenen Backends
