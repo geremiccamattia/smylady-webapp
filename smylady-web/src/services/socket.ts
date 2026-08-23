@@ -2,6 +2,7 @@
 
 import { io, Socket } from 'socket.io-client'
 import { STORAGE_KEYS } from '@/lib/constants'
+import { replaceWithPath } from '@/lib/navigation'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app.shareyourparty.de'
 // Backend WebSocket Gateway uses namespace '/chat' - must append it to the URL
@@ -88,7 +89,6 @@ class SocketManager {
       this.socket = io(WS_URL, {
         transports: ['websocket', 'polling'],
         auth: { token },
-        query: { userId },
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: this.reconnectDelay,
@@ -175,7 +175,35 @@ class SocketManager {
       this.reconnectAttempts++
     })
 
-    this.socket.on('error', (error) => {
+    this.socket.on('error', (error: { message?: string }) => {
+      // Server-JWT (7 Tage gültig) ist abgelaufen/ungültig; der Server trennt
+      // die Verbindung direkt danach. Nicht einfach automatisch weiterlaufen
+      // lassen: socket.io cached `auth` beim ersten connect() und schickt bei
+      // jedem eingebauten Reconnect-Versuch (reconnection: true) denselben
+      // toten Token erneut — ohne diesen Abbruch würde das bis zu
+      // maxReconnectAttempts lang sinnlos gegen den abgelaufenen Token laufen.
+      // Erneuerung ist hier bewusst "zur Anmeldung führen": es gibt aktuell
+      // keinen Token-Refresh-Endpoint (siehe authService), REST-401s werden im
+      // selben Fall genauso behandelt (src/services/api.ts).
+      if (error?.message === 'Authentication required') {
+        this.disconnect()
+        localStorage.removeItem(STORAGE_KEYS.TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.USER)
+        const localePrefix = /^\/en(?=\/|$)/.test(window.location.pathname) ? '/en' : ''
+        replaceWithPath(`${localePrefix}/login`)
+        return
+      }
+
+      // Tritt auf, wenn ein Client einem Raum beitreten will, in dem er laut
+      // Server nicht (mehr) Teilnehmer ist — typischerweise veralteter
+      // lokaler Zustand (alter Link, entfernte Konversation). Das ist im
+      // Normalbetrieb erwartet, kein technischer Fehler: nur loggen, NICHT
+      // erneut beitreten oder reconnecten (sonst Endlosschleife).
+      if (error?.message === 'You are not a participant of this room') {
+        console.warn('Socket: not a participant of this room, ignoring:', error)
+        return
+      }
+
       console.error('Socket error:', error)
     })
   }
@@ -255,11 +283,18 @@ class SocketManager {
   }
 
   /**
-   * Reconnect with new credentials
+   * Reconnect the existing socket with a freshly obtained token — e.g. once
+   * a "Authentication required" error has been resolved by logging back in
+   * without a full page reload.
+   * socket.io caches `auth` from the first connect() and replays that exact
+   * value on every reconnect; mutating `socket.auth` here BEFORE calling
+   * `socket.connect()` is required, otherwise the renewed token never
+   * reaches the server and the connection stays dead.
    */
-  async reconnectWithNewCredentials(userId: string): Promise<Socket> {
-    this.cachedUserId = userId
-    return this.connect(true)
+  reconnectWithToken(token: string): void {
+    if (!this.socket) return
+    this.socket.auth = { token }
+    this.socket.connect()
   }
 
   /**
@@ -287,8 +322,11 @@ class SocketManager {
    * Join a chat room
    */
   joinChat(chatId: string): void {
+    // userId nicht mehr mitschicken — der Server leitet die Identität aus
+    // dem JWT im Handshake ab. this.cachedUserId dient hier nur noch als
+    // Bereit-Flag (ist eine authentifizierte Verbindung aufgebaut).
     if (this.cachedUserId) {
-      this.emit('join-chat', { chatId, userId: this.cachedUserId })
+      this.emit('join-chat', { chatId })
     }
   }
 
@@ -297,7 +335,7 @@ class SocketManager {
    */
   leaveChat(chatId: string): void {
     if (this.cachedUserId) {
-      this.emit('leave-chat', { chatId, userId: this.cachedUserId })
+      this.emit('leave-chat', { chatId })
     }
   }
 

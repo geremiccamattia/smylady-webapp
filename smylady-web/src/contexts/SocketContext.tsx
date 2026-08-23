@@ -157,12 +157,24 @@ export function SocketProvider({ children }: SocketProviderProps) {
           }))
         })
 
+        // "You are not a participant of this room" signals stale local state
+        // (e.g. an old link to a room the user was removed from). Refresh the
+        // conversations list so it drops out instead of staying clickable.
+        // socket.ts already guarantees this never triggers a retry/loop.
+        const unsubError = socketManager.on('error', (error: unknown) => {
+          const message = (error as { message?: string } | undefined)?.message
+          if (message === 'You are not a participant of this room') {
+            queryClient.invalidateQueries({ queryKey: ['conversations'] })
+          }
+        })
+
         return () => {
           unsubMessage()
           unsubNotification()
           unsubDeleted()
           unsubRoomDeleted()
           unsubTyping()
+          unsubError()
         }
       } catch (error: unknown) {
         // Silent fail for credential errors
