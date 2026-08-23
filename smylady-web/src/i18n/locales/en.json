@@ -1327,6 +1327,11 @@
     "unsubscribeSuccessToast": "You are no longer following this organizer",
     "upcoming": "Upcoming"
   },
+  "imageCrop": {
+    "cannotDisplay": "This image cannot be displayed.",
+    "cannotDisplayHint": "Your browser doesn't support this file format. Please choose a JPEG or PNG image.",
+    "heicSkipCrop": "This image format can't be cropped in the browser. The image will be uploaded unchanged and converted automatically."
+  },
   "interest": {
     "description": "Choose your interests to get personalized recommendations",
     "heading": "What interests you?",

@@ -233,8 +233,12 @@ export default function CreateSpotlight() {
         })
         toast({ title: 'Free Spotlight erstellt ✓' })
         router.push('/profile')
-      } catch {
-        toast({ variant: 'destructive', title: 'Fehler', description: 'Spotlight konnte nicht erstellt werden.' })
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Fehler',
+          description: error?.response?.data?.message || 'Spotlight konnte nicht erstellt werden.',
+        })
       } finally {
         setIsLoading(false)
       }
@@ -263,8 +267,12 @@ export default function CreateSpotlight() {
 
       setFormPayload(payload)
       setClientSecret(data.data.clientSecret)
-    } catch {
-      toast({ variant: 'destructive', title: 'Fehler', description: 'Zahlung konnte nicht initiiert werden.' })
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: error?.response?.data?.message || 'Zahlung konnte nicht initiiert werden.',
+      })
     } finally {
       setIsLoading(false)
     }

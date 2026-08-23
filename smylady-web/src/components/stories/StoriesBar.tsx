@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
+import { isHeicFile } from '@/lib/heic'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
@@ -182,32 +183,46 @@ export function StoriesBar({ onStoryClick, currentUserId: _currentUserId }: Stor
       queryClient.invalidateQueries({ queryKey: ['myStories'] })
       toast({ title: 'Story erstellt!' })
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('[StoriesBar] Story creation failed:', error)
       toast({
         variant: 'destructive',
         title: t('common.error'),
-        description: t('stories.createError'),
+        description: error?.response?.data?.message || t('stories.createError'),
       })
     },
   })
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      // Check if it's an image (not video) - only crop images
-      if (file.type.startsWith('image/')) {
-        const imageUrl = URL.createObjectURL(file)
-        setSelectedImageUrl(imageUrl)
-        setCropModalOpen(true)
-      } else {
-        // For videos, upload directly without cropping
-        createStoryMutation.mutate({ file })
-      }
-    }
-    // Reset input
+    // Reset input up front so the same file can be re-selected later
     if (e.target) {
       e.target.value = ''
+    }
+    if (!file) return
+
+    // Browser können HEIC nicht dekodieren — der Crop-Dialog würde nur eine
+    // schwarze Fläche zeigen. Das Backend konvertiert HEIC zuverlässig,
+    // daher Crop überspringen und die Originaldatei direkt hochladen. Magic
+    // Bytes statt file.type/Dateiendung, da beide bei iOS-Uploads
+    // unzuverlässig sind.
+    if (await isHeicFile(file)) {
+      toast({
+        title: t('imageCrop.heicSkipCrop', {
+          defaultValue: 'Dieses Bildformat kann im Browser nicht zugeschnitten werden. Das Bild wird unverändert hochgeladen und automatisch umgewandelt.',
+        }),
+      })
+      createStoryMutation.mutate({ file })
+      return
+    }
+
+    if (file.type.startsWith('image/')) {
+      const imageUrl = URL.createObjectURL(file)
+      setSelectedImageUrl(imageUrl)
+      setCropModalOpen(true)
+    } else {
+      // For videos, upload directly without cropping
+      createStoryMutation.mutate({ file })
     }
   }
 

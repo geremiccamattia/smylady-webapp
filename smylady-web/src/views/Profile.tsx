@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, resolveImageUrl, safeFormatDate } from '@/lib/utils'
+import { isHeicFile } from '@/lib/heic'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { authService } from '@/services/auth'
@@ -133,16 +134,28 @@ export default function Profile() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    // Reset input up front so the same file can be re-selected later
+    if (e.target) {
+      e.target.value = ''
+    }
+
+    // Browser können HEIC nicht dekodieren — der Crop-Dialog würde nur eine
+    // schwarze Fläche zeigen. Das Backend konvertiert HEIC zuverlässig,
+    // daher Crop überspringen und die Originaldatei direkt hochladen.
+    if (await isHeicFile(file)) {
+      toast({
+        title: t('imageCrop.heicSkipCrop', {
+          defaultValue: 'Dieses Bildformat kann im Browser nicht zugeschnitten werden. Das Bild wird unverändert hochgeladen und automatisch umgewandelt.',
+        }),
+      })
+      await handleCropComplete(file)
+      return
+    }
 
     // Open crop modal with selected image
     const imageUrl = URL.createObjectURL(file)
     setSelectedImageUrl(imageUrl)
     setCropModalOpen(true)
-    
-    // Reset input
-    if (e.target) {
-      e.target.value = ''
-    }
   }
 
   const handleCropComplete = async (croppedFile: File) => {
@@ -150,11 +163,11 @@ export default function Profile() {
       const result = await authService.updateProfileImage(croppedFile)
       updateUser({ ...user!, profileImage: result.profileImage })
       toast({ title: 'Profilbild aktualisiert' })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Fehler',
-        description: 'Bild-Upload fehlgeschlagen.',
+        description: error?.response?.data?.message || 'Bild-Upload fehlgeschlagen.',
       })
     }
     // Clean up

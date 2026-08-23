@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Cropper from 'react-easy-crop'
 import type { Area, Point } from 'react-easy-crop'
 import {
@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, Square, RectangleHorizontal, RectangleVertical, Maximize2 } from 'lucide-react'
+import { Loader2, Square, RectangleHorizontal, RectangleVertical, Maximize2, ImageOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 
@@ -113,6 +113,18 @@ export function ImageCropModal({
     initialAspectRatio ? 'square' : 'original'
   )
   const [originalAspect, setOriginalAspect] = useState<number>(1)
+  // Bild lässt sich nicht darstellen (defekte Datei, unbekanntes Format
+  // o.ä.) — ohne diese Prüfung zeigt der Cropper nur eine schwarze Fläche,
+  // ohne dass für den Nutzer erkennbar ist, was schiefgelaufen ist.
+  // HEIC wird bereits vor dem Öffnen dieses Dialogs an den Call-Sites
+  // abgefangen (siehe src/lib/heic.ts, isHeicFile) — dieser Guard ist ein
+  // generisches Sicherheitsnetz für alle anderen nicht darstellbaren Bilder.
+  const [loadError, setLoadError] = useState(false)
+
+  // Bei jedem neu geöffneten Bild den Fehlerzustand zurücksetzen
+  useEffect(() => {
+    setLoadError(false)
+  }, [imageUrl])
 
   // Aspect ratio configurations
   const aspectRatios: Record<AspectRatioOption, AspectRatioConfig> = {
@@ -137,7 +149,17 @@ export function ImageCropModal({
   }, [])
 
   const onMediaLoaded = useCallback((mediaSize: { naturalWidth: number; naturalHeight: number }) => {
+    // Manche Browser feuern bei nicht dekodierbaren Formaten trotzdem "load",
+    // liefern dann aber naturalWidth/-Height 0 statt eines onerror-Events.
+    if (!mediaSize.naturalWidth || !mediaSize.naturalHeight) {
+      setLoadError(true)
+      return
+    }
     setOriginalAspect(mediaSize.naturalWidth / mediaSize.naturalHeight)
+  }, [])
+
+  const onMediaError = useCallback(() => {
+    setLoadError(true)
   }, [])
 
   const handleConfirm = async () => {
@@ -171,25 +193,41 @@ export function ImageCropModal({
 
         {/* Cropper Area */}
         <div className="relative h-[400px] bg-black">
-          <Cropper
-            image={imageUrl}
-            crop={crop}
-            zoom={zoom}
-            aspect={currentAspectRatio}
-            onCropChange={onCropChange}
-            onZoomChange={onZoomChange}
-            onCropComplete={onCropAreaChange}
-            onMediaLoaded={onMediaLoaded}
-            showGrid
-            style={{
-              containerStyle: {
-                backgroundColor: '#000',
-              },
-            }}
-          />
+          {loadError ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center text-white">
+              <ImageOff className="h-10 w-10 text-white/70" />
+              <p className="font-medium">
+                {t('imageCrop.cannotDisplay', { defaultValue: 'Dieses Bild kann nicht angezeigt werden.' })}
+              </p>
+              <p className="text-sm text-white/70">
+                {t('imageCrop.cannotDisplayHint', {
+                  defaultValue: 'Das Dateiformat wird von deinem Browser nicht unterstützt. Bitte wähle ein JPEG- oder PNG-Bild.',
+                })}
+              </p>
+            </div>
+          ) : (
+            <Cropper
+              image={imageUrl}
+              crop={crop}
+              zoom={zoom}
+              aspect={currentAspectRatio}
+              onCropChange={onCropChange}
+              onZoomChange={onZoomChange}
+              onCropComplete={onCropAreaChange}
+              onMediaLoaded={onMediaLoaded}
+              mediaProps={{ onError: onMediaError }}
+              showGrid
+              style={{
+                containerStyle: {
+                  backgroundColor: '#000',
+                },
+              }}
+            />
+          )}
         </div>
 
         {/* Controls */}
+        {!loadError && (
         <div className="p-4 space-y-4 border-t">
           {/* Zoom Slider */}
           <div className="flex items-center gap-4">
@@ -232,12 +270,13 @@ export function ImageCropModal({
             </div>
           )}
         </div>
+        )}
 
         <DialogFooter className="p-4 pt-0">
           <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleConfirm} disabled={isProcessing || !croppedAreaPixels}>
+          <Button onClick={handleConfirm} disabled={isProcessing || !croppedAreaPixels || loadError}>
             {isProcessing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

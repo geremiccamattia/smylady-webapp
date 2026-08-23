@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
+import { isHeicFile } from '@/lib/heic'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
@@ -318,6 +319,72 @@ function CreateEventContent() {
     return () => clearTimeout(timer)
   }, [tbaCityQuery, locationType])
 
+  // Komprimiert + übernimmt eine fertige Datei (gecroppt ODER — bei HEIC —
+  // unverändert). Reine Übernahme-Logik ohne Warteschlangen-Fortsetzung,
+  // damit sie sowohl vom Cropper-Callback als auch vom HEIC-Bypass in
+  // drainImageQueue verwendet werden kann.
+  const finalizeImage = async (file: File) => {
+    let fileToUse = file
+    // HEIC-Bypass: unveränderte Originaldatei, keine Kompression versuchen —
+    // browser-image-compression zeichnet intern auf Canvas und kann HEIC
+    // ebenso wenig dekodieren wie der Cropper.
+    if (!(await isHeicFile(file))) {
+      try {
+        const compressed = await imageCompression(file, {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+        })
+        const safeName = file.name && file.name !== ''
+          ? file.name.replace(/\.(heic|heif)$/i, '.jpg')
+          : `image_${Date.now()}.jpg`
+        const safeType = compressed.type === 'image/heic' || compressed.type === 'image/heif'
+          ? 'image/jpeg'
+          : compressed.type
+        fileToUse = new File([compressed], safeName, { type: safeType })
+      } catch {
+        console.warn('Image compression failed, using original')
+      }
+    }
+
+    setImages((prev) => [...prev, fileToUse])
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreviews((prev) => [...prev, reader.result as string])
+    }
+    reader.readAsDataURL(fileToUse)
+  }
+
+  // Arbeitet eine Warteschlange ausgewählter Bilder ab: HEIC-Dateien werden
+  // ohne Crop-Dialog direkt übernommen (Backend konvertiert sie zuverlässig),
+  // das erste Bild, das tatsächlich gecroppt werden kann, öffnet den Cropper.
+  // WICHTIG: `queue` läuft als Parameter durch, nicht über die pendingFiles-
+  // State gelesen — sonst stale closure, da setPendingFiles() erst beim
+  // nächsten Render sichtbar wird, wir hier aber ggf. noch im selben Tick
+  // (nach einem await) weiterlesen würden.
+  const drainImageQueue = async (queue: File[]) => {
+    for (let i = 0; i < queue.length; i++) {
+      const file = queue[i]
+      if (await isHeicFile(file)) {
+        toast({
+          title: t('imageCrop.heicSkipCrop', {
+            defaultValue: 'Dieses Bildformat kann im Browser nicht zugeschnitten werden. Das Bild wird unverändert hochgeladen und automatisch umgewandelt.',
+          }),
+        })
+        await finalizeImage(file)
+        continue
+      }
+      setPendingFiles(queue.slice(i + 1))
+      const imageUrl = URL.createObjectURL(file)
+      setSelectedImageUrl(imageUrl)
+      setCropModalOpen(true)
+      return
+    }
+    // Warteschlange komplett abgearbeitet (nur HEIC oder leer) — Dialog bleibt zu.
+    setCropModalOpen(false)
+  }
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (images.length + files.length > 5) {
@@ -334,39 +401,12 @@ function CreateEventContent() {
     }
 
     if (files.length > 0) {
-      setPendingFiles(files.slice(1))
-      const imageUrl = URL.createObjectURL(files[0])
-      setSelectedImageUrl(imageUrl)
-      setCropModalOpen(true)
+      drainImageQueue(files)
     }
   }
 
   const handleCropComplete = async (croppedFile: File) => {
-    let fileToUse = croppedFile
-    try {
-      const compressed = await imageCompression(croppedFile, {
-        maxSizeMB: 0.5,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-      })
-      const safeName = croppedFile.name && croppedFile.name !== ''
-        ? croppedFile.name.replace(/\.(heic|heif)$/i, '.jpg')
-        : `image_${Date.now()}.jpg`
-      const safeType = compressed.type === 'image/heic' || compressed.type === 'image/heif'
-        ? 'image/jpeg'
-        : compressed.type
-      fileToUse = new File([compressed], safeName, { type: safeType })
-    } catch {
-      console.warn('Image compression failed, using original')
-    }
-
-    setImages((prev) => [...prev, fileToUse])
-
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreviews((prev) => [...prev, reader.result as string])
-    }
-    reader.readAsDataURL(fileToUse)
+    await finalizeImage(croppedFile)
 
     if (selectedImageUrl) {
       URL.revokeObjectURL(selectedImageUrl)
@@ -374,10 +414,10 @@ function CreateEventContent() {
     }
 
     if (pendingFiles.length > 0) {
-      const nextFile = pendingFiles[0]
-      setPendingFiles(pendingFiles.slice(1))
-      const imageUrl = URL.createObjectURL(nextFile)
-      setSelectedImageUrl(imageUrl)
+      // pendingFiles ist hier sicher aktuell: handleCropComplete wird als
+      // Modal-Callback erst nach echter Nutzerinteraktion aufgerufen — der
+      // State ist zu diesem Zeitpunkt längst committed.
+      await drainImageQueue(pendingFiles)
     } else {
       setCropModalOpen(false)
     }

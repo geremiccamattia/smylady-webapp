@@ -1189,6 +1189,11 @@
     "unsubscribeSuccessToast": "Du folgst diesem Veranstalter nicht mehr",
     "upcoming": "Kommend"
   },
+  "imageCrop": {
+    "cannotDisplay": "Dieses Bild kann nicht angezeigt werden.",
+    "cannotDisplayHint": "Das Dateiformat wird von deinem Browser nicht unterstützt. Bitte wähle ein JPEG- oder PNG-Bild.",
+    "heicSkipCrop": "Dieses Bildformat kann im Browser nicht zugeschnitten werden. Das Bild wird unverändert hochgeladen und automatisch umgewandelt."
+  },
   "interest": {
     "description": "Wähle deine Interessen, um personalisierte Empfehlungen zu erhalten",
     "heading": "Was interessiert dich?",

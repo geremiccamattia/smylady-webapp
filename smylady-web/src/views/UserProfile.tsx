@@ -21,6 +21,7 @@ import i18n from '@/i18n'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { getInitials, cn, resolveImageUrl, safeFormatDate, formatRelativeTime, generateEventSlug, generateCommunitySlug } from '@/lib/utils'
+import { isHeicFile } from '@/lib/heic'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import {
@@ -1944,14 +1945,56 @@ function CreatePostModal({ onClose, onSuccess }: { onClose: () => void; onSucces
       toast({ title: t('posts.created') })
       onClose()
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: t('common.error'),
-        description: t('posts.createError'),
+        description: error?.response?.data?.message || t('posts.createError'),
       })
     },
   })
+
+  // Übernimmt eine fertige Datei (gecroppt ODER — bei HEIC — unverändert).
+  // Reine Übernahme-Logik ohne Warteschlangen-Fortsetzung, damit sie sowohl
+  // vom Cropper-Callback als auch vom HEIC-Bypass in drainImageQueue
+  // verwendet werden kann.
+  const finalizeImage = (file: File) => {
+    setImages(prev => [...prev, file])
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviews(prev => [...prev, reader.result as string])
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Arbeitet eine Warteschlange ausgewählter Bilder ab: HEIC-Dateien werden
+  // ohne Crop-Dialog direkt übernommen (Backend konvertiert sie zuverlässig),
+  // das erste Bild, das tatsächlich gecroppt werden kann, öffnet den Cropper.
+  // WICHTIG: `queue` läuft als Parameter durch, nicht über die pendingFiles-
+  // State gelesen — sonst stale closure, da setPendingFiles() erst beim
+  // nächsten Render sichtbar wird, wir hier aber ggf. noch im selben Tick
+  // (nach einem await) weiterlesen würden.
+  const drainImageQueue = async (queue: File[]) => {
+    for (let i = 0; i < queue.length; i++) {
+      const file = queue[i]
+      if (await isHeicFile(file)) {
+        toast({
+          title: t('imageCrop.heicSkipCrop', {
+            defaultValue: 'Dieses Bildformat kann im Browser nicht zugeschnitten werden. Das Bild wird unverändert hochgeladen und automatisch umgewandelt.',
+          }),
+        })
+        finalizeImage(file)
+        continue
+      }
+      setPendingFiles(queue.slice(i + 1))
+      const imageUrl = URL.createObjectURL(file)
+      setSelectedImageUrl(imageUrl)
+      setCropModalOpen(true)
+      return
+    }
+    // Warteschlange komplett abgearbeitet (nur HEIC oder leer) — Dialog bleibt zu.
+    setCropModalOpen(false)
+  }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -1961,29 +2004,21 @@ function CreatePostModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     }
     if (e.target) e.target.value = ''
     if (files.length > 0) {
-      setPendingFiles(files.slice(1))
-      const imageUrl = URL.createObjectURL(files[0])
-      setSelectedImageUrl(imageUrl)
-      setCropModalOpen(true)
+      drainImageQueue(files)
     }
   }
 
   const handleCropComplete = (croppedFile: File) => {
-    setImages(prev => [...prev, croppedFile])
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreviews(prev => [...prev, reader.result as string])
-    }
-    reader.readAsDataURL(croppedFile)
+    finalizeImage(croppedFile)
     if (selectedImageUrl) {
       URL.revokeObjectURL(selectedImageUrl)
       setSelectedImageUrl('')
     }
     if (pendingFiles.length > 0) {
-      const nextFile = pendingFiles[0]
-      setPendingFiles(pendingFiles.slice(1))
-      const imageUrl = URL.createObjectURL(nextFile)
-      setSelectedImageUrl(imageUrl)
+      // pendingFiles ist hier sicher aktuell: handleCropComplete wird als
+      // Modal-Callback erst nach echter Nutzerinteraktion aufgerufen — der
+      // State ist zu diesem Zeitpunkt längst committed.
+      drainImageQueue(pendingFiles)
     } else {
       setCropModalOpen(false)
     }

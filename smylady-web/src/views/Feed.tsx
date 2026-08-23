@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
+import { isHeicFile } from '@/lib/heic'
 import { StoriesBar } from '@/components/stories/StoriesBar'
 import CommunityExplore from '@/components/community/CommunityExplore'
 import { PostCard } from '@/components/PostCard'
@@ -348,14 +349,56 @@ export function CreatePostModal({
       setSelectedTrack(null)
       onClose()
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: t('common.error'),
-        description: t('posts.couldNotCreate'),
+        description: error?.response?.data?.message || t('posts.couldNotCreate'),
       })
     },
   })
+
+  // Übernimmt eine fertige Datei (gecroppt ODER — bei HEIC — unverändert).
+  // Reine Übernahme-Logik ohne Warteschlangen-Fortsetzung, damit sie sowohl
+  // vom Cropper-Callback als auch vom HEIC-Bypass in drainImageQueue
+  // verwendet werden kann.
+  const finalizeImage = (file: File) => {
+    setImages(prev => [...prev, file])
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviews(prev => [...prev, reader.result as string])
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Arbeitet eine Warteschlange ausgewählter Bilder ab: HEIC-Dateien werden
+  // ohne Crop-Dialog direkt übernommen (Backend konvertiert sie zuverlässig),
+  // das erste Bild, das tatsächlich gecroppt werden kann, öffnet den Cropper.
+  // WICHTIG: `queue` läuft als Parameter durch, nicht über die pendingFiles-
+  // State gelesen — sonst stale closure, da setPendingFiles() erst beim
+  // nächsten Render sichtbar wird, wir hier aber ggf. noch im selben Tick
+  // (nach einem await) weiterlesen würden.
+  const drainImageQueue = async (queue: File[]) => {
+    for (let i = 0; i < queue.length; i++) {
+      const file = queue[i]
+      if (await isHeicFile(file)) {
+        toast({
+          title: t('imageCrop.heicSkipCrop', {
+            defaultValue: 'Dieses Bildformat kann im Browser nicht zugeschnitten werden. Das Bild wird unverändert hochgeladen und automatisch umgewandelt.',
+          }),
+        })
+        finalizeImage(file)
+        continue
+      }
+      setPendingFiles(queue.slice(i + 1))
+      const imageUrl = URL.createObjectURL(file)
+      setSelectedImageUrl(imageUrl)
+      setCropModalOpen(true)
+      return
+    }
+    // Warteschlange komplett abgearbeitet (nur HEIC oder leer) — Dialog bleibt zu.
+    setCropModalOpen(false)
+  }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -374,37 +417,24 @@ export function CreatePostModal({
 
     // Queue files and start cropping first one
     if (files.length > 0) {
-      setPendingFiles(files.slice(1)) // Queue remaining files
-      const imageUrl = URL.createObjectURL(files[0])
-      setSelectedImageUrl(imageUrl)
-      setCropModalOpen(true)
+      drainImageQueue(files)
     }
   }
 
   const handleCropComplete = (croppedFile: File) => {
-    // Add cropped image
-    setImages(prev => [...prev, croppedFile])
-    
-    // Generate preview
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreviews(prev => [...prev, reader.result as string])
-    }
-    reader.readAsDataURL(croppedFile)
-    
+    finalizeImage(croppedFile)
+
     // Clean up current URL
     if (selectedImageUrl) {
       URL.revokeObjectURL(selectedImageUrl)
       setSelectedImageUrl('')
     }
-    
-    // Process next pending file
+
     if (pendingFiles.length > 0) {
-      const nextFile = pendingFiles[0]
-      setPendingFiles(pendingFiles.slice(1))
-      const imageUrl = URL.createObjectURL(nextFile)
-      setSelectedImageUrl(imageUrl)
-      // Keep modal open for next image
+      // pendingFiles ist hier sicher aktuell: handleCropComplete wird als
+      // Modal-Callback erst nach echter Nutzerinteraktion aufgerufen — der
+      // State ist zu diesem Zeitpunkt längst committed.
+      drainImageQueue(pendingFiles)
     } else {
       setCropModalOpen(false)
     }

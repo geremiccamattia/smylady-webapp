@@ -16,6 +16,7 @@ import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Globe, ArrowLeft, Upload, Settings, Crop, Share2, ChevronDown } from 'lucide-react'
 import { generateCommunitySlug } from '@/lib/utils'
+import { isHeicFile } from '@/lib/heic'
 
 export default function CreateCommunityPage() {
   const { isAuthenticated } = useAuth()
@@ -63,6 +64,53 @@ export default function CreateCommunityPage() {
     )
   }
 
+  // Übernimmt eine fertige Datei (gecroppt ODER — bei HEIC — unverändert) an
+  // Index `index` (Ersetzen eines bestehenden Bildes) oder ans Ende (neues
+  // Bild). Reine Übernahme-Logik ohne Warteschlangen-Fortsetzung.
+  const finalizeImage = (file: File, index: number | null) => {
+    const newFiles = index !== null
+      ? selectedFiles.map((f, i) => (i === index ? file : f))
+      : [...selectedFiles, file]
+    setSelectedFiles(newFiles)
+    setPreviews(newFiles.map((f) => URL.createObjectURL(f)))
+  }
+
+  // Arbeitet eine Warteschlange ausgewählter Bilder ab: HEIC-Dateien werden
+  // ohne Crop-Dialog direkt übernommen (Backend konvertiert sie zuverlässig),
+  // das erste Bild, das tatsächlich gecroppt werden kann, öffnet den Cropper.
+  // WICHTIG: `queue` läuft als Parameter durch, nicht über die pendingFiles-
+  // State gelesen — sonst stale closure, da setPendingFiles() erst beim
+  // nächsten Render sichtbar wird, wir hier aber ggf. noch im selben Tick
+  // (nach einem await) weiterlesen würden.
+  const drainImageQueue = async (queue: File[], replaceIndex: number | null) => {
+    for (let i = 0; i < queue.length; i++) {
+      const file = queue[i]
+      if (await isHeicFile(file)) {
+        toast({
+          title: t('imageCrop.heicSkipCrop', {
+            defaultValue: 'Dieses Bildformat kann im Browser nicht zugeschnitten werden. Das Bild wird unverändert hochgeladen und automatisch umgewandelt.',
+          }),
+        })
+        finalizeImage(file, replaceIndex)
+        // Ein Re-Crop eines bestehenden Bildes ist immer ein Einzelbild —
+        // keine Warteschlange fortzusetzen.
+        if (replaceIndex !== null) return
+        continue
+      }
+      setPendingFiles(queue.slice(i + 1))
+      setCropIndex(replaceIndex)
+      setCropImageUrl(URL.createObjectURL(file))
+      setCropModalOpen(true)
+      return
+    }
+    // Warteschlange komplett abgearbeitet (nur HEIC oder leer) — Dialog bleibt zu.
+    if (replaceIndex === null) {
+      setCropModalOpen(false)
+      setCropImageUrl('')
+      setPendingFiles([])
+    }
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
@@ -73,10 +121,7 @@ export default function CreateCommunityPage() {
     }
 
     // Bilder werden nacheinander durch den Cropper geschickt
-    setPendingFiles(files.slice(1))
-    setCropIndex(null)
-    setCropImageUrl(URL.createObjectURL(files[0]))
-    setCropModalOpen(true)
+    drainImageQueue(files, null)
 
     // Input zurücksetzen damit dasselbe Bild erneut gewählt werden kann
     e.target.value = ''
@@ -89,24 +134,15 @@ export default function CreateCommunityPage() {
   }
 
   const handleCropComplete = (croppedFile: File) => {
-    if (cropIndex !== null) {
-      const newFiles = [...selectedFiles]
-      newFiles[cropIndex] = croppedFile
-      setSelectedFiles(newFiles)
-      setPreviews(newFiles.map((f) => URL.createObjectURL(f)))
-    } else {
-      const newFiles = [...selectedFiles, croppedFile]
-      setSelectedFiles(newFiles)
-      setPreviews(newFiles.map((f) => URL.createObjectURL(f)))
-    }
+    finalizeImage(croppedFile, cropIndex)
 
     URL.revokeObjectURL(cropImageUrl)
 
     if (cropIndex === null && pendingFiles.length > 0) {
-      // Nächstes ausgewähltes Bild croppen, Modal bleibt offen
-      const [nextFile, ...rest] = pendingFiles
-      setPendingFiles(rest)
-      setCropImageUrl(URL.createObjectURL(nextFile))
+      // pendingFiles ist hier sicher aktuell: handleCropComplete wird als
+      // Modal-Callback erst nach echter Nutzerinteraktion aufgerufen — der
+      // State ist zu diesem Zeitpunkt längst committed.
+      drainImageQueue(pendingFiles, null)
     } else {
       setCropModalOpen(false)
       setCropImageUrl('')
@@ -124,9 +160,7 @@ export default function CreateCommunityPage() {
   }
 
   const openCropForExisting = (index: number) => {
-    setCropIndex(index)
-    setCropImageUrl(URL.createObjectURL(selectedFiles[index]))
-    setCropModalOpen(true)
+    drainImageQueue([selectedFiles[index]], index)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
