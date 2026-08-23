@@ -522,7 +522,10 @@ export const postsService = {
       pagination: { page, limit, total: 0, totalPages: 0 }
     }
     try {
-      const response = await apiClient.get('/posts/public', {
+      // publicClient statt apiClient: die Route ist bereits öffentlich, aber über
+      // apiClient hängt ein evtl. abgelaufener/ungültiger Token im localStorage
+      // trotzdem am Request — publicClient schickt garantiert keinen mit.
+      const response = await publicClient.get('/posts/public', {
         params: { page, limit },
       })
       if (!response?.data?.data) return emptyResponse

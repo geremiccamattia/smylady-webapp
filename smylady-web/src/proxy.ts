@@ -9,6 +9,12 @@ const SKIP_PREFIXES = [
   '/robots',
   '/sitemap',
   '/blog',
+  // Sentry-Tunnel (next.config.ts: tunnelRoute) — der Matcher unten trifft sonst
+  // auch diesen Pfad und würde ihn für EN-Nutzer (i18nextLng-Cookie) auf
+  // /en/monitoring umleiten. next.config.ts kennt aber nur "/monitoring" als
+  // Tunnel-Ziel, ein umgeleiteter Request landet dort nicht mehr — Sentry
+  // meldet dann clientseitige Fehler nicht mehr (siehe Kommentar in next.config.ts).
+  '/monitoring',
 ]
 
 export function proxy(request: NextRequest) {

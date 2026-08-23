@@ -32,12 +32,25 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
+      // War auf der fehlgeschlagenen Anfrage überhaupt ein Bearer-Token dabei?
+      // Guest-Nebenanfragen (z.B. auf /explore, ohne eingeloggten User) laufen
+      // ohne Authorization-Header und liefern an geschützten Endpoints ebenfalls
+      // 401 — das ist erwartetes Verhalten für einen Gast, kein Session-Fehler.
+      // WICHTIG: Token/User NUR löschen, wenn WIR selbst einen Header gesendet
+      // haben und der vom Backend abgelehnt wurde. Sonst verliert ein
+      // eingeloggter Nutzer auf /explore seine Session, sobald irgendeine
+      // parallele Guest-artige Nebenanfrage zufällig 401 liefert — ein stiller,
+      // kaum reproduzierbarer Logout. Diese Bedingung ist also KEIN überflüssiger
+      // Zusatz-Check, sondern der eigentliche Bugfix — bitte nicht entfernen.
+      const hadAuthHeader = Boolean(error.config?.headers?.Authorization)
       // Don't clear token when returning from Spotify OAuth
       const isSpotifyReturn = window.location.search.includes('spotify=')
-      if (!isSpotifyReturn) {
+      if (hadAuthHeader && !isSpotifyReturn) {
         localStorage.removeItem(STORAGE_KEYS.TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER)
       }
+      // Redirect-Logik bleibt bewusst UNABHÄNGIG von hadAuthHeader: ein Gast auf
+      // einer geschützten (nicht-öffentlichen) Seite soll weiterhin zu /login.
       const publicPaths = [
         '/explore', '/login', '/register', '/event/', '/user/', '/feed', '/post/',
         '/influencer', '/api', '/communities',

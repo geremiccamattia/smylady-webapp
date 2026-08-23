@@ -260,7 +260,9 @@ function ExploreContent() {
   const { data: raffleEvents } = useQuery({
     queryKey: ['raffleEvents', selectedLocation?.lat, selectedLocation?.lng, radius],
     queryFn: async () => {
-      const response = await apiClient.get('/events', {
+      // publicClient + /events/public statt apiClient + /events: /events ist
+      // auth-pflichtig (401 ohne Token) — gleiches Muster wie RafflePromoBanner.tsx.
+      const response = await publicClient.get('/events/public', {
         params: {
           isRaffle: true,
           upcoming: true,

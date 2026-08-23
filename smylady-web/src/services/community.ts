@@ -12,8 +12,16 @@ export const communityService = {
   },
 
   getTopPicks: async (limit = 3) => {
-    const response = await apiClient.get(`/communities/top-picks?limit=${limit}`)
-    return response.data.data
+    // /communities/top-picks ist auth-pflichtig (401 im Gast-Modus, z.B. auf
+    // /explore). Wie bei eventsService.getRecentMemories/getTopPicks: Fehler
+    // abfangen und leeres Array liefern, statt die Anfrage React Query dreimal
+    // wiederholen zu lassen (Default-Retry) und den Rest der Seite zu stören.
+    try {
+      const response = await apiClient.get(`/communities/top-picks?limit=${limit}`)
+      return response.data.data
+    } catch {
+      return []
+    }
   },
 
   getMyCommunities: async () => {
