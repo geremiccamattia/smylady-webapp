@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -173,9 +173,8 @@ function SpotlightPaymentHandler({
 export default function CreateSpotlight() {
   const router = useRouter()
   const { toast } = useToast()
-  const { user } = useAuth()
   const { t } = useTranslation()
-  const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')
+  const isAdmin = useIsAdmin()
 
   const [selectedPlan, setSelectedPlan] = useState<PlanId | 'free' | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null)

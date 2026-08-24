@@ -29,6 +29,7 @@ import { chatService } from '@/services/chat'
 import { memoriesService, getMemoryUrl, getMemoryType, getMemoryId, getUploadedByInfo } from '@/services/memories'
 import { useTranslation } from 'react-i18next'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { format } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import QRCode from 'react-qr-code'
@@ -175,9 +176,7 @@ export default function EventDetailClient({ id }: Props) {
 
   const currentUserId = user ? (user._id || user.id) : null
   const isOwner = !!(currentUserId && creatorId && currentUserId === creatorId)
-  const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')
-  console.log('USER EMAIL:', user?.email)
-  console.log('IS ADMIN:', isAdmin)
+  const isAdmin = useIsAdmin()
   const eventHasStarted = event ? new Date(event.eventDate) <= new Date() : false
   const eventId = event?._id || event?.id || id
 

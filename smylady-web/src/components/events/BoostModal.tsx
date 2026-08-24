@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { useAuth } from '@/contexts/AuthContext'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!)
 
@@ -127,8 +127,7 @@ export default function BoostModal({
 }: BoostModalProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
-  const isAdmin = ['geremicca.mattia+1@gmail.com', 'smylady@hotmail.com'].includes(user?.email ?? '')
+  const isAdmin = useIsAdmin()
   const [budget, setBudget] = useState('')
   const [days, setDays] = useState('7')
   const [radius, setRadius] = useState('25')

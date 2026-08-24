@@ -15,7 +15,10 @@ export interface User {
   }
   dateOfBirth?: string
   age?: number
-  role: 'user' | 'organizer'
+  // 'admin' schaltet plattformweite Sonderrechte frei (Gratis-Boost, Gratis-
+  // Spotlight, Fremdevents verwalten). Ob das Backend diesen Wert tatsächlich
+  // ausliefert, ist im Frontend nicht nachweisbar — siehe Hinweis in EventDetailClient.
+  role: 'user' | 'organizer' | 'admin'
   profileImage?: string
   bio?: string
   showAge?: boolean
