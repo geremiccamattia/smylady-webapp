@@ -18,8 +18,16 @@ import { useTranslation } from 'react-i18next'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Upload, X, Calendar, MapPin, Ticket, Music, Info, ArrowLeft, Loader2, Plus, Trash2, Languages } from 'lucide-react'
+import { Upload, X, Calendar, MapPin, Ticket, Music, Info, ArrowLeft, Loader2, Plus, Trash2, Languages, Users } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  SubscriberPicker,
+  useSubscribers,
+  normalizeInvitedUsers,
+  getSubscriberId,
+} from '@/components/events/SubscriberPicker'
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>()
@@ -27,6 +35,7 @@ export default function EditEvent() {
   const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()
+  const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [seriesScope, setSeriesScope] = useState<'this' | 'future' | 'all' | null>(null)
   const [showAddDates, setShowAddDates] = useState(false)
@@ -112,6 +121,11 @@ export default function EditEvent() {
   const [tbaCityQuery, setTbaCityQuery] = useState('')
   const [tbaCityResults, setTbaCityResults] = useState<Array<{ name: string; lat: number; lng: number }>>([])
   const [selectedTbaCity, setSelectedTbaCity] = useState<{ name: string; lat: number; lng: number } | null>(null)
+  // Nachträgliche Einladungen: nur die NEU hinzugefügten IDs. Die bestehenden
+  // stehen am Event und werden beim Speichern wieder mitgeschickt (siehe
+  // buildEventFormData) — sie sind hier bewusst nicht Teil des States, damit ein
+  // Rendern ohne geladenes Event sie nicht versehentlich leert.
+  const [newInvitedUsers, setNewInvitedUsers] = useState<string[]>([])
   const [translating, setTranslating] = useState(false)
   const [translatedPreview, setTranslatedPreview] = useState<{
     lang: string; name: string; description: string; restrictions: string
@@ -142,6 +156,19 @@ export default function EditEvent() {
     queryFn: () => eventsService.getEventById(id!),
     enabled: !!id,
   })
+
+  const organizerId = user?._id || user?.id
+  // Dieselbe Query wie im Picker (gleicher Key) — React Query liefert sie aus dem
+  // Cache, es wird also nicht doppelt geladen. Hier nur, um zu IDs die Namen und
+  // Profilbilder aufzulösen, falls das Backend invitedUsers unpopuliert schickt.
+  const { subscribers } = useSubscribers(organizerId)
+
+  const isSelectedVisibility = formData.visibility === 'selected'
+  const existingInvitedUsers = normalizeInvitedUsers((event as any)?.invitedUsers, subscribers)
+  const existingInvitedIds = existingInvitedUsers.map(getSubscriberId).filter(Boolean)
+  const newlyInvitedUsers = newInvitedUsers.map(
+    (id) => subscribers.find((s) => getSubscriberId(s) === id) ?? { _id: id, id, name: '' },
+  )
 
   const parseStringField = (value: unknown): string => {
     const unwrap = (v: unknown): string[] => {
@@ -606,6 +633,20 @@ export default function EditEvent() {
     }
 
     eventFormData.append('existingImages', JSON.stringify(existingImages))
+
+    // Einladungen nur mitschicken, wenn tatsächlich jemand dazugekommen ist —
+    // ein Speichern ohne Änderung an diesem Abschnitt lässt das Feld unberührt
+    // und kann die bestehende Liste damit auch nicht beschädigen.
+    //
+    // Gesendet wird dann die VOLLSTÄNDIGE Liste (bestehende + neue), weil von hier
+    // aus nicht feststellbar ist, ob das Backend invitedUsers ersetzt oder ergänzt
+    // (das Backend liegt in einem eigenen Repo). Bei "ersetzt" ist das die einzig
+    // korrekte Variante; bei "ergänzt" hängt es daran, ob serverseitig $addToSet
+    // oder $push verwendet wird — siehe Rückfrage im Bericht.
+    if (isSelectedVisibility && newInvitedUsers.length > 0) {
+      const mergedInvitedUsers = Array.from(new Set([...existingInvitedIds, ...newInvitedUsers]))
+      eventFormData.append('invitedUsers', JSON.stringify(mergedInvitedUsers))
+    }
 
     if (locationType === 'physical' && (location || event?.location)) {
       eventFormData.append('location', JSON.stringify(location || event?.location))
@@ -1454,6 +1495,83 @@ export default function EditEvent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Eingeladene Personen — nur bei visibility 'selected' */}
+        {isSelectedVisibility && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                {t('editEvent.invitedTitle', { defaultValue: 'Eingeladene Personen' })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {existingInvitedUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {t('editEvent.invitedNone', { defaultValue: 'Es wurde noch niemand eingeladen.' })}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {existingInvitedUsers.map((invited) => (
+                    <div key={getSubscriberId(invited)} className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={invited.profileImage || ''} />
+                        <AvatarFallback>
+                          {invited.name?.charAt(0)?.toUpperCase() || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {invited.name ||
+                            t('editEvent.invitedUnknown', { defaultValue: 'Eingeladene Person' })}
+                        </p>
+                        {invited.username && (
+                          <p className="text-sm text-muted-foreground truncate">@{invited.username}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {newlyInvitedUsers.length > 0 && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    {t('editEvent.invitedPending', {
+                      defaultValue: 'Wird mit dem Speichern eingeladen',
+                    })}
+                  </p>
+                  {newlyInvitedUsers.map((invited) => (
+                    <div key={getSubscriberId(invited)} className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={invited.profileImage || ''} />
+                        <AvatarFallback>
+                          {invited.name?.charAt(0)?.toUpperCase() || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {invited.name ||
+                            t('editEvent.invitedUnknown', { defaultValue: 'Eingeladene Person' })}
+                        </p>
+                        {invited.username && (
+                          <p className="text-sm text-muted-foreground truncate">@{invited.username}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <SubscriberPicker
+                userId={organizerId}
+                value={newInvitedUsers}
+                onChange={setNewInvitedUsers}
+                excludeUserIds={existingInvitedIds}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Images */}
         <Card>

@@ -12,12 +12,10 @@ import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { useGetConnectedAccount } from '@/hooks/useStripe'
 import { eventsService } from '@/services/events'
-import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
 import {
   Upload,
   X,
@@ -28,7 +26,6 @@ import {
   Globe,
   UserPlus,
   Loader2,
-  Check,
   Repeat,
   Plus,
   Trash2,
@@ -36,24 +33,10 @@ import {
   Gift,
 } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { SubscriberPicker } from '@/components/events/SubscriberPicker'
 
 // Event visibility types (same as mobile app)
 type EventVisibility = 'public' | 'subscribers' | 'selected'
-
-interface Subscriber {
-  _id?: string
-  id?: string
-  name: string
-  username?: string
-  profileImage?: string
-}
 
 function CreateEventContent() {
   const router = useRouter()
@@ -75,26 +58,8 @@ function CreateEventContent() {
   // Visibility state (matching mobile app)
   const [visibility, setVisibility] = useState<EventVisibility>('public')
   const [invitedUsers, setInvitedUsers] = useState<string[]>([])
-  const [showSubscriberModal, setShowSubscriberModal] = useState(false)
 
   const userId = user?._id || user?.id
-
-  // Fetch subscribers for visibility selector
-  const { data: subscribersData, isLoading: isLoadingSubscribers } = useQuery({
-    queryKey: ['subscribers', userId],
-    queryFn: () => userService.getSubscribers(userId || ''),
-    enabled: !!userId,
-  })
-
-  const subscribers: Subscriber[] = (Array.isArray(subscribersData) ? subscribersData : []).map(
-    (user: Subscriber) => ({
-      id: user._id || user.id,
-      _id: user._id || user.id,
-      name: user.name || user.username || 'Unknown',
-      username: user.username,
-      profileImage: user.profileImage,
-    })
-  )
 
   const [useTiers, setUseTiers] = useState(false)
   const [payAtDoor, setPayAtDoor] = useState(false)
@@ -435,14 +400,6 @@ function CreateEventContent() {
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index))
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
-  }
-
-  const toggleSubscriber = (subscriberId: string) => {
-    if (invitedUsers.includes(subscriberId)) {
-      setInvitedUsers(invitedUsers.filter((id) => id !== subscriberId))
-    } else {
-      setInvitedUsers([...invitedUsers, subscriberId])
-    }
   }
 
   const validateStep1 = () => {
@@ -874,16 +831,12 @@ function CreateEventContent() {
 
                 {/* Select Subscribers Button (matching mobile) */}
                 {visibility === 'selected' && (
-                  <Button
-                    type="button"
+                  <SubscriberPicker
+                    userId={userId}
+                    value={invitedUsers}
+                    onChange={setInvitedUsers}
                     className="mt-4 w-full"
-                    onClick={() => setShowSubscriberModal(true)}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    {invitedUsers.length > 0
-                      ? t('createEvent.selectedCount', { count: invitedUsers.length })
-                      : t('createEvent.selectSubscribers')}
-                  </Button>
+                  />
                 )}
               </CardContent>
             </Card>
@@ -1916,71 +1869,6 @@ function CreateEventContent() {
           )}
         </div>
       </form>
-
-      {/* Subscriber Selection Modal (matching mobile) */}
-      <Dialog open={showSubscriberModal} onOpenChange={setShowSubscriberModal}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>{t('createEvent.selectSubscribers')}</DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto py-4">
-            {isLoadingSubscribers ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : subscribers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">{t('createEvent.noSubscribers')}</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {subscribers.map((subscriber) => {
-                  const subId = subscriber._id || subscriber.id || ''
-                  return (
-                    <div
-                      key={subId}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer"
-                      onClick={() => toggleSubscriber(subId)}
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={subscriber.profileImage || ''} />
-                        <AvatarFallback>
-                          {subscriber.name?.charAt(0)?.toUpperCase() || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium">{subscriber.name}</p>
-                        {subscriber.username && (
-                          <p className="text-sm text-muted-foreground">@{subscriber.username}</p>
-                        )}
-                      </div>
-                      <div
-                        className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                          invitedUsers.includes(subId)
-                            ? 'bg-primary border-primary'
-                            : 'border-muted-foreground'
-                        }`}
-                      >
-                        {invitedUsers.includes(subId) && (
-                          <Check className="h-4 w-4 text-white" />
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4 border-t">
-            <Button className="w-full" onClick={() => setShowSubscriberModal(false)}>
-              {t('common.done')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Image Crop Modal */}
       <ImageCropModal
