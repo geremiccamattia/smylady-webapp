@@ -145,6 +145,16 @@ export interface Event {
   rafflePrize?: string
   raffleWinners?: { _id: string; name: string; profileImage?: string }[]
   raffleDrawDate?: string
+  /** Verlosung vor Ort mit Anwesenheitspflicht. Steuert Abschnitt 5 der
+   *  Teilnahmebedingungen und den Anwesenheitshinweis auf der Eventseite. */
+  raffleDrawOnSite?: boolean
+  /** Partner, der die Teilnehmerdaten erhält. Leer = keine Weitergabe (Normalfall). */
+  rafflePartner?: string
+  /** Partner darf die Adressen zusätzlich für Marketing nutzen. Nur relevant,
+   *  wenn rafflePartner gesetzt ist. */
+  rafflePartnerMarketing?: boolean
+  /** Gewinner per E-Mail benachrichtigen. Feldname exakt wie vom Backend erwartet. */
+  raffleNotifyWinnerByEmail?: boolean
   // Kennzeichnung durch den Veranstalter, dass Bilder oder Texte mit KI erzeugt wurden
   isAiGenerated?: boolean
   // Wird vom Backend nur angereichert, wenn der Veranstalter populiert wird.

@@ -183,6 +183,8 @@ export default function EventDetailClient({ id }: Props) {
   // Check if this is an external/Ticketmaster event
   const isExternalEvent = event?.isTicketmaster || event?.isExternalEvent || event?.source === 'ticketmaster'
   const isDoorPayment = event?.paymentType === 'door'
+  // Anwesenheitshinweise gelten nur für Verlosungen, die vor Ort stattfinden.
+  const isDrawOnSite = event?.raffleDrawOnSite === true
   // Geprüft, bevor daraus ein window.open() wird: Der useEffect unten feuert ohne
   // Zutun des Besuchers, ein javascript:-Wert liefe also allein beim Seitenaufruf.
   const externalUrl = safeExternalUrl(event?.ticketmasterUrl || event?.externalUrl)
@@ -903,22 +905,24 @@ export default function EventDetailClient({ id }: Props) {
                 </div>
               )}
 
-              {/* Anwesenheitspflicht — stand bisher nur in den Teilnahmebedingungen */}
-              <div className="flex items-start gap-2 pt-3 border-t border-amber-200 dark:border-amber-800">
-                <MapPin className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-bold text-amber-700 dark:text-amber-300">
-                    {t('raffle.attendanceTitle', { defaultValue: 'Anwesenheit erforderlich' })}
-                  </p>
-                  <p className="text-xs text-amber-800/90 dark:text-amber-200/90 leading-relaxed">
-                    {t('raffle.attendanceText', {
-                      eventName: event.name,
-                      defaultValue:
-                        'Der Gewinner wird ausschließlich vor Ort bei {{eventName}} gezogen und muss zum Zeitpunkt der Ziehung persönlich anwesend sein. Ist der gezogene Gewinner nicht anwesend, wird sofort ein neuer Gewinner gezogen.',
-                    })}
-                  </p>
+              {/* Anwesenheitspflicht — nur wenn vor Ort gezogen wird */}
+              {isDrawOnSite && (
+                <div className="flex items-start gap-2 pt-3 border-t border-amber-200 dark:border-amber-800">
+                  <MapPin className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                      {t('raffle.attendanceTitle', { defaultValue: 'Anwesenheit erforderlich' })}
+                    </p>
+                    <p className="text-xs text-amber-800/90 dark:text-amber-200/90 leading-relaxed">
+                      {t('raffle.attendanceText', {
+                        eventName: event.name,
+                        defaultValue:
+                          'Der Gewinner wird ausschließlich vor Ort bei {{eventName}} gezogen und muss zum Zeitpunkt der Ziehung persönlich anwesend sein. Ist der gezogene Gewinner nicht anwesend, wird sofort ein neuer Gewinner gezogen.',
+                      })}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Gewinner anzeigen (wenn gezogen) */}
               {raffleStatus?.raffleStatus === 'completed' && raffleStatus?.raffleWinners?.length > 0 && (
@@ -1526,11 +1530,13 @@ export default function EventDetailClient({ id }: Props) {
                         >
                           🎰 {t('raffle.ctaButton', { defaultValue: 'Am Gewinnspiel teilnehmen' })}
                         </Button>
-                        <p className="mt-2 text-center text-xs text-muted-foreground">
-                          {t('raffle.attendanceHint', {
-                            defaultValue: 'Ziehung vor Ort — Anwesenheit erforderlich',
-                          })}
-                        </p>
+                        {isDrawOnSite && (
+                          <p className="mt-2 text-center text-xs text-muted-foreground">
+                            {t('raffle.attendanceHint', {
+                              defaultValue: 'Ziehung vor Ort — Anwesenheit erforderlich',
+                            })}
+                          </p>
+                        )}
                       </>
                     ) : (
                       <Button

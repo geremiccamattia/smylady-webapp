@@ -20,6 +20,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { Upload, X, Calendar, MapPin, Ticket, Music, Info, ArrowLeft, Loader2, Plus, Trash2, Languages, Users } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
+import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -126,6 +127,11 @@ export default function EditEvent() {
   // buildEventFormData) — sie sind hier bewusst nicht Teil des States, damit ein
   // Rendern ohne geladenes Event sie nicht versehentlich leert.
   const [newInvitedUsers, setNewInvitedUsers] = useState<string[]>([])
+  // Gewinnspiel-Einstellungen, die den Wortlaut der Teilnahmebedingungen steuern.
+  const [raffleDrawOnSite, setRaffleDrawOnSite] = useState(false)
+  const [raffleNotifyWinnerByEmail, setRaffleNotifyWinnerByEmail] = useState(false)
+  const [rafflePartner, setRafflePartner] = useState('')
+  const [rafflePartnerMarketing, setRafflePartnerMarketing] = useState(false)
   const [translating, setTranslating] = useState(false)
   const [translatedPreview, setTranslatedPreview] = useState<{
     lang: string; name: string; description: string; restrictions: string
@@ -228,6 +234,10 @@ export default function EditEvent() {
       setLocationType((event as any).locationType || 'physical')
       setOnlineUrl((event as any).onlineUrl || '')
       setIsAiGenerated(event.isAiGenerated || false)
+      setRaffleDrawOnSite(event.raffleDrawOnSite === true)
+      setRaffleNotifyWinnerByEmail(event.raffleNotifyWinnerByEmail === true)
+      setRafflePartner(event.rafflePartner || '')
+      setRafflePartnerMarketing(event.rafflePartnerMarketing === true)
 
       if (event.eventEndTime && isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime)) {
         setIsMultiDay(true)
@@ -633,6 +643,18 @@ export default function EditEvent() {
     }
 
     eventFormData.append('existingImages', JSON.stringify(existingImages))
+
+    // Nur bei Gewinnspielen — diese Felder bestimmen den Wortlaut der
+    // Teilnahmebedingungen und dürfen bei anderen Events nicht mitgeschickt werden.
+    if ((event as any)?.isRaffle) {
+      eventFormData.append('raffleDrawOnSite', String(raffleDrawOnSite))
+      eventFormData.append('raffleNotifyWinnerByEmail', String(raffleNotifyWinnerByEmail))
+      eventFormData.append('rafflePartner', rafflePartner.trim())
+      eventFormData.append(
+        'rafflePartnerMarketing',
+        String(rafflePartner.trim() ? rafflePartnerMarketing : false),
+      )
+    }
 
     // Einladungen nur mitschicken, wenn tatsächlich jemand dazugekommen ist —
     // ein Speichern ohne Änderung an diesem Abschnitt lässt das Feld unberührt
@@ -1495,6 +1517,30 @@ export default function EditEvent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Gewinnspiel-Einstellungen — nur wenn das Event ein Gewinnspiel ist */}
+        {(event as any)?.isRaffle && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                🎰 {t('createEvent.isRaffle', { defaultValue: 'Gewinnspiel' })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RaffleSettingsFields
+                drawOnSite={raffleDrawOnSite}
+                onDrawOnSiteChange={setRaffleDrawOnSite}
+                notifyWinnerByEmail={raffleNotifyWinnerByEmail}
+                onNotifyWinnerByEmailChange={setRaffleNotifyWinnerByEmail}
+                partner={rafflePartner}
+                onPartnerChange={setRafflePartner}
+                partnerMarketing={rafflePartnerMarketing}
+                onPartnerMarketingChange={setRafflePartnerMarketing}
+                hasDrawDate={!!(event as any)?.raffleDrawDate}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Eingeladene Personen — nur bei visibility 'selected' */}
         {isSelectedVisibility && (

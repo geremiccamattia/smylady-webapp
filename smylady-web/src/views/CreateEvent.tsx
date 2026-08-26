@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 import { SubscriberPicker } from '@/components/events/SubscriberPicker'
+import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 
 // Event visibility types (same as mobile app)
 type EventVisibility = 'public' | 'subscribers' | 'selected'
@@ -66,6 +67,10 @@ function CreateEventContent() {
   const [isRaffle, setIsRaffle] = useState(false)
   const [rafflePrize, setRafflePrize] = useState('')
   const [raffleDrawDate, setRaffleDrawDate] = useState('')
+  const [raffleDrawOnSite, setRaffleDrawOnSite] = useState(false)
+  const [raffleNotifyWinnerByEmail, setRaffleNotifyWinnerByEmail] = useState(false)
+  const [rafflePartner, setRafflePartner] = useState('')
+  const [rafflePartnerMarketing, setRafflePartnerMarketing] = useState(false)
   const [showRecurringModal, setShowRecurringModal] = useState(false)
   const [seriesConfig, setSeriesConfig] = useState<{
     recurrence: string
@@ -667,6 +672,14 @@ function CreateEventContent() {
         if (raffleDrawDate) {
           eventFormData.append('raffleDrawDate', new Date(raffleDrawDate).toISOString())
         }
+        // Bestimmen den Wortlaut der Teilnahmebedingungen
+        eventFormData.append('raffleDrawOnSite', String(raffleDrawOnSite))
+        eventFormData.append('raffleNotifyWinnerByEmail', String(raffleNotifyWinnerByEmail))
+        eventFormData.append('rafflePartner', rafflePartner.trim())
+        eventFormData.append(
+          'rafflePartnerMarketing',
+          String(rafflePartner.trim() ? rafflePartnerMarketing : false),
+        )
       }
 
       const validQuestions = questions
@@ -1741,6 +1754,21 @@ function CreateEventContent() {
                     <p className="text-xs text-muted-foreground">
                       {t('createEvent.raffleDrawDateHint', { defaultValue: 'Leer lassen = Ziehung nach Event-Ende' })}
                     </p>
+                  </div>
+
+                  {/* Steuert den Wortlaut der Teilnahmebedingungen */}
+                  <div className="pt-2 border-t">
+                    <RaffleSettingsFields
+                      drawOnSite={raffleDrawOnSite}
+                      onDrawOnSiteChange={setRaffleDrawOnSite}
+                      notifyWinnerByEmail={raffleNotifyWinnerByEmail}
+                      onNotifyWinnerByEmailChange={setRaffleNotifyWinnerByEmail}
+                      partner={rafflePartner}
+                      onPartnerChange={setRafflePartner}
+                      partnerMarketing={rafflePartnerMarketing}
+                      onPartnerMarketingChange={setRafflePartnerMarketing}
+                      hasDrawDate={!!raffleDrawDate}
+                    />
                   </div>
 
                   {/* Hinweis */}
