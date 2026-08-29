@@ -42,6 +42,7 @@ import {
 } from 'lucide-react'
 import { EVENT_CATEGORIES } from '@/lib/constants'
 import { resolveImageUrl } from '@/lib/utils'
+import { isRaffleOpen } from '@/lib/raffle'
 import { postsService } from '@/services/posts'
 import { Event } from '@/types'
 
@@ -271,7 +272,10 @@ function ExploreContent() {
           radius,
         },
       })
-      return response.data?.data?.events || response.data?.data || []
+      const list = response.data?.data?.events || response.data?.data || []
+      // Der Endpoint filtert nur auf isRaffle, nicht auf den Status — ausgeloste
+      // Gewinnspiele fallen deshalb hier heraus. Siehe Hinweis zum Backend im Bericht.
+      return (list as any[]).filter((e) => isRaffleOpen(e))
     },
     enabled: locationLoaded && !!selectedLocation,
     staleTime: 5 * 60 * 1000,
@@ -369,7 +373,8 @@ function ExploreContent() {
 
     if (priceFilter && priceFilter !== 'all') {
       result = result.filter((e: any) => {
-        if (priceFilter === 'raffle') return !!e.isRaffle
+        // Chip "Gewinnspiel" zeigt nur noch offene — ausgeloste sind keine Teilnahme mehr wert
+        if (priceFilter === 'raffle') return !!e.isRaffle && isRaffleOpen(e)
         if (e.isTicketmaster || e.isExternalEvent) return true
         switch (priceFilter) {
           case 'free': return (e.price === 0 || !e.price) && e.paymentType !== 'door'

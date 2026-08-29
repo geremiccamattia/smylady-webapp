@@ -7,6 +7,7 @@ import { useLocalePath } from '@/hooks/useLocalePath'
 import { useRouter } from 'next/navigation'
 import { publicClient } from '@/services/api'
 import { generateEventSlug } from '@/lib/utils'
+import { isRaffleOpen } from '@/lib/raffle'
 import { X } from 'lucide-react'
 
 export function RafflePromoBanner() {
@@ -29,15 +30,18 @@ export function RafflePromoBanner() {
     queryFn: async () => {
       // /events ist auth-pflichtig (401 ohne Token) — für den Banner muss der
       // öffentliche Endpoint her, sonst sehen ausgeloggte Nutzer nie ein Gewinnspiel.
+      // limit war 1: kam als einziges Ergebnis ein ausgelostes Gewinnspiel zurück,
+      // blieb der Banner leer, obwohl noch offene existieren. Deshalb mehrere holen
+      // und das erste offene nehmen.
       const response = await publicClient.get('/events/public', {
-        params: { isRaffle: true, upcoming: true, limit: 1 },
+        params: { isRaffle: true, upcoming: true, limit: 5 },
       })
       return response.data?.data?.events || response.data?.data || []
     },
     staleTime: 5 * 60 * 1000, // 5 Minuten cachen
   })
 
-  const activeRaffle = raffleEvents?.[0]
+  const activeRaffle = (raffleEvents as any[] | undefined)?.find((e) => isRaffleOpen(e))
 
   const handleDismiss = () => {
     setDismissed(true)
@@ -46,14 +50,9 @@ export function RafflePromoBanner() {
     }
   }
 
-  // Nicht anzeigen wenn: kein Gewinnspiel, bereits geschlossen, oder Gewinnspiel beendet
-  if (
-    dismissed ||
-    !activeRaffle ||
-    !activeRaffle.name ||
-    !activeRaffle._id ||
-    activeRaffle.raffleStatus === 'completed'
-  ) {
+  // Nicht anzeigen wenn: kein offenes Gewinnspiel oder Banner bereits geschlossen.
+  // Ausgeloste sind oben schon herausgefiltert (isRaffleOpen).
+  if (dismissed || !activeRaffle || !activeRaffle.name || !activeRaffle._id) {
     return null
   }
 

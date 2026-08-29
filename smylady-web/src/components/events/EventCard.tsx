@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
 import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import { isRaffleDrawn } from '@/lib/raffle'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -60,6 +61,10 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
   const isExternalEvent = event.isTicketmaster || event.isExternalEvent || event.source === 'ticketmaster'
   // Ohne brauchbare externe URL fällt die Karte unten auf den internen Link zurück.
   const externalUrl = safeExternalUrl(event.ticketmasterUrl || event.externalUrl)
+
+  // Quelle ist hier das Event aus dem Listen-Endpoint — der liefert raffleStatus und
+  // raffleWinners mit (anders als auf der Detailseite, wo die Status-Route zuständig ist).
+  const showRaffleBadge = !!event.isRaffle && !isRaffleDrawn(event)
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -176,8 +181,9 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
             Gesponsert
           </div>
         )}
-        {/* Raffle Badge */}
-        {event.isRaffle && !isExternalEvent && (
+        {/* Raffle Badge — entfällt nach der Ziehung, dann übernimmt unten das
+            reguläre Preis-Badge (bei Gewinnspielen "Kostenlos"). */}
+        {showRaffleBadge && !isExternalEvent && (
           <div className="absolute bottom-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
             🎰 {t('raffle.badge', { defaultValue: 'Gewinnspiel' })}
           </div>
@@ -201,8 +207,9 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
             🤖 {t('common.aiShort', { defaultValue: 'KI' })}
           </div>
         )}
-        {/* Price Badge - hidden for raffles, the Gewinnspiel badge already covers it */}
-        {!event.isRaffle && (
+        {/* Price Badge — bei laufenden Gewinnspielen verdeckt vom Gewinnspiel-Badge
+            (gleiche Position), nach der Ziehung tritt es an dessen Stelle. */}
+        {!showRaffleBadge && (
           <div className={cn(
             "absolute bottom-2 left-2 px-3 py-1 rounded-full text-white text-sm font-semibold",
             isExternalEvent ? "bg-blue-600" :

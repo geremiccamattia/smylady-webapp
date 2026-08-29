@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent, isEventOver } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import { isRaffleDrawn } from '@/lib/raffle'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -235,6 +236,10 @@ export default function EventDetailClient({ id }: Props) {
     },
     enabled: !!event?.isRaffle,
   })
+
+  // Quelle ist bewusst die Status-Route, nicht event.raffleStatus: die Detailseite
+  // holt den Status separat, und nur diese Antwort ist nach einer Ziehung aktuell.
+  const isRaffleAlreadyDrawn = isRaffleDrawn(raffleStatus)
 
   // Fetch user's ticket for this event (for uploading memories)
   // MUST be called before any conditional returns to follow React hook rules
@@ -683,8 +688,9 @@ export default function EventDetailClient({ id }: Props) {
             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/1200x500?text=Event'
           }}
         />
-        {/* Raffle Hero Banner */}
-        {event?.isRaffle && (
+        {/* Raffle Hero Banner — nach der Ziehung ist "Kostenlos teilnehmen und
+            gewinnen!" eine Einladung zu etwas, das es nicht mehr gibt. */}
+        {event?.isRaffle && !isRaffleAlreadyDrawn && (
           <div className="absolute inset-x-0 top-0 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2.5 px-4">
             <p className="text-sm font-bold flex items-center justify-center gap-2">
               🎰 {t('raffle.heroBanner', { defaultValue: 'GEWINNSPIEL — Kostenlos teilnehmen und gewinnen!' })}
@@ -845,8 +851,11 @@ export default function EventDetailClient({ id }: Props) {
             </div>
           )}
 
-          {/* Raffle Info Box */}
-          {event?.isRaffle && (
+          {/* Raffle Info Box — verschwindet nach der Ziehung komplett. Damit bleibt
+              auf der Detailseite nichts mehr vom Gewinnspiel stehen; die Seite sieht
+              aus wie bei jedem anderen Event. Die Teilnahmebedingungen bleiben unter
+              /event/[id]/teilnahmebedingungen erreichbar, nur nicht mehr verlinkt. */}
+          {event?.isRaffle && !isRaffleAlreadyDrawn && (
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-3">
               {/* Badge */}
               <div className="flex items-center gap-2">
@@ -905,8 +914,10 @@ export default function EventDetailClient({ id }: Props) {
                 </div>
               )}
 
-              {/* Anwesenheitspflicht — nur wenn vor Ort gezogen wird */}
-              {isDrawOnSite && (
+              {/* Anwesenheitspflicht — nur wenn vor Ort gezogen wird und die Ziehung
+                  noch bevorsteht. Nach der Ziehung stünde hier im Futur ("wird
+                  gezogen", "muss anwesend sein"), was längst stattgefunden hat. */}
+              {isDrawOnSite && !isRaffleAlreadyDrawn && (
                 <div className="flex items-start gap-2 pt-3 border-t border-amber-200 dark:border-amber-800">
                   <MapPin className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
                   <div>
@@ -1516,7 +1527,10 @@ export default function EventDetailClient({ id }: Props) {
                         </span>
                       </div>
                     )}
-                    {event?.isRaffle ? (
+                    {/* Nach der Ziehung fällt der Gewinnspiel-Zweig weg und der reguläre
+                        Ticket-Button greift — das Event findet weiter statt und bleibt
+                        buchbar, nur eben ohne Gewinnspiel-Aufmachung. */}
+                    {event?.isRaffle && !isRaffleAlreadyDrawn ? (
                       <>
                         <Button
                           variant="default"
@@ -1717,7 +1731,7 @@ export default function EventDetailClient({ id }: Props) {
               ) : (
                 <p className={cn(
                   "font-bold text-sm truncate",
-                  event.isRaffle ? "text-amber-600" : "text-green-600"
+                  event.isRaffle && !isRaffleAlreadyDrawn ? "text-amber-600" : "text-green-600"
                 )}>
                   {t('events.free')}
                 </p>
@@ -1736,7 +1750,9 @@ export default function EventDetailClient({ id }: Props) {
               <Button variant="secondary" size="sm" className="shrink-0" disabled>
                 {t('events.soldOut')}
               </Button>
-            ) : event.isRaffle ? (
+            ) : event.isRaffle && !isRaffleAlreadyDrawn ? (
+              // Zweiter Teilnahme-Einstieg (mobile Sticky-Leiste). Nach der Ziehung
+              // greift auch hier der reguläre Ticket-Button aus dem else-Zweig.
               <Button
                 size="sm"
                 className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold"

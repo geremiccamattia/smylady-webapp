@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { Card, CardContent } from '@/components/ui/card'
 import { resolveImageUrl, generateEventSlug } from '@/lib/utils'
+import { isRaffleDrawn } from '@/lib/raffle'
 import { Gift, Users, Calendar, MapPin } from 'lucide-react'
 
 interface RaffleEventCardProps {
@@ -18,6 +19,12 @@ export function RaffleEventCard({ event }: RaffleEventCardProps) {
   const eventImage = event.locationImages?.[0]?.url
   const slug = generateEventSlug(event.name, event._id)
 
+  // Nach der Ziehung bleibt die Karte stehen — das Event findet ja trotzdem statt.
+  // Weg fällt nur die Gewinnspiel-Werbung: Badge, "Gewinn: …" und Statuszeile.
+  // Quelle ist hier das Event-Objekt aus dem Listen-Endpoint (nicht die Status-Route),
+  // das raffleStatus und raffleWinners mitliefert.
+  const drawn = isRaffleDrawn(event)
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('de-AT', {
       day: '2-digit',
@@ -28,7 +35,11 @@ export function RaffleEventCard({ event }: RaffleEventCardProps) {
 
   return (
     <Link href={localePath(`/event/${slug}`)}>
-      <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full border-2 border-amber-200 dark:border-amber-800">
+      <Card
+        className={`overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full${
+          drawn ? '' : ' border-2 border-amber-200 dark:border-amber-800'
+        }`}
+      >
         {/* Bild mit Gewinnspiel-Badge */}
         <div className="relative aspect-[16/9] overflow-hidden bg-muted">
           {eventImage ? (
@@ -42,10 +53,12 @@ export function RaffleEventCard({ event }: RaffleEventCardProps) {
               <Gift className="h-12 w-12 text-amber-500" />
             </div>
           )}
-          {/* Gewinnspiel-Badge */}
-          <div className="absolute bottom-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-            🎰 {t('raffle.badge', { defaultValue: 'Gewinnspiel' })}
-          </div>
+          {/* Gewinnspiel-Badge — entfällt nach der Ziehung */}
+          {!drawn && (
+            <div className="absolute bottom-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+              🎰 {t('raffle.badge', { defaultValue: 'Gewinnspiel' })}
+            </div>
+          )}
           {/* Teilnehmer-Count */}
           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
             <Users className="h-3 w-3" />
@@ -64,7 +77,7 @@ export function RaffleEventCard({ event }: RaffleEventCardProps) {
           <h3 className="font-semibold text-sm line-clamp-1">{event.name}</h3>
 
           {/* Gewinn */}
-          {event.rafflePrize && (
+          {event.rafflePrize && !drawn && (
             <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
               <Gift className="h-3.5 w-3.5" />
               <span className="text-xs font-medium line-clamp-1">
@@ -87,12 +100,8 @@ export function RaffleEventCard({ event }: RaffleEventCardProps) {
             )}
           </div>
 
-          {/* Status */}
-          {event.raffleStatus === 'completed' && (
-            <div className="text-xs text-green-600 font-medium">
-              ✓ {t('raffle.completed', { defaultValue: 'Gewinner gezogen' })}
-            </div>
-          )}
+          {/* Laufende Ziehung ankündigen — nach Abschluss steht hier nichts mehr,
+              die Karte verhält sich dann wie eine normale Event-Karte. */}
           {event.raffleStatus === 'drawing' && (
             <div className="text-xs text-amber-600 font-medium animate-pulse">
               🎰 {t('raffle.drawing', { defaultValue: 'Ziehung läuft...' })}
