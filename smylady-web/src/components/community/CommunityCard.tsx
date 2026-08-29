@@ -5,7 +5,7 @@ import { Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@/components/ui/card'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { resolveImageUrl, generateCommunitySlug } from '@/lib/utils'
+import { resolveThumbnailUrl, generateCommunitySlug } from '@/lib/utils'
 import { EVENT_CATEGORIES } from '@/lib/constants'
 
 interface CommunityCardProps {
@@ -38,7 +38,7 @@ export default function CommunityCard({ community }: CommunityCardProps) {
   const { t } = useTranslation()
   const localePath = useLocalePath()
 
-  const coverUrl = community.coverImages?.[0]?.url ? resolveImageUrl(community.coverImages[0].url) : null
+  const coverUrl = community.coverImages?.[0]?.url ? resolveThumbnailUrl(community.coverImages[0]) : null
   const categories = (community.categories && community.categories.length > 0
     ? community.categories
     : [community.category]

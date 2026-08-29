@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ticketsService } from '@/services/tickets'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { formatDate, formatPrice, formatEventTime, resolveImageUrl, generateEventSlug } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, resolveThumbnailUrl, generateEventSlug } from '@/lib/utils'
 import Link from 'next/link'
 import { Ticket, Calendar, MapPin, QrCode, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
@@ -76,7 +76,7 @@ export default function MyTickets() {
                     {event && (
                       <div className="w-full md:w-48 h-32 md:h-auto bg-muted">
                         <img
-                          src={resolveImageUrl(event.thumbnailUrl || event.locationImages?.[0]?.url || event.images?.[0]) || 'https://via.placeholder.com/200x150?text=Event'}
+                          src={resolveThumbnailUrl(event.thumbnailUrl || event.locationImages?.[0] || event.images?.[0]) || 'https://via.placeholder.com/200x150?text=Event'}
                           alt={event.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {

@@ -6,10 +6,10 @@ import { useTranslation } from 'react-i18next'
 import { Image, Video, MessageCircle, Upload, Loader2, Clock, TrendingUp, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, isMemoryHighlighted, getUploadedByInfo } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, isMemoryHighlighted, getUploadedByInfo } from '@/services/memories'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { getInitials, resolveImageUrl, cn } from '@/lib/utils'
+import { getInitials, resolveImageUrl, resolveThumbnailUrl, cn } from '@/lib/utils'
 import MemoryViewer from './MemoryViewer'
 import MemoryUpload from './MemoryUpload'
 import ReportModal from '@/components/ReportModal'
@@ -317,7 +317,7 @@ export default function MemoryGallery({
                   </div>
                 ) : (
                   <img
-                    src={resolveImageUrl(memoryUrl)}
+                    src={resolveThumbnailUrl(getMemoryThumbnailSource(memory))}
                     alt={memory.caption || 'Memory'}
                     className="w-full h-full object-cover"
                     onError={(e) => {

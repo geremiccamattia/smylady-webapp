@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
-import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
+import { getInitials, cn, resolveImageUrl, resolveThumbnailUrl } from '@/lib/utils'
 import { isHeicFile } from '@/lib/heic'
 import { StoriesBar } from '@/components/stories/StoriesBar'
 import CommunityExplore from '@/components/community/CommunityExplore'
@@ -557,7 +557,7 @@ export function CreatePostModal({
                     >
                       {event.locationImages?.[0]?.url ? (
                         <img
-                          src={resolveImageUrl(event.locationImages[0].url)}
+                          src={resolveThumbnailUrl(event.locationImages[0])}
                           alt=""
                           className="w-12 h-8 rounded object-cover shrink-0"
                         />

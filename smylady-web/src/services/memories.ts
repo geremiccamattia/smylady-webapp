@@ -7,6 +7,14 @@ export function getMemoryUrl(memory: Memory): string {
   return memory.url || memory.fileUrl || ''
 }
 
+/**
+ * Quelle für die Rasteransicht: bevorzugt das Thumbnail, fällt sonst auf das
+ * Original zurück. Für die große Einzelansicht weiterhin getMemoryUrl nutzen.
+ */
+export function getMemoryThumbnailSource(memory: Memory): { url: string; thumbnailUrl?: string | null } {
+  return { url: getMemoryUrl(memory), thumbnailUrl: memory.thumbnailUrl }
+}
+
 // Helper to get the correct memory type (supports both old and new field names)
 export function getMemoryType(memory: Memory): 'image' | 'video' | 'text' {
   return memory.type || memory.fileType || 'image'
@@ -53,6 +61,8 @@ export interface Memory {
   url: string
   // Legacy field name for backward compatibility
   fileUrl?: string
+  // 400px-Variante für die Rasteransicht. Fehlt beim Altbestand und bei Videos.
+  thumbnailUrl?: string | null
   // Backend field is "type", not "fileType"
   type: 'image' | 'video' | 'text'
   // Legacy field name for backward compatibility

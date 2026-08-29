@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsService } from '@/services/events'
-import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, isMemoryHighlighted } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, isMemoryHighlighted } from '@/services/memories'
 import { ticketsService } from '@/services/tickets'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { MemoryViewer, MemoryUpload } from '@/components/memories'
 import ReportModal from '@/components/ReportModal'
 import { getUserReaction, Reaction } from '@/components/emojiReaction/EmojiReactionPicker'
-import { getInitials, resolveImageUrl, formatRelativeTime } from '@/lib/utils'
+import { getInitials, resolveImageUrl, resolveThumbnailUrl, formatRelativeTime } from '@/lib/utils'
 import {
   ArrowLeft,
   Image,
@@ -321,7 +321,7 @@ export default function EventMemories() {
             {/* Event Thumbnail */}
             <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
               <img
-                src={resolveImageUrl(event.thumbnailUrl || event.locationImages?.[0]?.url || event.images?.[0]) || 'https://via.placeholder.com/96'}
+                src={resolveThumbnailUrl(event.thumbnailUrl || event.locationImages?.[0] || event.images?.[0]) || 'https://via.placeholder.com/96'}
                 alt={event.name}
                 className="w-full h-full object-cover"
               />
@@ -474,7 +474,7 @@ export default function EventMemories() {
                 </div>
               ) : (
                 <img
-                  src={resolveImageUrl(memoryUrl)}
+                  src={resolveThumbnailUrl(getMemoryThumbnailSource(memory))}
                   alt={memory.caption || 'Memory'}
                   className="w-full h-full object-cover"
                   loading="lazy"

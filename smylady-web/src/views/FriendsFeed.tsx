@@ -25,7 +25,7 @@ import { StoriesBar } from '@/components/stories/StoriesBar'
 import { postsService } from '@/services/posts'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
-import { getInitials, resolveImageUrl, generateEventSlug } from '@/lib/utils'
+import { getInitials, resolveImageUrl, resolveThumbnailUrl, generateEventSlug } from '@/lib/utils'
 
 interface FriendsEvent {
   event: {
@@ -315,7 +315,7 @@ export default function FriendsFeed() {
                       <div className="relative h-20 w-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         {event.locationImages?.[0]?.url ? (
                           <img
-                            src={resolveImageUrl(event.locationImages[0].url)}
+                            src={resolveThumbnailUrl(event.locationImages[0])}
                             alt={event.name}
                             className="h-full w-full object-cover"
                           />

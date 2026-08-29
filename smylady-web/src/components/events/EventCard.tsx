@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
-import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
+import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -45,11 +45,16 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
   const eventId = event.id || event._id
   // Handle different image structures: locationImages array with url property, or direct images array
   // Priority: locationImages[0].url > thumbnailUrl > images[0]
-  const rawImageUrl = event.locationImages?.[0]?.url || event.thumbnailUrl || event.images?.[0]
+  // Das ganze Objekt statt nur .url, damit resolveThumbnailUrl an die 400px-Variante
+  // kommt. Die Fallback-Kette bleibt exakt wie bisher: ist .url leer, geht es weiter
+  // auf thumbnailUrl und images[0].
+  const rawImageUrl = event.locationImages?.[0]?.url
+    ? event.locationImages[0]
+    : (event.thumbnailUrl || event.images?.[0])
 
   // Generate a unique placeholder based on event ID to avoid all events showing the same fallback
   const uniquePlaceholder = `https://via.placeholder.com/400x225/6366f1/ffffff?text=${encodeURIComponent((tr?.name || event.name)?.substring(0, 15) || 'Event')}`
-  const imageUrl = resolveImageUrl(rawImageUrl) || uniquePlaceholder
+  const imageUrl = resolveThumbnailUrl(rawImageUrl) || uniquePlaceholder
 
   // Check if this is a Ticketmaster/external event
   const isExternalEvent = event.isTicketmaster || event.isExternalEvent || event.source === 'ticketmaster'

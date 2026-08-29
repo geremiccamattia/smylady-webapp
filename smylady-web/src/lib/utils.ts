@@ -39,6 +39,26 @@ export function resolveImageUrl(url?: string | { url?: string } | null): string 
   return `${baseUrl}${normalizedPath}`
 }
 
+/** Bildquelle vom Backend: entweder der nackte Pfad oder das Upload-Objekt. */
+export type ImageSource = string | { url?: string; thumbnailUrl?: string | null } | null | undefined
+
+/**
+ * Wie {@link resolveImageUrl}, nimmt aber die 400px-Variante, wenn es sie gibt.
+ * Für Listen, Karten und andere kleine Darstellungen — nicht für Vollbild,
+ * Hero-Bilder oder die große Memories-Ansicht.
+ *
+ * Der Rückfall auf `url` ist der Normalfall, nicht die Ausnahme: `thumbnailUrl`
+ * fehlt beim gesamten Altbestand und bleibt bei Videos und animierten Bildern
+ * dauerhaft leer. Deshalb wird jeder leere Wert (null, undefined, '') still
+ * übergangen, statt ein kaputtes Bild zu erzeugen.
+ */
+export function resolveThumbnailUrl(source?: ImageSource): string | undefined {
+  if (source && typeof source === 'object' && source.thumbnailUrl) {
+    return resolveImageUrl(source.thumbnailUrl)
+  }
+  return resolveImageUrl(source)
+}
+
 /**
  * Safely format a date string to locale date. Returns null if date is invalid.
  */

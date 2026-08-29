@@ -89,7 +89,10 @@ export interface Event {
   locationType?: 'physical' | 'online' | 'tba'
   onlineUrl?: string
   images: string[]
-  locationImages?: { url: string; fileName: string }[]
+  // thumbnailUrl (400 px längste Kante) liefert das Backend nur bei neuen Uploads;
+  // Altbestand, Videos und animierte Bilder haben null. resolveThumbnailUrl fällt
+  // deshalb immer auf url zurück.
+  locationImages?: { url: string; fileName: string; thumbnailUrl?: string | null }[]
   thumbnailUrl?: string
   creator: User | string
   userId?: User | string
