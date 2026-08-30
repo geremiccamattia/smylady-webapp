@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { generateEventSlug } from '@/lib/utils'
+import { stripMarkdown } from '@/lib/markdown'
 import EventDetailClient from './EventDetailClient'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const json = await res.json()
     const event = json.data
     const title = event.name
-    const description = event.description?.slice(0, 160) ?? 'Entdecke Events auf Share Your Party'
+    // stripMarkdown: die Beschreibung ist Markdown, im Meta-Tag stünden sonst ** und #
+    const description = stripMarkdown(event.description).slice(0, 160) || 'Entdecke Events auf Share Your Party'
     const image = event.locationImages?.[0]?.url || event.thumbnailUrl || ''
     const url = `https://shareyourparty.de/event/${generateEventSlug(event.name, event._id || id)}`
 

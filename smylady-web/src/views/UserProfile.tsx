@@ -449,7 +449,7 @@ export default function UserProfile() {
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-2xl font-bold">{profile.name}</h1>
               <p className="text-muted-foreground">{profile.username}</p>
-              {profile.bio && <p className="mt-2 text-sm">{profile.bio}</p>}
+              {profile.bio && <p className="mt-2 text-sm whitespace-pre-line">{profile.bio}</p>}
               
               <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4 text-sm text-muted-foreground">
                 {/* Show age only if user has enabled it */}

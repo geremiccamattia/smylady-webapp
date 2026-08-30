@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import ReactMarkdown from 'react-markdown'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import { Bold, Italic, Link2, List, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -131,27 +131,11 @@ export function MarkdownEditor({
       </div>
 
       {preview ? (
-        <div
-          className="px-3 py-2 prose prose-sm dark:prose-invert max-w-none"
-          style={{ minHeight }}
-        >
+        <div className="px-3 py-2" style={{ minHeight }}>
           {value ? (
-            <ReactMarkdown
-              components={{
-                a: ({ href, children }) => (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline"
-                  >
-                    {children}
-                  </a>
-                ),
-              }}
-            >
-              {value}
-            </ReactMarkdown>
+            // Dieselbe Komponente wie auf der Event-Seite — sonst zeigt die Vorschau
+            // etwas anderes als die spätere Anzeige.
+            <MarkdownContent content={value} />
           ) : (
             <p className="text-muted-foreground">{placeholder}</p>
           )}

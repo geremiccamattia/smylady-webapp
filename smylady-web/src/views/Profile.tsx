@@ -464,7 +464,7 @@ export default function Profile() {
               <div className="flex-1 text-center md:text-left">
                 <h1 className="text-2xl font-bold">{user.name}</h1>
                 <p className="text-muted-foreground">{user.username}</p>
-                {user.bio && <p className="mt-2 text-sm">{user.bio}</p>}
+                {user.bio && <p className="mt-2 text-sm whitespace-pre-line">{user.bio}</p>}
                 <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4 text-sm text-muted-foreground">
                   {/* Show age if user has it and visibility is enabled */}
                   {user.age && user.showAge !== false && (

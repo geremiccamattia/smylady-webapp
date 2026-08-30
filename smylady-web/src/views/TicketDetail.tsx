@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug, isEventOver } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import {
@@ -391,7 +392,7 @@ export default function TicketDetail() {
               {event.description && (
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{event.description}</p>
+                  <MarkdownContent content={event.description} className="text-sm text-muted-foreground" />
                 </div>
               )}
             </div>
