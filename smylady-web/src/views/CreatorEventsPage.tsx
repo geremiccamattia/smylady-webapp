@@ -18,14 +18,14 @@ const GRADIENT = 'bg-gradient-to-r from-[#ff720e] via-[#ff4d3c] to-[#e9548c]'
 const HOW_IT_WORKS_STEPS = [
   { emoji: '📩', titleKey: 'influencerEvents.step1Title', titleDefault: 'Anfrage senden', descKey: 'influencerEvents.step1Desc', descDefault: 'Fülle das Kontaktformular aus und erzähl uns von deinem Projekt, deiner Marke oder deinem Event.' },
   { emoji: '📞', titleKey: 'influencerEvents.step2Title', titleDefault: 'Persönliches Briefing', descKey: 'influencerEvents.step2Desc', descDefault: 'Wir melden uns innerhalb von 24 Stunden bei dir — per Telefon oder E-Mail — und besprechen deine Ziele und Wünsche.' },
-  { emoji: '🎯', titleKey: 'influencerEvents.step3Title', titleDefault: 'Creator-Auswahl', descKey: 'influencerEvents.step3Desc', descDefault: 'Wir wählen aus unserem Influencer Club die passenden Creator für deine Zielgruppe und dein Budget aus.' },
+  { emoji: '🎯', titleKey: 'influencerEvents.step3Title', titleDefault: 'Creator-Auswahl', descKey: 'influencerEvents.step3Desc', descDefault: 'Wir wählen aus unserem Creator Club die passenden Creators für deine Zielgruppe und dein Budget aus.' },
   { emoji: '🚀', titleKey: 'influencerEvents.step4Title', titleDefault: 'Kampagne läuft', descKey: 'influencerEvents.step4Desc', descDefault: 'Innerhalb von ca. einer Woche starten die Creator mit Content, Stories und Event-Begleitung. Du lehnst dich zurück.' },
 ]
 
 const SERVICE_CARDS = [
   { emoji: '🎬', titleKey: 'influencerEvents.service1Title', titleDefault: 'Experience Marketing', descKey: 'influencerEvents.service1Desc', descDefault: 'Creator begleiten dein Event oder dein Pop-up live — echte Eindrücke, echte Reichweite.' },
-  { emoji: '📱', titleKey: 'influencerEvents.service2Title', titleDefault: 'Social Media Content', descKey: 'influencerEvents.service2Desc', descDefault: 'Instagram Stories, Reels, TikToks und Posts — produziert und gepostet von unseren Creatorn.' },
-  { emoji: '🎉', titleKey: 'influencerEvents.service3Title', titleDefault: 'Influencer Events', descKey: 'influencerEvents.service3Desc', descDefault: 'Wir organisieren exklusive Events mit Share Your Party und laden unsere Creator ein — deine Marke im Mittelpunkt.' },
+  { emoji: '📱', titleKey: 'influencerEvents.service2Title', titleDefault: 'Social Media Content', descKey: 'influencerEvents.service2Desc', descDefault: 'Instagram Stories, Reels, TikToks und Posts — produziert und gepostet von unseren Creators.' },
+  { emoji: '🎉', titleKey: 'influencerEvents.service3Title', titleDefault: 'Creator Events', descKey: 'influencerEvents.service3Desc', descDefault: 'Wir organisieren exklusive Events mit Share Your Party und laden unsere Creator ein — deine Marke im Mittelpunkt.' },
   { emoji: '📸', titleKey: 'influencerEvents.service4Title', titleDefault: 'Produkt- & Location-Reviews', descKey: 'influencerEvents.service4Desc', descDefault: 'Creator testen und präsentieren dein Produkt, dein Restaurant oder deine Location authentisch auf ihren Kanälen.' },
   { emoji: '📋', titleKey: 'influencerEvents.service5Title', titleDefault: 'Briefing & Koordination', descKey: 'influencerEvents.service5Desc', descDefault: 'Wir übernehmen die komplette Organisation — Briefing, Creator-Auswahl, Zeitplanung und Qualitätskontrolle.' },
   { emoji: '📊', titleKey: 'influencerEvents.service6Title', titleDefault: 'Reporting & Ergebnisse', descKey: 'influencerEvents.service6Desc', descDefault: 'Nach der Kampagne erhältst du einen Überblick über Reichweite, Impressions und Engagement.' },
@@ -39,7 +39,7 @@ const CREATOR_CARDS = [
 ]
 
 const FAQ_ITEMS = [
-  { qKey: 'influencerEvents.faq1Q', qDefault: 'Was kostet eine Influencer-Kampagne?', aKey: 'influencerEvents.faq1A', aDefault: 'Die Kosten hängen vom Umfang, der Anzahl der Creator und dem gewünschten Format ab. Wir erstellen dir ein individuelles Angebot — unverbindlich und kostenlos.' },
+  { qKey: 'influencerEvents.faq1Q', qDefault: 'Was kostet eine Creator-Kampagne?', aKey: 'influencerEvents.faq1A', aDefault: 'Die Kosten hängen vom Umfang, der Anzahl der Creator und dem gewünschten Format ab. Wir erstellen dir ein individuelles Angebot — unverbindlich und kostenlos.' },
   { qKey: 'influencerEvents.faq2Q', qDefault: 'Wie schnell kann eine Kampagne starten?', aKey: 'influencerEvents.faq2A', aDefault: 'In der Regel planen wir mit etwa einer Woche Vorlaufzeit. Bei einfacheren Formaten kann es auch schneller gehen.' },
   { qKey: 'influencerEvents.faq3Q', qDefault: 'Welche Branchen bedient ihr?', aKey: 'influencerEvents.faq3A', aDefault: 'Unser Fokus liegt auf Gastronomie, Bars, Events, lokale Shops und kleinere Marken in Wien. Grundsätzlich sind wir aber für jedes Projekt offen.' },
   { qKey: 'influencerEvents.faq4Q', qDefault: 'Welche Plattformen werden bespielt?', aKey: 'influencerEvents.faq4A', aDefault: 'Unsere Creator sind auf Instagram, TikTok und Snapchat aktiv. Je nach Projekt wählen wir die passenden Kanäle.' },
@@ -71,7 +71,7 @@ const INITIAL_FORM: FormState = {
   message: '',
 }
 
-export default function InfluencerEventsPage() {
+export default function CreatorEventsPage() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const localePath = useLocalePath()
@@ -135,7 +135,7 @@ export default function InfluencerEventsPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
         <div className="relative z-10 max-w-xl px-6 md:px-14 py-16 text-white">
           <p className="mb-4 text-[13px] font-black uppercase tracking-wide text-[#ff9a6a]">
-            {t('influencerEvents.eyebrow', { defaultValue: 'Influencer-Marketing für Unternehmen' })}
+            {t('influencerEvents.eyebrow', { defaultValue: 'Creator-Marketing für Unternehmen' })}
           </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-[1.08] tracking-tight">
             <span className="block whitespace-nowrap">
@@ -156,7 +156,7 @@ export default function InfluencerEventsPage() {
             className={cn('mt-8 rounded-full text-white hover:opacity-90 uppercase text-xs font-black tracking-wide', GRADIENT)}
             onClick={() => scrollTo('contact-form')}
           >
-            {t('influencerEvents.ctaFind', { defaultValue: 'Influencer finden' })} →
+            {t('influencerEvents.ctaFind', { defaultValue: 'Creators finden' })} →
           </Button>
         </div>
       </section>
@@ -168,7 +168,7 @@ export default function InfluencerEventsPage() {
         </p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-y-8 md:divide-x divide-border">
           {[
-            { icon: Target, titleKey: 'influencerEvents.benefitsTitle1', titleDefault: 'Passende Creator', descKey: 'influencerEvents.benefitsDesc1', descDefault: 'Wir finden Influencer, die wirklich zu deiner Marke und Zielgruppe passen.' },
+            { icon: Target, titleKey: 'influencerEvents.benefitsTitle1', titleDefault: 'Passende Creator', descKey: 'influencerEvents.benefitsDesc1', descDefault: 'Wir finden Creators, die wirklich zu deiner Marke und Zielgruppe passen.' },
             { icon: Megaphone, titleKey: 'influencerEvents.benefitsTitle2', titleDefault: 'Mehr Reichweite', descKey: 'influencerEvents.benefitsDesc2', descDefault: 'Erreiche neue Kunden und steigere Bekanntheit, Vertrauen und Engagement.' },
             { icon: Star, titleKey: 'influencerEvents.benefitsTitle3', titleDefault: 'Authentisch & Echt', descKey: 'influencerEvents.benefitsDesc3', descDefault: 'Echte Empfehlungen statt Werbung – für maximale Glaubwürdigkeit und starke Ergebnisse.' },
             { icon: ClipboardList, titleKey: 'influencerEvents.benefitsTitle4', titleDefault: 'Für jeden Anlass', descKey: 'influencerEvents.benefitsDesc4', descDefault: 'Ob Produkt, Marke, Event oder Dienstleistung – wir haben die passenden Creator.' },
@@ -241,7 +241,7 @@ export default function InfluencerEventsPage() {
           {t('influencerEvents.serviceEyebrow', { defaultValue: 'Was wir anbieten' })}
         </p>
         <h2 className="text-center text-3xl md:text-4xl font-black leading-[1.1] tracking-tight">
-          {t('influencerEvents.serviceHeadline', { defaultValue: 'Influencer-Marketing, das wirkt.' })}
+          {t('influencerEvents.serviceHeadline', { defaultValue: 'Creator-Marketing, das wirkt.' })}
         </h2>
         <p className="mt-4 text-center text-muted-foreground text-base leading-relaxed max-w-xl mx-auto">
           {t('influencerEvents.serviceSubline', {
@@ -286,7 +286,7 @@ export default function InfluencerEventsPage() {
         <p className="mt-4 text-center text-muted-foreground text-base leading-relaxed max-w-xl mx-auto">
           {t('influencerEvents.creatorsSubline', {
             defaultValue:
-              'Unser Influencer Club besteht aus ausgewählten Creatorn aus Wien — authentisch, engagiert und bereit für deine Marke.',
+              'Unser Creator Club besteht aus ausgewählten Creators aus Wien — authentisch, engagiert und bereit für deine Marke.',
           })}
         </p>
         <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -312,11 +312,11 @@ export default function InfluencerEventsPage() {
         </div>
         <div className="mt-8 text-center">
           <Link
-            href={localePath('/influencer-club')}
+            href={localePath('/creator-club')}
             className="text-sm font-bold text-[#e9548c] hover:opacity-80"
           >
             {t('influencerEvents.creatorsCta', {
-              defaultValue: 'Du bist Creator? Bewirb dich für unseren Influencer Club →',
+              defaultValue: 'Du bist Creator? Bewirb dich für unseren Creator Club →',
             })}
           </Link>
         </div>
@@ -388,7 +388,7 @@ export default function InfluencerEventsPage() {
             {t('influencerEvents.contactEyebrow', { defaultValue: "Los geht's" })}
           </p>
           <h2 className="text-3xl md:text-4xl font-black leading-[1.1] tracking-tight">
-            {t('influencerEvents.contactHeadline', { defaultValue: 'Bereit für deine nächste Influencer-Kampagne?' })}
+            {t('influencerEvents.contactHeadline', { defaultValue: 'Bereit für deine nächste Creator-Kampagne?' })}
           </h2>
           <p className="mt-4 text-muted-foreground text-base leading-relaxed max-w-md">
             {t('influencerEvents.contactLead', {

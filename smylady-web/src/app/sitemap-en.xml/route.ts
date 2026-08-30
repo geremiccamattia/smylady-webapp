@@ -6,6 +6,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smylady-backend.onre
 const staticPages = [
   { url: '/en/explore',      priority: '1.0', changefreq: 'daily'   },
   { url: '/en/events/wien',  priority: '0.8', changefreq: 'daily'   },
+  // Nur die neuen URLs — /en/influencer-* wird per 308 weitergeleitet und gehört
+  // deshalb nicht in die Sitemap.
+  { url: '/en/creator-events', priority: '0.7', changefreq: 'monthly' },
+  { url: '/en/creator-club',   priority: '0.6', changefreq: 'monthly' },
   { url: '/en/grounding',    priority: '0.6', changefreq: 'monthly' },
   { url: '/en/pricing',      priority: '0.5', changefreq: 'monthly' },
   { url: '/en/contact',      priority: '0.4', changefreq: 'yearly'  },

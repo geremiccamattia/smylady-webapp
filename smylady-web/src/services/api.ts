@@ -53,7 +53,9 @@ apiClient.interceptors.response.use(
       // einer geschützten (nicht-öffentlichen) Seite soll weiterhin zu /login.
       const publicPaths = [
         '/explore', '/login', '/register', '/event/', '/user/', '/feed', '/post/',
-        '/influencer', '/api', '/communities',
+        // '/influencer' bleibt zusaetzlich drin, solange die 308-Weiterleitungen
+        // in next.config.ts auf die alten URLs zeigen (Instagram, Mails, Google).
+        '/creator', '/influencer', '/api', '/communities',
       ]
       // Locale-Prefix abschneiden, sonst gilt /en/explore nicht als public und ein 401
       // einer Nebenanfrage wirft den Besucher von einer öffentlichen Seite auf /login.

@@ -77,8 +77,8 @@ export default function Header() {
   // Sekundäre Links — identisch für Gäste und eingeloggte Nutzer.
   const secondaryLinks = [
     { href: '/contact', label: t('nav.contact', { defaultValue: 'Kontakt' }) },
-    { href: '/influencer-club', label: t('nav.influencerClub', { defaultValue: 'Influencer Club' }) },
-    { href: '/influencer-events', label: t('influencerEvents.navLabel', { defaultValue: 'Influencer Events' }) },
+    { href: '/creator-club', label: t('nav.influencerClub', { defaultValue: 'Creator Club' }) },
+    { href: '/creator-events', label: t('influencerEvents.navLabel', { defaultValue: 'Creator Events' }) },
     { href: '/api', label: t('nav.apiDocs', { defaultValue: 'API-Dokumentation' }) },
     { href: 'mailto:office@shareyourparty.de', label: t('nav.emailSupport', { defaultValue: 'E-Mail Support' }) },
     { href: '/pricing', label: t('pricing.title', { defaultValue: 'Preise & Konditionen' }) },

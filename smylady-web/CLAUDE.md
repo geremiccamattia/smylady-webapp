@@ -9,29 +9,41 @@ Dieses Verzeichnis enthält die Web-Version der "Share Your Party" Event-App.
 | Komponente | URL / Service |
 |------------|---------------|
 | **Frontend (Web)** | https://www.shareyourparty.de |
+| **Frontend Hosting** | **Vercel** (Projekt `smylady-webapp`, Root Directory `smylady-web`) |
 | **Backend API** | https://app.shareyourparty.de |
 | **Backend Hosting** | Render.com |
 | **Datenbank** | MongoDB Atlas |
-| **Frontend Hosting** | FTP Upload ins Root-Verzeichnis |
 
 ### Environment Variables
 
-Die Environment-Variablen sind komplett auf **Render.com** konfiguriert.
-Das Frontend verwendet die API-URL `https://app.shareyourparty.de`.
+- **Frontend:** in den Vercel-Projekteinstellungen; lokal in `smylady-web/.env.local`
+  (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SOCKET_URL`, `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`).
+- **Backend:** auf **Render.com**.
 
 ### Build & Deployment
 
 ```powershell
 cd smylady-web
 npm install
-npm run build
+npm run build          # next build, Ausgabe nach .next/
 ```
 
-Nach dem Build:
-1. Inhalt des `dist/` Ordners per FTP ins Root-Verzeichnis von www.shareyourparty.de hochladen
-2. Die `.htaccess` Datei aus `root-htaccess/` ebenfalls ins Root-Verzeichnis kopieren
+Deployment nach Produktion:
 
-**Wichtig:** Die App verwendet `index.html` (nicht .htm) als Entry Point.
+```powershell
+vercel deploy --prod --force
+```
+
+Vercel-Projekteinstellungen (aus `.vercel/project.json`): Framework `nextjs`,
+Root Directory `smylady-web`, Node 22.x. Build- und Install-Command sind nicht
+überschrieben, es gelten also die Next.js-Standards. Die `vercel.json` ist leer —
+die gesamte Konfiguration steht in `next.config.ts`.
+
+**Wichtig:** Die App läuft als Next.js-Anwendung auf dem Vercel-Node-Runtime, nicht
+als statischer Export. Deshalb greifen `redirects()` und `rewrites()` aus
+`next.config.ts` zur Laufzeit — dort liegen unter anderem der Blog-Rewrite und die
+308-Weiterleitungen der alten `/influencer-*`-URLs. Es gibt **kein** `.htaccess`
+und keinen FTP-Upload mehr.
 
 ## Schnellstart (Entwicklung)
 

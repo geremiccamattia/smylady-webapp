@@ -104,7 +104,7 @@ const STEP_KEYS = [
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default function InfluencerClubPage() {
+export default function CreatorClubPage() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const localePath = useLocalePath()
@@ -278,14 +278,14 @@ export default function InfluencerClubPage() {
               {t('influencer.heroHeadline3', { defaultValue: 'Share Your Party.' })}
             </span>
             <span className={cn(GRADIENT, 'block bg-clip-text text-transparent')}>
-              {t('influencer.heroHeadline4', { defaultValue: 'Influencer Club.' })}
+              {t('influencer.heroHeadline4', { defaultValue: 'Creator Club.' })}
             </span>
           </h1>
           <div className={cn('w-14 h-0.5 my-6', GRADIENT)} />
           <p className="text-muted-foreground text-base leading-relaxed max-w-md">
             {t('influencer.heroLead', {
               defaultValue:
-                'Werde Teil des Share Your Party Influencer Clubs. Erlebe exklusive Events, teile echte Momente und wachse gemeinsam mit einer aktiven Community.',
+                'Werde Teil des Share Your Party Creator Clubs. Erlebe exklusive Events, teile echte Momente und wachse gemeinsam mit einer aktiven Community.',
             })}
           </p>
           <div className="flex items-center gap-8 mt-8 flex-wrap">

@@ -13,6 +13,26 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  /**
+   * Umbenennung Influencer Club → Creator Club (August 2026).
+   *
+   * Die alten URLs stehen in Instagram-Posts, versendeten E-Mails und im
+   * Google-Index und müssen erreichbar bleiben. `permanent: true` erzeugt in
+   * Next.js einen 308, damit die Methode erhalten bleibt und Suchmaschinen die
+   * Adresse dauerhaft übernehmen.
+   *
+   * Je Route braucht es zwei Einträge: Die Sprachen laufen in diesem Projekt über
+   * echte Verzeichnisse (src/app/en/(app)/…) und nicht über eine i18n-Middleware,
+   * deshalb greift eine Regel für "/…" nicht automatisch auch für "/en/…".
+   */
+  async redirects() {
+    return [
+      { source: '/influencer-club', destination: '/creator-club', permanent: true },
+      { source: '/en/influencer-club', destination: '/en/creator-club', permanent: true },
+      { source: '/influencer-events', destination: '/creator-events', permanent: true },
+      { source: '/en/influencer-events', destination: '/en/creator-events', permanent: true },
+    ]
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },

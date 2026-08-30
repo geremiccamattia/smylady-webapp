@@ -1,18 +1,20 @@
 import type { Metadata } from 'next'
-import InfluencerEventsPage from '@/views/InfluencerEventsPage'
+import CreatorEventsPage from '@/views/CreatorEventsPage'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const url = 'https://shareyourparty.de/influencer-events'
+  const url = 'https://shareyourparty.de/en/creator-events'
   return {
-    title: 'Influencer Marketing für Unternehmen — Share Your Party',
-    description: 'Finde passende Creator für deine Marke und starte deine nächste Influencer-Marketing-Kampagne mit Share Your Party.',
+    title: 'Creator Marketing for Businesses — Share Your Party',
+    // "influencer marketing" stays on purpose: it is the established search term
+    // businesses look for. The brand is Creator Club, the search term is not.
+    description: 'Find the right creators for your brand and start your next influencer marketing campaign with Share Your Party.',
     alternates: {
       canonical: url,
-      languages: { en: 'https://shareyourparty.de/en/influencer-events' },
+      languages: { de: 'https://shareyourparty.de/creator-events' },
     },
     openGraph: {
-      title: 'Influencer Marketing für Unternehmen — Share Your Party',
-      description: 'Wir verbinden deine Marke mit Creatorn, die deine Zielgruppe wirklich erreichen.',
+      title: 'Creator Marketing for Businesses — Share Your Party',
+      description: 'We connect your brand with creators who truly reach your target audience.',
       url,
       type: 'website',
     },
@@ -22,25 +24,25 @@ export async function generateMetadata(): Promise<Metadata> {
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Service',
-  name: 'Influencer Marketing für Unternehmen',
+  name: 'Creator Marketing for Businesses',
   description:
-    'Wir verbinden deine Marke mit Creatorn, die deine Zielgruppe wirklich erreichen — von Experience Marketing bis Social Media Content.',
+    'We connect your brand with creators who truly reach your target audience — from experience marketing to social media content.',
   provider: {
     '@type': 'Organization',
     name: 'Share Your Party',
     url: 'https://shareyourparty.de',
     areaServed: {
       '@type': 'City',
-      name: 'Wien',
+      name: 'Vienna',
     },
   },
   areaServed: {
     '@type': 'City',
-    name: 'Wien',
+    name: 'Vienna',
   },
   hasOfferCatalog: {
     '@type': 'OfferCatalog',
-    name: 'Influencer Marketing Services',
+    name: 'Creator Marketing Services',
     itemListElement: [
       {
         '@type': 'Offer',
@@ -60,28 +62,28 @@ const jsonLd = {
         '@type': 'Offer',
         itemOffered: {
           '@type': 'Service',
-          name: 'Influencer Events',
+          name: 'Creator Events',
         },
       },
       {
         '@type': 'Offer',
         itemOffered: {
           '@type': 'Service',
-          name: 'Produkt- & Location-Reviews',
+          name: 'Product & Location Reviews',
         },
       },
     ],
   },
 }
 
-export default function InfluencerEventsRoute() {
+export default function CreatorEventsRouteEN() {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <InfluencerEventsPage />
+      <CreatorEventsPage />
     </>
   )
 }
