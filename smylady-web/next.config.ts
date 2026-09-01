@@ -31,6 +31,25 @@ const nextConfig: NextConfig = {
       { source: '/en/influencer-club', destination: '/en/creator-club', permanent: true },
       { source: '/influencer-events', destination: '/creator-events', permanent: true },
       { source: '/en/influencer-events', destination: '/en/creator-events', permanent: true },
+
+      /*
+       * Altbestand der statischen Vorgänger-Website. Diese Seiten lagen alle flach im
+       * Wurzelverzeichnis, es gab kein /en/-Präfix — deshalb hier bewusst keine
+       * /en/-Entsprechungen.
+       *
+       * Die zugehörigen Dateien liegen noch in public/ und werden mit jedem Deploy
+       * ausgeliefert. Das ist unschädlich: In der Next.js-Routing-Reihenfolge greifen
+       * redirects() VOR dem Dateisystem, die Weiterleitung gewinnt also gegen die
+       * Datei. Nach dem Löschen der Dateien bleiben die Regeln trotzdem nötig — die
+       * URLs stehen in Google und in alten Links.
+       */
+      { source: '/impressum.htm', destination: '/imprint', permanent: true },
+      { source: '/datenschutz.htm', destination: '/privacy', permanent: true },
+      { source: '/privacy-policy.htm', destination: '/privacy', permanent: true },
+      { source: '/index.htm', destination: '/explore', permanent: true },
+      // index.html ist byte-identisch mit index.htm und verweist auf ein längst
+      // entferntes Vite-Bundle — dieselbe Behandlung.
+      { source: '/index.html', destination: '/explore', permanent: true },
     ]
   },
   images: {
