@@ -698,17 +698,17 @@ function CreateEventContent() {
       }
 
       if (translatedPreview) {
-        const sourceLang = i18n.language?.substring(0, 2) || 'de'
+        // Nur die ZIELsprache wird gespeichert. Die Ausgangssprache stand hier früher
+        // ebenfalls drin — als Kopie von name/description. Diese Kopie veraltete beim
+        // nächsten Bearbeiten, und weil die Anzeige `translations[lang]` bevorzugt,
+        // verdeckte sie dauerhaft den aktuellen Originaltext.
+        // name/description halten die Ausgangssprache bereits; ohne Eintrag greift
+        // in der Anzeige der Fallback `tr?.description || event.description`.
         const translations: any = {}
         translations[translatedPreview.lang] = {
           name: translatedPreview.name,
           description: translatedPreview.description,
           restrictions: translatedPreview.restrictions,
-        }
-        translations[sourceLang] = {
-          name: formData.name,
-          description: formData.description,
-          restrictions: formData.restrictions || '',
         }
         eventFormData.append('translations', JSON.stringify(translations))
       }

@@ -538,6 +538,49 @@ export default function EditEvent() {
     }
   }
 
+  /**
+   * Verwirft nach dem Speichern alle Übersetzungen, wenn einer der übersetzten
+   * Texte geändert wurde — auch die der anderen Sprache, die in dieser Ansicht gar
+   * nicht sichtbar ist. Die Anzeige fällt dann über `tr?.description ||
+   * event.description` auf das zurück, was gerade eingetippt wurde. Ein
+   * unübersetzter, aber richtiger Text ist besser als eine veraltete Fassung: Beim
+   * Weintage-Event fehlte im alten Text z.B. der Ziehungstermin.
+   *
+   * Bewusst NICHT über buildEventFormData: `translations` steht nicht im
+   * UpdateEventDto des Backends, und die ValidationPipe läuft mit whitelist: true —
+   * ein mitgeschicktes Feld würde kommentarlos verworfen. Der dedizierte Endpoint
+   * PATCH /events/:id/translation schreibt dagegen direkt und akzeptiert
+   * Leerstrings (er speichert `data.name || ''`).
+   *
+   * Läuft erst NACH dem erfolgreichen Update: Schlägt das Speichern fehl, bleiben
+   * die Übersetzungen unangetastet.
+   */
+  const discardOutdatedTranslations = async () => {
+    const translations = (event as any)?.translations
+    if (!translations) return
+
+    const textFieldsChanged =
+      formData.name !== (event?.name ?? '') ||
+      formData.description !== (event?.description ?? '') ||
+      formData.restrictions !== parseStringField(event?.restrictions)
+    if (!textFieldsChanged) return
+
+    // '_id' ist die Subdokument-ID des Mongoose-Objekts, keine Sprache
+    const langs = Object.keys(translations).filter((l) => l !== '_id')
+    const eventId = (event as any)?._id || (event as any)?.id || id
+
+    await Promise.all(
+      langs.map((lang) =>
+        eventsService
+          .saveEventTranslation(eventId, lang, { name: '', description: '', restrictions: '' })
+          // Das Event selbst ist zu diesem Zeitpunkt bereits gespeichert. Scheitert
+          // das Leeren, ist das ein Schönheitsfehler — kein Grund, dem Veranstalter
+          // eine fehlgeschlagene Speicherung zu melden.
+          .catch((e) => console.error(`[EditEvent] Übersetzung "${lang}" konnte nicht verworfen werden:`, e)),
+      ),
+    )
+  }
+
   const buildEventFormData = () => {
     const eventFormData = new FormData()
 
@@ -606,6 +649,7 @@ export default function EditEvent() {
     const restrictionsArray = restrictions ? restrictions.split(',').map(s => s.trim()).filter(Boolean) : []
     eventFormData.append('offerings', JSON.stringify(offeringsArray))
     eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
+
     eventFormData.append('allowGuestMemories', String(allowGuestMemories))
     eventFormData.append('paymentType', payAtDoor ? 'door' : 'online')
     // Immer senden (nicht nur wenn true) — sonst lässt sich eine einmal gesetzte
@@ -784,6 +828,8 @@ export default function EditEvent() {
       } else {
         await eventsService.updateEvent(id!, eventFormData)
       }
+
+      await discardOutdatedTranslations()
 
       window.dataLayer = window.dataLayer || []
       window.dataLayer.push({ event: 'update_event' })
