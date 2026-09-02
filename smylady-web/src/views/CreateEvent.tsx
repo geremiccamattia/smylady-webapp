@@ -34,10 +34,8 @@ import {
 } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 import { SubscriberPicker } from '@/components/events/SubscriberPicker'
+import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
-
-// Event visibility types (same as mobile app)
-type EventVisibility = 'public' | 'subscribers' | 'selected'
 
 function CreateEventContent() {
   const router = useRouter()
@@ -148,27 +146,6 @@ function CreateEventContent() {
     { value: 'feuerstelle', label: t('offerings.fireplace', { defaultValue: 'Feuerstelle' }) },
     { value: 'drinks', label: t('offerings.drinks', { defaultValue: 'Getränke' }) },
     { value: 'other', label: t('offerings.other', { defaultValue: 'Sonstiges' }) },
-  ]
-
-  const VISIBILITY_OPTIONS = [
-    {
-      value: 'public' as EventVisibility,
-      label: 'Public',
-      description: 'Everyone can see this event',
-      icon: Globe,
-    },
-    {
-      value: 'subscribers' as EventVisibility,
-      label: 'Subscribers Only',
-      description: 'Only your subscribers can see this event',
-      icon: Users,
-    },
-    {
-      value: 'selected' as EventVisibility,
-      label: 'Selected People',
-      description: 'Only selected subscribers can see this event',
-      icon: UserPlus,
-    },
   ]
 
   const addTier = () => {
@@ -803,44 +780,7 @@ function CreateEventContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {VISIBILITY_OPTIONS.map((option) => (
-                    <div
-                      key={option.value}
-                      onClick={() => setVisibility(option.value)}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        visibility === option.value
-                          ? 'border-primary bg-primary/5'
-                          : 'border-muted hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <option.icon
-                          className={`h-5 w-5 ${
-                            visibility === option.value ? 'text-primary' : 'text-muted-foreground'
-                          }`}
-                        />
-                        <div
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            visibility === option.value ? 'border-primary' : 'border-muted-foreground'
-                          }`}
-                        >
-                          {visibility === option.value && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                          )}
-                        </div>
-                      </div>
-                      <p
-                        className={`font-medium text-sm ${
-                          visibility === option.value ? 'text-primary' : ''
-                        }`}
-                      >
-                        {option.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">{option.description}</p>
-                    </div>
-                  ))}
-                </div>
+                <VisibilitySelector value={visibility} onChange={setVisibility} />
 
                 {/* Select Subscribers Button (matching mobile) */}
                 {visibility === 'selected' && (

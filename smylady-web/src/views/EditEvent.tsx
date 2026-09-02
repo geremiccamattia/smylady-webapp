@@ -29,6 +29,7 @@ import {
   normalizeInvitedUsers,
   getSubscriberId,
 } from '@/components/events/SubscriberPicker'
+import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>()
@@ -1588,7 +1589,27 @@ export default function EditEvent() {
           </Card>
         )}
 
-        {/* Eingeladene Personen — nur bei visibility 'selected' */}
+        {/* Sichtbarkeit — dieselbe Bedienung wie in CreateEvent */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              {t('createEvent.whoCanSee', { defaultValue: 'Wer kann das Event sehen?' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VisibilitySelector
+              value={formData.visibility as EventVisibility}
+              onChange={(next) => setFormData({ ...formData, visibility: next })}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Eingeladene Personen — nur bei visibility 'selected'.
+            Beim Umschalten auf öffentlich verschwindet der Abschnitt, die
+            invitedUsers am Event bleiben aber unangetastet: buildEventFormData
+            schickt das Feld nur, wenn tatsächlich jemand hinzugefügt wurde.
+            Wer zurückschaltet, findet seine Liste deshalb wieder. */}
         {isSelectedVisibility && (
           <Card>
             <CardHeader>

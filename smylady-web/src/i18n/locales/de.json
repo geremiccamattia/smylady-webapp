@@ -944,6 +944,12 @@
     "toSettings": "Zu Einstellungen",
     "until": "bis",
     "uploadImagesHere": "Bilder hier hochladen",
+    "visibilityPublic": "Öffentlich",
+    "visibilityPublicDesc": "Jeder kann dieses Event sehen.",
+    "visibilitySubscribers": "Nur Abonnenten",
+    "visibilitySubscribersDesc": "Nur deine Abonnenten können dieses Event sehen.",
+    "visibilitySelected": "Ausgewählte Abonnenten",
+    "visibilitySelectedDesc": "Nur ausgewählte Abonnenten können dieses Event sehen.",
     "whenParty": "Wann findet die Party statt?",
     "whereParty": "Wo findet die Party statt?",
     "whoCanSee": "Wer kann das Event sehen?"
