@@ -58,6 +58,7 @@ import {
   User,
   MessageCircle,
   ScanLine,
+  KeyRound,
   Image,
   ExternalLink,
   CheckCircle,
@@ -1604,6 +1605,12 @@ export default function EventDetailClient({ id }: Props) {
                       <Link href={`/scan/${eventId}/statistics?name=${encodeURIComponent(event?.name || '')}`}>
                         <Users className="h-4 w-4" />
                         {t('tickets.scanStatistics')}
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="w-full gap-2" asChild>
+                      <Link href={`/scan/${eventId}/access`}>
+                        <KeyRound className="h-4 w-4" />
+                        {t('tickets.scanAccess', { defaultValue: 'Scan-Berechtigungen' })}
                       </Link>
                     </Button>
                     <Button variant="outline" className="w-full gap-2" asChild>

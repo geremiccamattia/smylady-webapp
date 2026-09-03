@@ -318,6 +318,7 @@
     "price": "Preis",
     "purchasedOn": "Gekauft am",
     "purchaseFailed": "Kauf fehlgeschlagen",
+    "scanAccess": "Scan-Berechtigungen",
     "scanStatistics": "Scan-Statistiken",
     "scanTickets": "Tickets scannen",
     "showAtEntrance": "Zeige den QR-Code am Eingang",

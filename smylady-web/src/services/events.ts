@@ -12,6 +12,26 @@ const publicClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+/** Ein Zugangslink, wie ihn GET /events/:id/scan-tokens zurückgibt. */
+export interface ScanTokenSummary {
+  id: string
+  label: string
+  createdAt: string
+  expiresAt: string
+  revokedAt?: string | null
+  status: 'active' | 'expired' | 'revoked'
+  scannedTickets: number
+}
+
+/** Eine Person mit Scan-Recht, wie sie GET /events/:id/scanners zurückgibt. */
+export interface EventScanner {
+  id: string
+  name: string
+  username: string
+  profileImage: string
+  profileImageThumbnailUrl?: string
+}
+
 export const eventsService = {
   // Get all events with filters - with error handling
   async getEvents(filters: EventFilters = {}, upcoming: boolean = false): Promise<Event[]> {
@@ -84,6 +104,49 @@ export const eventsService = {
   // Delete event series
   async deleteEventSeries(id: string): Promise<void> {
     await apiClient.delete(`/events/${id}/series`)
+  },
+
+  // ──────────────────────────────────────────────────
+  // SCAN-ZUGÄNGE (Links für Personal ohne Konto)
+  // ──────────────────────────────────────────────────
+
+  /**
+   * Legt einen Zugangslink an. Der Klartext-Token steht NUR in dieser Antwort —
+   * gespeichert wird er gehasht, ein verlorener Link muss widerrufen und neu
+   * erzeugt werden. Die aufrufende Seite muss ihn deshalb sofort anzeigen.
+   */
+  async createScanToken(
+    eventId: string,
+    data: { label: string; expiresAt?: string },
+  ): Promise<{ id: string; label: string; expiresAt: string; token: string }> {
+    const response = await apiClient.post(`/events/${eventId}/scan-tokens`, data)
+    return response.data.data
+  },
+
+  async listScanTokens(eventId: string): Promise<ScanTokenSummary[]> {
+    const response = await apiClient.get(`/events/${eventId}/scan-tokens`)
+    return response.data.data || []
+  },
+
+  async revokeScanToken(eventId: string, tokenId: string): Promise<void> {
+    await apiClient.delete(`/events/${eventId}/scan-tokens/${tokenId}`)
+  },
+
+  // ──────────────────────────────────────────────────
+  // SCANNER-PERSONEN (scannen über ihr eigenes Konto)
+  // ──────────────────────────────────────────────────
+
+  async listScanners(eventId: string): Promise<EventScanner[]> {
+    const response = await apiClient.get(`/events/${eventId}/scanners`)
+    return response.data.data || []
+  },
+
+  async addScanner(eventId: string, userId: string): Promise<void> {
+    await apiClient.post(`/events/${eventId}/scanners`, { userId })
+  },
+
+  async removeScanner(eventId: string, userId: string): Promise<void> {
+    await apiClient.delete(`/events/${eventId}/scanners/${userId}`)
   },
 
   // Cancel event

@@ -56,6 +56,12 @@ apiClient.interceptors.response.use(
         // '/influencer' bleibt zusaetzlich drin, solange die 308-Weiterleitungen
         // in next.config.ts auf die alten URLs zeigen (Instagram, Mails, Google).
         '/creator', '/influencer', '/api', '/communities',
+        // Scan-Zugang für Personal ohne Konto. Muss hier stehen, sonst wirft eine
+        // beliebige 401-Nebenanfrage (z.B. getCurrentUser mit abgelaufenem Token
+        // im localStorage) das Einlasspersonal auf /login — wo es sich mangels
+        // Konto nicht anmelden könnte. Mit Schrägstrich, damit /settings,
+        // /stories und /subscribers nicht mitmatchen.
+        '/s/',
       ]
       // Locale-Prefix abschneiden, sonst gilt /en/explore nicht als public und ein 401
       // einer Nebenanfrage wirft den Besucher von einer öffentlichen Seite auf /login.

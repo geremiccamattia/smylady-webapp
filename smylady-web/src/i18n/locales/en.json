@@ -297,6 +297,7 @@
     "price": "Price",
     "purchasedOn": "Purchased on",
     "purchaseFailed": "Purchase failed",
+    "scanAccess": "Scan access",
     "scanStatistics": "Scan statistics",
     "scanTickets": "Scan tickets",
     "showAtEntrance": "Show the QR code at the entrance",
