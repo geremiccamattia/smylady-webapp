@@ -464,7 +464,11 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
       {showCreatePost && (
         <CreatePostModal
           onClose={() => setShowCreatePost(false)}
-          communityId={communityId}
+          // Die ECHTE ObjectId aus dem geladenen Objekt, nicht der Routen-Parameter:
+          // In der URL steht ein Slug ("syp-k-9e6365c1"), den das Backend beim Anlegen
+          // eines Posts als ObjectId zu casten versucht — daraus entstand der CastError.
+          // Lesende Endpoints lösen den Slug selbst auf, POST /posts nicht.
+          communityId={community?._id || community?.id}
         />
       )}
 

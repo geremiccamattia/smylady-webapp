@@ -164,6 +164,19 @@ export default function EditEvent() {
     enabled: !!id,
   })
 
+  /**
+   * Die echte ObjectId des Events — für alle schreibenden Aufrufe.
+   *
+   * `id` aus der URL ist ein SLUG ("sommerfest-9e6365c1"). Manche Backend-Methoden
+   * lösen ihn über extractEventId auf (findOne, update, updateEventSeries,
+   * deleteEventSeries), andere nicht: convertToSeries und addSerieDates gehen
+   * direkt auf findById und laufen mit einem Slug in einen CastError.
+   *
+   * Der Fallback auf `id` bleibt für den Moment, in dem das Event noch lädt —
+   * dort greift ohnehin keiner der schreibenden Pfade.
+   */
+  const resolvedEventId = (event as any)?._id || (event as any)?.id || id
+
   const organizerId = user?._id || user?.id
   // Dieselbe Query wie im Picker (gleicher Key) — React Query liefert sie aus dem
   // Cache, es wird also nicht doppelt geladen. Hier nur, um zu IDs die Namen und
@@ -487,7 +500,7 @@ export default function EditEvent() {
     if (!id || !translatedPreview) return
     setTranslating(true)
     try {
-      await eventsService.saveEventTranslation((event as any)?._id || (event as any)?.id || id, translatedPreview.lang, {
+      await eventsService.saveEventTranslation(resolvedEventId, translatedPreview.lang, {
         name: translatedPreview.name,
         description: translatedPreview.description,
         restrictions: translatedPreview.restrictions,
@@ -511,7 +524,7 @@ export default function EditEvent() {
     setTranslating(true)
     try {
       const currentLang = i18n.language?.substring(0, 2) === 'de' ? 'EN' : 'DE'
-      const result = await eventsService.translateEvent((event as any)?._id || (event as any)?.id || id, currentLang as 'DE' | 'EN')
+      const result = await eventsService.translateEvent(resolvedEventId, currentLang as 'DE' | 'EN')
       const translated = result.translations[currentLang.toLowerCase()]
       if (translated) {
         setTranslatedPreview({
@@ -568,7 +581,7 @@ export default function EditEvent() {
 
     // '_id' ist die Subdokument-ID des Mongoose-Objekts, keine Sprache
     const langs = Object.keys(translations).filter((l) => l !== '_id')
-    const eventId = (event as any)?._id || (event as any)?.id || id
+    const eventId = resolvedEventId
 
     await Promise.all(
       langs.map((lang) =>
@@ -747,7 +760,7 @@ export default function EditEvent() {
     setAddingDates(true)
     try {
       console.log('Calling addSeriesDates with:', id, validDates)
-      const result = await eventsService.addSeriesDates(id!, validDates)
+      const result = await eventsService.addSeriesDates(resolvedEventId, validDates)
       console.log('addSeriesDates result:', result)
       toast({
         title: `${validDates.length} Termine hinzugefügt`,
@@ -812,7 +825,7 @@ export default function EditEvent() {
         if (config.customDates && formData.eventDate) {
           config.customDates = config.customDates.filter((d: string) => d !== formData.eventDate)
         }
-        await eventsService.convertToSeries(id!, config)
+        await eventsService.convertToSeries(resolvedEventId, config)
         toast({ title: 'Serie erstellt!' })
         router.push('/my-events')
         return
@@ -825,9 +838,9 @@ export default function EditEvent() {
           return
         }
         eventFormData.append('scope', seriesScope)
-        await eventsService.updateEventSeries(id!, eventFormData)
+        await eventsService.updateEventSeries(resolvedEventId, eventFormData)
       } else {
-        await eventsService.updateEvent(id!, eventFormData)
+        await eventsService.updateEvent(resolvedEventId, eventFormData)
       }
 
       await discardOutdatedTranslations()

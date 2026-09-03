@@ -343,7 +343,11 @@ export function CreatePostModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] })
       if (communityId) {
-        queryClient.invalidateQueries({ queryKey: ['communityPosts', communityId] })
+        // Ohne zweites Key-Element: Die Community-Seite schlüsselt ihre Liste nach
+        // dem Slug aus der URL, hier liegt die ObjectId vor. React Query matcht
+        // Präfixe, damit trifft die Invalidierung die Liste unabhängig davon,
+        // welcher Bezeichner dort im Schlüssel steht.
+        queryClient.invalidateQueries({ queryKey: ['communityPosts'] })
       }
       toast({ title: t('posts.postCreated') })
       setSelectedTrack(null)
