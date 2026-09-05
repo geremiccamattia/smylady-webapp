@@ -1167,6 +1167,7 @@
   },
   "explore": {
     "activeFilters": "Active filters",
+    "boostedEvents": "Sponsored events",
     "allEvents": "All Events",
     "backToExplore": "Show all events",
     "category": "Category",

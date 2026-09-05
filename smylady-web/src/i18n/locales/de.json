@@ -1031,6 +1031,7 @@
   },
   "explore": {
     "activeFilters": "Aktive Filter",
+    "boostedEvents": "Gesponserte Events",
     "allEvents": "Alle Events",
     "backToExplore": "Alle Events anzeigen",
     "category": "Kategorie",

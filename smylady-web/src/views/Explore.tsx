@@ -404,22 +404,54 @@ function ExploreContent() {
     return { total: upcoming.length, free: freeCount, withAttendees }
   }, [filteredEvents])
 
-  const doorEvents = useMemo(() => {
+  /**
+   * Bezahlt platzierte Events — eigene Sektion, bewusst KEINE Doppelanzeige.
+   *
+   * Sie werden aus allen folgenden Sektionen ausgeschlossen (siehe usedIds
+   * weiter unten). Ein bezahltes Event in „Kostenlos starten" stünde in einem
+   * Kontext, der nach redaktioneller Auswahl aussieht — genau diese Vermischung
+   * soll bezahlte Platzierung nicht erzeugen. In „Alle Events" bleiben sie
+   * enthalten, das ist die Vollliste.
+   *
+   * Bedingung wie im Backend (boost-ranking.util.ts): aktiver Status und
+   * Enddatum in der Zukunft. Kein Radius-Vergleich mehr.
+   */
+  const boostedEvents = useMemo(() => {
     const topPickIds = new Set(topPicks.map((e: any) => e._id))
+    const now = new Date()
     return (filteredEvents || [])
       .filter((e: any) => {
         const eid = e._id || e.id
-        return !e.isTicketmaster && !topPickIds.has(eid) && e.paymentType === 'door'
+        return (
+          !topPickIds.has(eid) &&
+          e.boostStatus === 'active' &&
+          e.boostEndDate &&
+          new Date(e.boostEndDate) > now
+        )
+      })
+      .slice(0, 3)
+  }, [filteredEvents, topPicks])
+
+  const doorEvents = useMemo(() => {
+    const usedIds = new Set([
+      ...topPicks.map((e: any) => e._id),
+      ...boostedEvents.map((e: any) => e._id || e.id),
+    ])
+    return (filteredEvents || [])
+      .filter((e: any) => {
+        const eid = e._id || e.id
+        return !e.isTicketmaster && !usedIds.has(eid) && e.paymentType === 'door'
       })
       .sort((a: any, b: any) =>
         new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
       )
       .slice(0, 3)
-  }, [filteredEvents, topPicks])
+  }, [filteredEvents, topPicks, boostedEvents])
 
   const freeEvents = useMemo(() => {
     const usedIds = new Set([
       ...topPicks.map((e: any) => e._id),
+      ...boostedEvents.map((e: any) => e._id || e.id),
       ...doorEvents.map((e: any) => e._id || e.id),
     ])
     return (filteredEvents || [])
@@ -432,11 +464,12 @@ function ExploreContent() {
         new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
       )
       .slice(0, 3)
-  }, [filteredEvents, topPicks, doorEvents])
+  }, [filteredEvents, topPicks, boostedEvents, doorEvents])
 
   const onlineEvents = useMemo(() => {
     const usedIds = new Set([
       ...topPicks.map((e: any) => e._id),
+      ...boostedEvents.map((e: any) => e._id || e.id),
       ...doorEvents.map((e: any) => e._id || e.id),
       ...freeEvents.map((e: any) => e._id || e.id),
     ])
@@ -449,11 +482,12 @@ function ExploreContent() {
         new Date(a.eventStartTime).getTime() - new Date(b.eventStartTime).getTime()
       )
       .slice(0, 3)
-  }, [filteredEvents, topPicks, doorEvents, freeEvents])
+  }, [filteredEvents, topPicks, boostedEvents, doorEvents, freeEvents])
 
   const categoriesWithEvents = useMemo(() => {
     const usedIds = new Set([
       ...topPicks.map((e: any) => e._id),
+      ...boostedEvents.map((e: any) => e._id || e.id),
       ...doorEvents.map((e: any) => e._id || e.id),
       ...freeEvents.map((e: any) => e._id || e.id),
       ...onlineEvents.map((e: any) => e._id || e.id),
@@ -469,8 +503,10 @@ function ExploreContent() {
     return Array.from(categoryMap.entries())
       .filter(([_, evs]) => evs.length > 0)
       .sort((a, b) => b[1].length - a[1].length)
-  }, [filteredEvents, topPicks, doorEvents, freeEvents, onlineEvents])
+  }, [filteredEvents, topPicks, boostedEvents, doorEvents, freeEvents, onlineEvents])
 
+  // Kein Ausschluss geboosteter Events: „Alle Events" ist die Vollliste, dort
+  // gehören sie hinein — die Sortierung des Backends stellt sie ohnehin nach vorne.
   const remainingEvents = useMemo(() => {
     const usedIds = new Set([
       ...topPicks.map((e: any) => e._id),
@@ -966,6 +1002,19 @@ function ExploreContent() {
                   events={topPicks}
                 />
               )}
+
+              {/* ⚡ Gesponserte Events — bezahlte Platzierung.
+                  Steht bewusst NACH Top Pick: Bezahltes vor der redaktionellen
+                  Empfehlung würde beide entwerten. Volle Überschriftengröße wie
+                  alle anderen Sektionen — eine kleiner gesetzte Kennzeichnung
+                  sähe aus, als wolle man sie verstecken.
+                  EventSection rendert nichts, wenn die Liste leer ist, und begrenzt
+                  auf drei Karten. Das „Gesponsert"-Badge sitzt auf der EventCard
+                  selbst und erscheint hier deshalb automatisch. */}
+              <EventSection
+                title={`⚡ ${t('explore.boostedEvents', { defaultValue: 'Gesponserte Events' })}`}
+                events={boostedEvents}
+              />
 
               {/* Posts Row 1 — nach Top Picks */}
               {topPicks.length > 0 && latestPosts.length > 0 && (
