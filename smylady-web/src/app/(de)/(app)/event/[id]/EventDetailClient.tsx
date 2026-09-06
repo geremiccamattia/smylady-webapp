@@ -1354,7 +1354,13 @@ export default function EventDetailClient({ id }: Props) {
                     <p className="font-semibold">{t('event.online', { defaultValue: 'Online-Event' })}</p>
                   ) : (event as any).locationType === 'tba' ? (
                     <p className="font-semibold">{t('event.tba', { defaultValue: 'Standort folgt' })}</p>
-                  ) : event.location?.coordinates?.[0] && event.location?.coordinates?.[1] ? (
+                  ) : event.locationName ? (
+                    /*
+                     * Verlinkt wird auch ohne Koordinaten: getMapsSearchUrl fällt dann
+                     * auf die Textsuche mit dem vollständigen Ortsnamen zurück. Vorher
+                     * hing die Bedingung an den Koordinaten, wodurch dieser Fallback nie
+                     * zum Zug kam — der Ort stand stumm als Text da.
+                     */
                     <a
                       href={getMapsSearchUrl(event.locationName, event.location?.coordinates)}
                       target="_blank"

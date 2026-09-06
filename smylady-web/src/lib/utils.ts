@@ -278,14 +278,44 @@ export function removeJsonLd(id: string): void {
   document.getElementById(id)?.remove()
 }
 
+/**
+ * Erkennt eine Hausnummer in den in Österreich üblichen Schreibweisen:
+ * `3`, `3a`, `3-5`, `3/2`, `1-3a` — auch mit Leerzeichen um Bindestrich/Schrägstrich.
+ *
+ * Bewusst eng gefasst: Alles mit Buchstaben am Anfang ist ein Orts- oder
+ * Straßenname und bleibt unangetastet. Eine vierstellige Postleitzahl würde zwar
+ * ebenfalls passen, steht in Nominatims `display_name` aber nie an erster Stelle —
+ * das Feld ist von spezifisch nach allgemein sortiert.
+ */
+const HOUSE_NUMBER_PATTERN = /^\d{1,4}\s*[a-zA-Z]?(?:\s*[-/]\s*\d{1,4}\s*[a-zA-Z]?)?$/
+
 export function shortenAddress(fullAddress: string): string {
   if (!fullAddress) return ''
 
   const detail = fullAddress.match(/\s*Top\s+(.+)$/)
   const base = fullAddress.replace(/\s*Top\s+.+$/, '')
 
-  const parts = base.split(',').map((p) => p.trim())
-  if (parts.length <= 3) return fullAddress
+  let parts = base.split(',').map((p) => p.trim())
+
+  /*
+   * Nominatim stellt bei Adressen ohne benannten Ort die Hausnummer voran:
+   * "3-5, Jakoministraße, Graz". Die Logik unten deutet parts[0] aber als
+   * Venue-Namen — die Hausnummer wurde dadurch zum Veranstaltungsort befördert.
+   * Steht dort eine Zahl, gehört sie an die Straße dahinter.
+   */
+  let houseNumberMerged = false
+  if (parts.length >= 2 && HOUSE_NUMBER_PATTERN.test(parts[0])) {
+    parts = [`${parts[1]} ${parts[0]}`, ...parts.slice(2)]
+    houseNumberMerged = true
+  }
+
+  if (parts.length <= 3) {
+    // Vorher wurde hier fullAddress unverändert zurückgegeben. Jetzt muss das
+    // zusammengezogene parts-Array durchschlagen; join() normalisiert dabei
+    // nebenbei die Abstände hinter den Kommata.
+    const merged = parts.join(', ')
+    return detail ? `${merged} Top ${detail[1]}` : merged
+  }
 
   const venue = parts[0]
   const street = parts[1]
@@ -307,27 +337,49 @@ export function shortenAddress(fullAddress: string): string {
     city = parts[parts.length - 3]?.replace(/\d{4,5}/g, '').trim() || ''
   }
 
-  const short = [venue, street, city].filter(Boolean).join(', ') || base
+  /*
+   * Nach dem Zusammenziehen steckt die Straße bereits in `venue`; parts[1] ist
+   * dann der Bezirk ("Innere Stadt"). Der Straßen-Slot entfällt deshalb, sonst
+   * stünde plötzlich ein Bezirk in der Anzeige, der vorher nicht da war.
+   */
+  const short = (houseNumberMerged ? [venue, city] : [venue, street, city])
+    .filter(Boolean)
+    .join(', ') || base
   return detail ? `${short} Top ${detail[1]}` : short
 }
 
 /**
  * Google-Maps-Link für einen Veranstaltungsort.
  *
- * Mit Koordinaten wird das Pfad-Format `maps/search/{Name}/@{lat},{lng},17z`
- * genutzt: Google sucht nach dem Venue-Namen, zentriert die Karte aber auf die
- * exakte Position (17z = Straßenebene). In die Suche geht nur der erste Teil des
- * Namens — die volle Geocoder-Adresse ("Club U, Obj. U26, Textilviertel, …")
- * liefert spürbar schlechtere Treffer.
+ * Liegen Koordinaten vor, gehen NUR sie in den Link — der Ortsname ist reine
+ * Beschriftung im UI und taucht in der URL nicht mehr auf.
  *
- * Ohne (brauchbare) Koordinaten bleibt es bei der reinen Textsuche.
+ * Vorher stand hier das Pfad-Format `maps/search/{Name}/@{lat},{lng},17z`. Das
+ * sah nach Koordinaten aus, war aber keine: Der Pfadteil ist der Suchbegriff,
+ * `@{lat},{lng},17z` setzt lediglich den Kartenausschnitt. Gesucht wurde also
+ * weiterhin nach Text — und zwar nach `split(',')[0]`, dem ersten Abschnitt des
+ * Namens. Bei Nominatim-Adressen wie "3-5, Jakoministraße, Graz" ist das die
+ * blanke Hausnummer "3-5"; Google verwarf den Ausschnitt und lieferte Treffer in
+ * Wien statt in Graz.
+ *
+ * Genutzt wird stattdessen `?api=1&query={lat},{lng}`:
+ *  - Eine Koordinatenabfrage wird nicht geokodiert, kann also nicht in der
+ *    falschen Stadt landen — der Pin sitzt exakt auf der gespeicherten Position.
+ *  - `api=1` ist Googles dokumentiertes, versioniertes URL-Schema und öffnet auf
+ *    iOS/Android direkt die Maps-App statt des Browsers. Die Seite wird
+ *    überwiegend mobil aufgerufen.
+ *  - Dasselbe Format nutzt bereits Conversation.tsx für geteilte Standorte.
+ *
+ * Eine eigene Pin-Beschriftung sieht `api=1` nicht vor; dafür bräuchte es
+ * `query_place_id` mit einer Google-Place-ID, die es hier nicht gibt (die Orte
+ * stammen aus Nominatim). Der Name steht deshalb nur im Linktext.
+ *
+ * Ohne brauchbare Koordinaten wird der VOLLSTÄNDIGE Ortsname gesucht, nicht mehr
+ * sein erster Abschnitt.
  *
  * @param coordinates GeoJSON-Reihenfolge [lng, lat], so wie das Backend sie liefert.
  */
 export function getMapsSearchUrl(locationName: string, coordinates?: number[] | null): string {
-  const short = shortenAddress(locationName)
-  const withoutDetail = short.replace(/\s*Top\s+.+$/, '')
-
   const lng = coordinates?.[0]
   const lat = coordinates?.[1]
   // [0, 0] ist der Default eines nicht gesetzten GeoJSON-Punkts und läge im Atlantik
@@ -337,10 +389,9 @@ export function getMapsSearchUrl(locationName: string, coordinates?: number[] | 
     !(lat === 0 && lng === 0)
 
   if (hasCoordinates) {
-    const venue = withoutDetail.split(',')[0].trim() || withoutDetail
-    return `https://www.google.com/maps/search/${encodeURIComponent(venue)}/@${lat},${lng},17z`
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
   }
 
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(withoutDetail)}`
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName.trim())}`
 }
 
