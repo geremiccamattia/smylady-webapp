@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import { primaryFieldKey } from '@/lib/eventFields'
 import {
   Eye,
   EyeOff,
@@ -281,11 +282,11 @@ export default function Login() {
           // Extract unique categories from all events (user + TM)
           const categories = new Set<string>()
           userEvents.forEach((event: any) => {
-            const cat = event.musicType || event.category || 'Sonstige'
+            const cat = primaryFieldKey(event.musicType, event.category)
             categories.add(cat)
           })
           fetchedTmEvents.forEach((event: TicketmasterEvent) => {
-            const cat = event.musicType || event.category || 'Sonstige'
+            const cat = primaryFieldKey(event.musicType, event.category)
             categories.add(cat)
           })
           setAvailableCategories(Array.from(categories).sort())
@@ -295,7 +296,7 @@ export default function Login() {
             setTicketmasterEvents(fetchedTmEvents.slice(0, 20))
           } else {
             const filtered = fetchedTmEvents.filter((event: TicketmasterEvent) => {
-              const cat = event.musicType || event.category || 'Sonstige'
+              const cat = primaryFieldKey(event.musicType, event.category)
               return cat === selectedCategory
             })
             setTicketmasterEvents(filtered.slice(0, 20))
@@ -325,7 +326,7 @@ export default function Login() {
       setTicketmasterEvents(allTicketmasterEvents.slice(0, 20))
     } else {
       const filtered = allTicketmasterEvents.filter((event) => {
-        const cat = event.musicType || event.category || 'Sonstige'
+        const cat = primaryFieldKey(event.musicType, event.category)
         return cat === selectedCategory
       })
       setTicketmasterEvents(filtered.slice(0, 20))
@@ -342,7 +343,7 @@ export default function Login() {
     let filteredTm = ticketmasterEvents
     if (selectedCategory !== 'all') {
       filteredTm = ticketmasterEvents.filter((event) => {
-        const cat = event.musicType || event.category || 'Sonstige'
+        const cat = primaryFieldKey(event.musicType, event.category)
         return cat === selectedCategory
       })
     }
@@ -874,7 +875,7 @@ export default function Login() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 auto-rows-[160px] md:auto-rows-[190px]">
               {combinedEvents.slice(0, 9).map((event, index) => {
-                const categoryKey = event.musicType || event.category || 'Music'
+                const categoryKey = primaryFieldKey(event.musicType, event.category, 'Music')
                 const style = categoryStyles[categoryKey] || { icon: Music, color: 'bg-purple-500' }
                 const CategoryIcon = style.icon
                 const eventImage = event.locationImages?.[0]?.url ||

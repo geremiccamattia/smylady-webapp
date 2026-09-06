@@ -13,7 +13,12 @@ const CSV_TEMPLATE_URL = 'https://docs.google.com/spreadsheets/d/1YWqArillO-1ypG
 
 const CATEGORIES = ['Gastronomy', 'Business', 'Sports', 'Nature', 'Theme', 'Music', 'On the Roof', 'Clubbing', 'Workshop', 'Yoga', 'Other']
 const PARTY_TYPES = ['birthday', 'wedding', 'corporate', 'social', 'other']
-const MUSIC_TYPES = ['pop', 'rock', 'jazz', 'classical', 'electronic', 'hip_hop', 'techno', 'house', 'rnb', 'indie', 'dnb', 'dj_set', 'live_band', 'mixed', 'reggae', 'latin', 'afrobeats', 'soul', 'metal', 'country', 'trance', 'folk', 'no_music', 'other']
+// `as const` ist Absicht: Erst dadurch entsteht ein Literal-Typ, den
+// src/lib/musicTypes.guard.ts gegen MUSIC_TYPE_VALUES prüfen kann.
+const MUSIC_TYPES = ['pop', 'rock', 'jazz', 'classical', 'electronic', 'hip_hop', 'techno', 'house', 'rnb', 'indie', 'dnb', 'dj_set', 'live_band', 'mixed', 'reggae', 'latin', 'afrobeats', 'soul', 'metal', 'country', 'trance', 'folk', 'no_music', 'other'] as const
+
+/** Die in dieser Doku-Seite aufgeführten Musikrichtungen. Siehe musicTypes.guard.ts. */
+export type ApiDocsMusicType = (typeof MUSIC_TYPES)[number]
 
 function CodeBlock({ code }: { code: string }) {
   return (

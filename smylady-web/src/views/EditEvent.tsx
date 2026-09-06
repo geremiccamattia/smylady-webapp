@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { useGetConnectedAccount } from '@/hooks/useStripe'
 import { eventsService } from '@/services/events'
-import { EVENT_CATEGORIES, MUSIC_TYPES, AGE_RESTRICTIONS } from '@/lib/constants'
+import { EVENT_CATEGORIES, AGE_RESTRICTIONS } from '@/lib/constants'
 import { resolveImageUrl, isMultiDayEvent } from '@/lib/utils'
 import { isHeicFile } from '@/lib/heic'
 import { useTranslation } from 'react-i18next'
@@ -30,6 +30,8 @@ import {
   getSubscriberId,
 } from '@/components/events/SubscriberPicker'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
+import { MultiSelectChips } from '@/components/events/MultiSelectChips'
+import { MUSIC_TYPE_VALUES, OFFERING_VALUES, toStringArray } from '@/lib/eventFields'
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>()
@@ -143,7 +145,7 @@ export default function EditEvent() {
     description: '',
     category: '',
     partyType: '',
-    musicType: '',
+    musicType: [] as string[],
     price: '',
     totalTickets: '',
     eventDate: '',
@@ -152,7 +154,7 @@ export default function EditEvent() {
     locationName: '',
     location: null as { type: string; coordinates: number[] } | null,
     minimumAge: '0',
-    offerings: '',
+    offerings: [] as string[],
     restrictions: '',
     visibility: 'public',
   })
@@ -190,6 +192,9 @@ export default function EditEvent() {
     (id) => subscribers.find((s) => getSubscriberId(s) === id) ?? { _id: id, id, name: '' },
   )
 
+  // Wird nur noch für restrictions gebraucht: Das Feld bleibt Freitext, kann aus
+  // Altbeständen aber als Array oder JSON-String kommen. musicType und offerings
+  // laufen inzwischen über toStringArray aus lib/eventFields.
   const parseStringField = (value: unknown): string => {
     const unwrap = (v: unknown): string[] => {
       if (!v) return []
@@ -218,7 +223,7 @@ export default function EditEvent() {
         description: event.description || '',
         category: event.category || '',
         partyType: event.partyType || '',
-        musicType: event.musicType || '',
+        musicType: toStringArray(event.musicType),
         price: event.price?.toString() || '0',
         totalTickets: event.totalTickets?.toString() || '',
         eventDate,
@@ -239,7 +244,7 @@ export default function EditEvent() {
         })(),
         location: null,
         minimumAge: event.minimumAge?.toString() || '0',
-        offerings: parseStringField(event.offerings),
+        offerings: toStringArray(event.offerings),
         restrictions: parseStringField(event.restrictions),
         visibility: event.visibility || 'public',
       })
@@ -598,7 +603,7 @@ export default function EditEvent() {
   const buildEventFormData = () => {
     const eventFormData = new FormData()
 
-    const { offerings, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, locationName, location, ...restFormData } = formData
+    const { offerings, musicType, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, locationName, location, ...restFormData } = formData
     Object.entries(restFormData).forEach(([key, value]) => {
       eventFormData.append(key, value)
     })
@@ -659,9 +664,13 @@ export default function EditEvent() {
       eventFormData.append('eventEndTime', fallbackEnd.toISOString())
     }
 
-    const offeringsArray = offerings ? offerings.split(',').map(s => s.trim()).filter(Boolean) : []
+    // Mehrfachwerte einzeln anhängen — multipart/form-data kennt keine native
+    // Array-Form. Früher ging offerings als JSON.stringify raus; das Backend
+    // versteht beides, wiederholte Felder sind aber die naheliegendere Form.
+    musicType.forEach((v) => eventFormData.append('musicType', v))
+    offerings.forEach((v) => eventFormData.append('offerings', v))
+    // restrictions bleibt ein Freitextfeld und damit unverändert.
     const restrictionsArray = restrictions ? restrictions.split(',').map(s => s.trim()).filter(Boolean) : []
-    eventFormData.append('offerings', JSON.stringify(offeringsArray))
     eventFormData.append('restrictions', JSON.stringify(restrictionsArray))
 
     eventFormData.append('allowGuestMemories', String(allowGuestMemories))
@@ -1529,27 +1538,23 @@ export default function EditEvent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Mehrfachauswahl — das Backend erwartet bei beiden Feldern ein Array */}
             <div className="space-y-2">
               <Label htmlFor="musicType">{t('editEvent.musicType')}</Label>
-              <select
+              <MultiSelectChips
                 id="musicType"
-                className="w-full h-10 px-3 border rounded-md bg-background"
+                options={MUSIC_TYPE_VALUES}
                 value={formData.musicType}
-                onChange={(e) => setFormData({ ...formData, musicType: e.target.value })}
-              >
-                <option value="">{t('common.select')}</option>
-                {MUSIC_TYPES.map(music => (
-                  <option key={music.value} value={music.value}>{music.label}</option>
-                ))}
-              </select>
+                onChange={(next) => setFormData({ ...formData, musicType: next })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="offerings">{t('editEvent.offeringsLabel')}</Label>
-              <Input
+              <MultiSelectChips
                 id="offerings"
+                options={OFFERING_VALUES}
                 value={formData.offerings}
-                onChange={(e) => setFormData({ ...formData, offerings: e.target.value })}
-                placeholder={t('editEvent.offeringsPlaceholder')}
+                onChange={(next) => setFormData({ ...formData, offerings: next })}
               />
             </div>
             <div className="space-y-2">

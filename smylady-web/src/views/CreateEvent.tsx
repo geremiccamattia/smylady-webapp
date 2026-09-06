@@ -34,6 +34,8 @@ import {
 } from 'lucide-react'
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 import { SubscriberPicker } from '@/components/events/SubscriberPicker'
+import { MultiSelectChips } from '@/components/events/MultiSelectChips'
+import { MUSIC_TYPE_VALUES, OFFERING_VALUES } from '@/lib/eventFields'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 
@@ -127,26 +129,7 @@ function CreateEventContent() {
     { value: 'other', label: t('partyTypes.other', { defaultValue: 'Sonstiges' }) },
   ]
 
-  const MUSIC_TYPES = [
-    { value: 'electronic', label: t('musicTypes.electronic', { defaultValue: 'Electronic' }) },
-    { value: 'rock', label: t('musicTypes.rock', { defaultValue: 'Rock' }) },
-    { value: 'pop', label: t('musicTypes.pop', { defaultValue: 'Pop' }) },
-    { value: 'hip_hop', label: t('musicTypes.hipHop', { defaultValue: 'Hip Hop' }) },
-    { value: 'classical', label: t('musicTypes.classical', { defaultValue: 'Klassik' }) },
-    { value: 'jazz', label: t('musicTypes.jazz', { defaultValue: 'Jazz' }) },
-    { value: 'other', label: t('musicTypes.other', { defaultValue: 'Sonstiges' }) },
-  ]
 
-  const OFFERINGS = [
-    { value: 'none', label: t('offerings.none', { defaultValue: 'Keine' }) },
-    { value: 'pool', label: t('offerings.pool', { defaultValue: 'Pool' }) },
-    { value: 'food_drinks', label: t('offerings.foodDrinks', { defaultValue: 'Essen & Trinken' }) },
-    { value: 'terrasse', label: t('offerings.terrace', { defaultValue: 'Terrasse' }) },
-    { value: 'grill', label: t('offerings.grill', { defaultValue: 'Grill' }) },
-    { value: 'feuerstelle', label: t('offerings.fireplace', { defaultValue: 'Feuerstelle' }) },
-    { value: 'drinks', label: t('offerings.drinks', { defaultValue: 'Getränke' }) },
-    { value: 'other', label: t('offerings.other', { defaultValue: 'Sonstiges' }) },
-  ]
 
   const addTier = () => {
     setTicketTiers(prev => [...prev, { name: '', description: '', price: '', quantity: '' }])
@@ -179,8 +162,8 @@ function CreateEventContent() {
     totalTickets: '',
     partyType: '',
     category: '',
-    musicType: '',
-    offerings: '',
+    musicType: [] as string[],
+    offerings: [] as string[],
     // Step 2 fields (matching mobile StepTwo)
     name: '',
     description: '',
@@ -409,11 +392,11 @@ function CreateEventContent() {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.selectCategory') })
       return false
     }
-    if (!formData.musicType) {
+    if (formData.musicType.length === 0) {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.selectMusicType') })
       return false
     }
-    if (!formData.offerings) {
+    if (formData.offerings.length === 0) {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.selectOfferings') })
       return false
     }
@@ -613,8 +596,11 @@ function CreateEventContent() {
       }
       eventFormData.append('partyType', formData.partyType)
       eventFormData.append('category', formData.category)
-      eventFormData.append('musicType', formData.musicType)
-      eventFormData.append('offerings', formData.offerings)
+      // Mehrfachwerte einzeln anhängen — multipart/form-data kennt keine native
+      // Array-Form; wiederholte Felder kommen im Backend als Array an, und
+      // normalizeStringList im DTO nimmt zusätzlich Einzelwerte entgegen.
+      formData.musicType.forEach((v) => eventFormData.append('musicType', v))
+      formData.offerings.forEach((v) => eventFormData.append('offerings', v))
       eventFormData.append('restrictions', formData.restrictions || '')
       eventFormData.append('minimumAge', formData.minimumAge || '0')
 
@@ -1140,42 +1126,26 @@ function CreateEventContent() {
                   </select>
                 </div>
 
-                {/* Music Type */}
+                {/* Music Type — Mehrfachauswahl, das Backend erwartet ein Array */}
                 <div className="space-y-2">
                   <Label htmlFor="musicType">{t('createEvent.musicTypeLabel')}</Label>
-                  <select
+                  <MultiSelectChips
                     id="musicType"
-                    className="w-full h-10 px-3 border rounded-md bg-background"
+                    options={MUSIC_TYPE_VALUES}
                     value={formData.musicType}
-                    onChange={(e) => setFormData({ ...formData, musicType: e.target.value })}
-                    required
-                  >
-                    <option value="">{t('createEvent.clickToSelect')}</option>
-                    {MUSIC_TYPES.map((music) => (
-                      <option key={music.value} value={music.value}>
-                        {music.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(next) => setFormData({ ...formData, musicType: next })}
+                  />
                 </div>
 
-                {/* Offerings */}
+                {/* Offerings — ebenfalls Mehrfachauswahl */}
                 <div className="space-y-2">
                   <Label htmlFor="offerings">{t('createEvent.offeringsLabel')}</Label>
-                  <select
+                  <MultiSelectChips
                     id="offerings"
-                    className="w-full h-10 px-3 border rounded-md bg-background"
+                    options={OFFERING_VALUES}
                     value={formData.offerings}
-                    onChange={(e) => setFormData({ ...formData, offerings: e.target.value })}
-                    required
-                  >
-                    <option value="">{t('createEvent.clickToSelect')}</option>
-                    {OFFERINGS.map((offering) => (
-                      <option key={offering.value} value={offering.value}>
-                        {offering.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(next) => setFormData({ ...formData, offerings: next })}
+                  />
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <Label>{t('createEvent.allowGuestPhotos', { defaultValue: 'Gäste dürfen Fotos hochladen' })}</Label>

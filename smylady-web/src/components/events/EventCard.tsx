@@ -10,6 +10,7 @@ import { Event } from '@/types'
 import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { isRaffleDrawn } from '@/lib/raffle'
+import { formatMusicTypes } from '@/lib/eventFields'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -319,9 +320,11 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
               {event.category}
             </span>
           )}
-          {event.musicType && (
+          {/* musicType ist ein Array — direkt gerendert verkettet React die Werte
+              ohne Trennzeichen zu „rockpop“. */}
+          {formatMusicTypes(event.musicType, t) && (
             <span className="px-2 py-1 bg-secondary/10 text-secondary rounded-md text-xs font-medium">
-              {event.musicType}
+              {formatMusicTypes(event.musicType, t)}
             </span>
           )}
           {(event as any).communityId?.name && (

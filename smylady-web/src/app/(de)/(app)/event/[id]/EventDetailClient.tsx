@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent, isEventOver } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { isRaffleDrawn } from '@/lib/raffle'
+import { formatMusicTypes, toStringArray } from '@/lib/eventFields'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -766,10 +767,11 @@ export default function EventDetailClient({ id }: Props) {
               <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 {event.category}
               </span>
-              {event.musicType && (
+              {/* musicType ist ein Array — siehe lib/eventFields */}
+              {formatMusicTypes(event.musicType, t) && (
                 <span className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-sm font-medium">
                   <Music className="h-3 w-3 inline mr-1" />
-                  {event.musicType}
+                  {formatMusicTypes(event.musicType, t)}
                 </span>
               )}
               {event?.isAiGenerated && (
@@ -979,21 +981,10 @@ export default function EventDetailClient({ id }: Props) {
 
           {/* Additional Info */}
           {(() => {
-            // Backend returns offerings and restrictions as comma-separated strings, not arrays
-            const unwrapField = (value: unknown): string[] => {
-              if (!value) return []
-              if (Array.isArray(value)) return value.flatMap(unwrapField)
-              if (typeof value === 'string') {
-                const trimmed = value.trim()
-                if (trimmed.startsWith('[') || trimmed.startsWith('"')) {
-                  try { return unwrapField(JSON.parse(trimmed)) } catch {}
-                }
-                return trimmed ? trimmed.split(',').map(s => s.trim()).filter(Boolean) : []
-              }
-              return [String(value)]
-            }
-            const offeringsArray = unwrapField(event.offerings)
-            const restrictionsArray = unwrapField(tr?.restrictions || event.restrictions)
+            // offerings kommt inzwischen als echtes Array, restrictions bleibt Freitext.
+            // toStringArray verkraftet beide Formen sowie den alten JSON-String.
+            const offeringsArray = toStringArray(event.offerings)
+            const restrictionsArray = toStringArray(tr?.restrictions || event.restrictions)
 
             if (offeringsArray.length === 0 && restrictionsArray.length === 0) return null
 
