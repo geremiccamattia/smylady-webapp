@@ -951,6 +951,12 @@
     "jazz": "Jazz",
     "other": "Other"
   },
+  "tutorials": {
+    "title": "Video Tutorials",
+    "settingsEntry": "Watch videos",
+    "minutes": "{{minutes}} min",
+    "empty": "No videos available right now."
+  },
   "offerings": {
     "none": "None",
     "pool": "Pool",

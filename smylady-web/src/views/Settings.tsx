@@ -14,6 +14,7 @@ import { BalanceCard } from '@/components/settings/BalanceCard'
 import { ChangeEmailModal } from '@/components/settings/ChangeEmailModal'
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal'
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal'
+import { TutorialsCard } from '@/components/settings/TutorialsCard'
 import {
   MapPin,
   Ticket,
@@ -319,6 +320,10 @@ function SettingsContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Video-Tutorials. Rendert sich selbst weg, wenn das Konto nicht
+          freigeschaltet ist — siehe TutorialsCard. */}
+      <TutorialsCard />
 
       {/* Links */}
       <Card>
