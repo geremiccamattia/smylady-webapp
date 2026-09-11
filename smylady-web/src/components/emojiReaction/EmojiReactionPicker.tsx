@@ -19,7 +19,8 @@ export const REACTION_EMOJIS = [
 export const DEFAULT_LIKE_EMOJI = '👍'
 
 export interface Reaction {
-  userId: string | { _id?: string; id?: string }
+  // null, wenn das reagierende Konto gelöscht wurde (siehe getUserReaction).
+  userId: string | { _id?: string; id?: string } | null
   emoji: string
   createdAt: string
 }
@@ -99,7 +100,7 @@ export function EmojiReactionDisplay({
 
     // Check if current user has reacted with this emoji
     const reactionUserId =
-      typeof reaction.userId === 'object'
+      reaction.userId && typeof reaction.userId === 'object'
         ? reaction.userId._id || reaction.userId.id
         : reaction.userId
 
@@ -156,8 +157,11 @@ export function getUserReaction(
   if (!reactions || !currentUserId) return undefined
 
   const userReaction = reactions.find(r => {
+    // userId ist null, wenn das reagierende Konto gelöscht wurde: Das Backend
+    // populiert reactions.userId, und für ein fehlendes Dokument setzt Mongoose
+    // null. typeof null === 'object' — deshalb zuerst auf Wahrheit prüfen.
     const reactionUserId =
-      typeof r.userId === 'object' ? r.userId._id || r.userId.id : r.userId
+      r.userId && typeof r.userId === 'object' ? r.userId._id || r.userId.id : r.userId
 
     return reactionUserId?.toString() === currentUserId?.toString()
   })

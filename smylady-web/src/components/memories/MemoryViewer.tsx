@@ -627,13 +627,13 @@ export default function MemoryViewer({
             {/* Photo Tags */}
             {showTags && photoTags.map((tag, index) => {
               const tagUserId = typeof tag.userId === 'string' ? tag.userId : tag.userId?._id
-              const tagUserName = tag.user?.name || (typeof tag.userId === 'object' ? tag.userId.name : 'User')
+              const tagUserName = tag.user?.name || (tag.userId && typeof tag.userId === 'object' ? tag.userId.name : 'User')
               return (
               <div
                 key={index}
                 className="absolute bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium shadow-lg transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform"
                 style={{ left: `${tag.x}%`, top: `${tag.y}%` }}
-                onClick={() => router.push(`/user/${tagUserId}`)}
+                onClick={() => tagUserId && router.push(`/user/${tagUserId}`)}
               >
                 {tagUserName}
               </div>
@@ -1268,7 +1268,7 @@ export default function MemoryViewer({
               <div className="flex flex-wrap gap-2">
                 {photoTags.map((tag, i) => {
                   const displayName = tag.user?.name
-                    || (typeof tag.userId === 'object' ? tag.userId.name : null)
+                    || (tag.userId && typeof tag.userId === 'object' ? tag.userId.name : null)
                     || 'User'
                   return (
                     <span key={i} className="text-xs bg-muted px-2 py-1 rounded-full">

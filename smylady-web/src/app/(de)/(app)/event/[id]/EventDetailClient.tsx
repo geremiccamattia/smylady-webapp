@@ -261,7 +261,7 @@ export default function EventDetailClient({ id }: Props) {
       try {
         const tickets = await ticketsService.getUserTickets()
         const ticket = tickets?.find((t: any) => {
-          const ticketEventId = typeof t.event === 'object' ? (t.event._id || t.event.id) : t.event
+          const ticketEventId = t.event && typeof t.event === 'object' ? (t.event._id || t.event.id) : t.event
           return ticketEventId === eventId
         })
         if (ticket) return { ticketId: ticket._id || ticket.id }
@@ -314,7 +314,7 @@ export default function EventDetailClient({ id }: Props) {
     queryFn: async () => {
       const tickets = await ticketsService.getMyTickets()
       const ticket = tickets?.find((t: any) => {
-        const ticketEventId = typeof t.event === 'object'
+        const ticketEventId = t.event && typeof t.event === 'object'
           ? (t.event._id || t.event.id)
           : (t.eventId || t.event)
         return ticketEventId === eventId ||

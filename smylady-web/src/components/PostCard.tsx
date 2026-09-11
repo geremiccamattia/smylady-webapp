@@ -199,7 +199,7 @@ export function PostCard({ post, communityId }: PostCardProps) {
     try {
       if (!isAuthenticated) {
         const usersFromReactions = (post.reactions || []).map((r: any) => {
-          const u = typeof r.userId === 'object' ? r.userId : { _id: r.userId }
+          const u = r.userId && typeof r.userId === 'object' ? r.userId : { _id: r.userId }
           return {
             _id: u._id || u.id || '',
             name: u.name || 'User',

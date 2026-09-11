@@ -157,7 +157,7 @@ export default function TicketDetail() {
     if (!ticket) return
     window.dataLayer = window.dataLayer || []
     window.dataLayer.push({ event: 'contact_host', ticket_id: ticketId })
-    const organizerId = ticket.organizerId || (typeof ticket.event === 'object' ? ((ticket.event as any).userId?._id || (ticket.event as any).userId) : null)
+    const organizerId = ticket.organizerId || (ticket.event && typeof ticket.event === 'object' ? ((ticket.event as any).userId?._id || (ticket.event as any).userId) : null)
     if (organizerId) {
       const currentUserId = user?._id || user?.id
       if (currentUserId) {
@@ -234,9 +234,11 @@ export default function TicketDetail() {
   const onlineUrl = safeExternalUrl((event as any)?.onlineUrl)
 
   // Organizer display info
-  const organizerName = event && typeof (event as any).userId === 'object' ? (event as any).userId.name : null
-  const organizerProfileImage = event && typeof (event as any).userId === 'object' ? (event as any).userId.profileImage : null
-  const organizerUserId = event && typeof (event as any).userId === 'object' ? (event as any).userId._id : (event as any)?.userId
+  // `event &&` allein reicht nicht: Ist das Veranstalterkonto gelöscht, ist userId
+  // null — und typeof null === 'object'.
+  const organizerName = event && (event as any).userId && typeof (event as any).userId === 'object' ? (event as any).userId.name : null
+  const organizerProfileImage = event && (event as any).userId && typeof (event as any).userId === 'object' ? (event as any).userId.profileImage : null
+  const organizerUserId = event && (event as any).userId && typeof (event as any).userId === 'object' ? (event as any).userId._id : (event as any)?.userId
 
   const getStatusInfo = () => {
     if (isCancelled) {

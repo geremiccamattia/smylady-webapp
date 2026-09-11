@@ -8,7 +8,7 @@ Dieses Verzeichnis enthält die Web-Version der "Share Your Party" Event-App.
 
 | Komponente | URL / Service |
 |------------|---------------|
-| **Frontend (Web)** | https://www.shareyourparty.de |
+| **Frontend (Web)** | https://shareyourparty.de |
 | **Frontend Hosting** | **Vercel** (Projekt `smylady-webapp`, Root Directory `smylady-web`) |
 | **Backend API** | https://app.shareyourparty.de |
 | **Backend Hosting** | Render.com |

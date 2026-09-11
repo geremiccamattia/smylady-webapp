@@ -2800,13 +2800,13 @@ function ProfileMemoryViewer({
             {/* Photo Tags - clickable to navigate to user profile */}
             {memory.photoTags && memory.photoTags.length > 0 && memory.photoTags.map((tag: { userId: string | { _id: string; name: string }; user?: { _id: string; name: string }; x: number; y: number }, index: number) => {
               const tagUserId = typeof tag.userId === 'string' ? tag.userId : tag.userId?._id
-              const tagUserName = tag.user?.name || (typeof tag.userId === 'object' ? tag.userId.name : 'User')
+              const tagUserName = tag.user?.name || (tag.userId && typeof tag.userId === 'object' ? tag.userId.name : 'User')
               return (
                 <div
                   key={index}
                   className="absolute bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium shadow-lg transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform"
                   style={{ left: `${tag.x}%`, top: `${tag.y}%` }}
-                  onClick={() => router.push(`/user/${tagUserId}`)}
+                  onClick={() => tagUserId && router.push(`/user/${tagUserId}`)}
                 >
                   {tagUserName}
                 </div>
