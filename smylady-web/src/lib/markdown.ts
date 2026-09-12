@@ -21,6 +21,15 @@ export function stripMarkdown(text?: string | null): string {
     .replace(/(\*\*|__)(.*?)\1/g, '$2') // fett
     .replace(/(\*|_)(.*?)\1/g, '$2') // kursiv
     .replace(/`([^`]*)`/g, '$1') // Code
+    // Literale "\n"-Folgen: Ein Teil der Beschreibungen trägt den Umbruch als
+    // zwei Zeichen (Backslash + n) statt als echten Zeilenumbruch. Die gerenderte
+    // Ansicht macht daraus einen Umbruch, im Meta-Tag stünde sonst sichtbar "\n" —
+    // also genau dort, wo Google den Text im Suchergebnis zeigt.
+    // MUSS vor der Whitespace-Normalisierung stehen: Nur so werden mehrere
+    // aufeinanderfolgende Folgen anschließend zu EINEM Leerzeichen zusammengezogen.
+    // `\\n` steht für EIN Backslash-Zeichen gefolgt von "n" — die Gruppe um
+    // `\\r` ist nötig, damit `?` nicht nur für das "r" gilt.
+    .replace(/(?:\\r)?\\n/g, ' ')
     .replace(/\s+/g, ' ') // Zeilenumbrüche → Leerzeichen
     .trim()
 }

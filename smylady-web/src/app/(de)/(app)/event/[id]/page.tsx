@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { SITE_URL, localeAlternates } from '@/lib/seo'
 import { generateEventSlug } from '@/lib/utils'
 import { stripMarkdown } from '@/lib/markdown'
+import { buildEventJsonLd, fetchPublicEvent } from '@/lib/eventSchema'
 import EventDetailClient from './EventDetailClient'
 
 export const dynamic = 'force-dynamic'
@@ -80,5 +81,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function EventPage({ params }: Props) {
   const { id } = await params
-  return <EventDetailClient id={id} />
+  // Serverseitig ausgegeben, nicht per useEffect: Google rendert JavaScript,
+  // die meisten KI-Crawler nicht.
+  const event = await fetchPublicEvent(id)
+  const jsonLd = event ? buildEventJsonLd(event, 'de', id) : null
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <EventDetailClient id={id} />
+    </>
+  )
 }
