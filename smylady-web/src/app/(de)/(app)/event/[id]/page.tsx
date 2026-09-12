@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { localeAlternates } from '@/lib/seo'
+import { SITE_URL, localeAlternates } from '@/lib/seo'
 import { generateEventSlug } from '@/lib/utils'
 import { stripMarkdown } from '@/lib/markdown'
 import EventDetailClient from './EventDetailClient'
@@ -10,6 +10,38 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
+/**
+ * Ein openGraph-Objekt auf Seitenebene ERSETZT das aus dem Root-Layout
+ * (root-shell.tsx), es wird nicht damit verschmolzen. Ohne diese beiden
+ * Felder fehlten auf der Eventseite og:type und og:site_name.
+ */
+const OG_DEFAULTS = {
+  type: 'website' as const,
+  siteName: 'Share Your Party',
+}
+
+const LOGO_IMAGE = { url: `${SITE_URL}/logo.png` }
+
+/**
+ * Greift bei nicht öffentlichen Events — /events/public/:id liefert nur
+ * öffentliche — und wenn das Backend gar nicht antwortet. Vorher stand hier
+ * nur "Event", was in jeder Link-Vorschau nichtssagend war.
+ */
+const FALLBACK_TITLE = 'Event auf Share Your Party'
+const FALLBACK_DESCRIPTION =
+  'Entdecke Events in deiner Nähe, sichere dir Tickets und teile die Momente mit deiner Community.'
+
+const FALLBACK_METADATA: Metadata = {
+  title: FALLBACK_TITLE,
+  description: FALLBACK_DESCRIPTION,
+  openGraph: {
+    ...OG_DEFAULTS,
+    title: FALLBACK_TITLE,
+    description: FALLBACK_DESCRIPTION,
+    images: [LOGO_IMAGE],
+  },
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   try {
@@ -17,29 +49,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const res = await fetch(`${apiUrl}/events/public/${id}?populateCreator=true`, {
       next: { revalidate: 60 }
     })
-    if (!res.ok) return { title: 'Event' }
+    if (!res.ok) return FALLBACK_METADATA
     const json = await res.json()
     const event = json.data
     const title = event.name
     // stripMarkdown: die Beschreibung ist Markdown, im Meta-Tag stünden sonst ** und #
     const description = stripMarkdown(event.description).slice(0, 160) || 'Entdecke Events auf Share Your Party'
     const image = event.locationImages?.[0]?.url || event.thumbnailUrl || ''
-    const url = `https://shareyourparty.de/event/${generateEventSlug(event.name, event._id || id)}`
+    const url = `${SITE_URL}/event/${generateEventSlug(event.name, event._id || id)}`
 
     return {
       title,
       description,
       alternates: localeAlternates(`/event/${generateEventSlug(event.name, event._id || id)}`, 'de'),
       openGraph: {
+        ...OG_DEFAULTS,
         title: `${title} | Share Your Party`,
         description,
         url,
-        images: image ? [{ url: image }] : [],
+        // Ohne Eventbild das Logo: ein leeres images-Array verdrängt auch den
+        // Rückfall aus dem Root-Layout, die Vorschau bliebe dann ganz ohne Bild.
+        images: image ? [{ url: image }] : [LOGO_IMAGE],
       },
     }
   } catch (error) {
     console.error('[generateMetadata] failed:', error)
-    return { title: 'Event' }
+    return FALLBACK_METADATA
   }
 }
 

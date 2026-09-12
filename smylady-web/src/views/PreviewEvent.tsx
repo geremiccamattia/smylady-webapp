@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { eventsService } from '@/services/events'
+import { generateEventSlug } from '@/lib/utils'
+import { SITE_URL } from '@/lib/seo'
 import { Event } from '@/types'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -51,7 +53,12 @@ export default function PreviewEvent() {
   }, [id, toast])
 
   const handleShare = async () => {
-    const shareUrl = `https://app.shareyourparty.de/redirect/event/${id}`
+    // Kanonischer WebApp-Link statt des alten /redirect/-Links (siehe
+    // EventDetailClient). Diese Ansicht gibt es nur auf Deutsch, deshalb ohne
+    // Sprachpräfix.
+    const eventId = event?._id || event?.id || id
+    const slug = event?.name ? generateEventSlug(event.name, eventId) : eventId
+    const shareUrl = `${SITE_URL}/event/${slug}`
     const shareText = `🎉 Du bist eingeladen zu: ${event?.name}\n#ShareYourParty`
 
     if (navigator.share) {

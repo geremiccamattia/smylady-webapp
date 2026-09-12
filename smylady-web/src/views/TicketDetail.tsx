@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug, isEventOver } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import { SITE_URL } from '@/lib/seo'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -91,7 +92,11 @@ export default function TicketDetail() {
 
     const eventObj = typeof ticket.event === 'object' ? ticket.event : null
     const eventId = eventObj ? (eventObj._id || eventObj.id) : ''
-    const url = eventId ? `https://app.shareyourparty.de/redirect/event/${eventId}` : window.location.href
+    // Kanonischer WebApp-Link statt des alten /redirect/-Links (siehe
+    // EventDetailClient). Ohne Event am Ticket bleibt die aktuelle Seite.
+    const slug =
+      eventObj?.name && eventId ? generateEventSlug(eventObj.name, eventId) : eventId
+    const url = slug ? `${SITE_URL}/event/${slug}` : window.location.href
     const text = `Mein Ticket für ${eventObj?.name || 'Event'}`
 
     if (navigator.share) {

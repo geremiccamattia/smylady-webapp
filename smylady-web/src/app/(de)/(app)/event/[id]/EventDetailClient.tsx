@@ -12,7 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent, isEventOver } from '@/lib/utils'
+import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent, isEventOver, generateEventSlug } from '@/lib/utils'
+import { SITE_URL } from '@/lib/seo'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { isRaffleDrawn } from '@/lib/raffle'
 import { formatMusicTypes, toStringArray } from '@/lib/eventFields'
@@ -503,7 +504,12 @@ export default function EventDetailClient({ id }: Props) {
   })
 
   const handleShare = async () => {
-    const url = `https://app.shareyourparty.de/redirect/event/${id}`
+    // Kanonischer WebApp-Link statt des alten /redirect/-Links: Die Vorschau
+    // zeigt damit Name, Beschreibung und Bild des Events statt einer
+    // allgemeinen Einladung. Ohne Eventnamen bleibt die ID im Pfad — die
+    // WebApp löst beide Formen auf.
+    const slug = event?.name ? generateEventSlug(event.name, eventId) : eventId
+    const url = `${SITE_URL}${localePath(`/event/${slug}`)}`
     if (navigator.share) {
       try {
         await navigator.share({
