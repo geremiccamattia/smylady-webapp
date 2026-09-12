@@ -11,6 +11,7 @@ import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug, isEve
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { SITE_URL } from '@/lib/seo'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import { CONFIG } from '@/lib/constants'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import {
@@ -197,6 +198,9 @@ export default function TicketDetail() {
   }
 
   const event = typeof ticket.event === 'object' ? ticket.event : null
+  // Für den Kalender-Link. `ticket.eventId` zuerst: Bei unpopuliertem `event`
+  // (dann ein blanker String) ist es die einzige Quelle der Event-ID.
+  const calendarEventId = ticket.eventId || (event ? event._id || event.id : '')
   const selectedTier = event?.ticketTiers && ticket.tierId
     ? event.ticketTiers?.find((t: any) => t._id === ticket.tierId || t._id?.toString() === ticket.tierId)
     : null
@@ -362,6 +366,29 @@ export default function TicketDetail() {
                 {t('tickets.showQR')}
               </p>
             </div>
+          )}
+
+          {/*
+           * Kalender-Export. Bewusst ein schlichter Link auf den Endpoint: Das
+           * Backend schickt `Content-Type: text/calendar` und
+           * `Content-Disposition: attachment`, den Rest erledigt das Betriebssystem.
+           * Kein `download`-Attribut — es greift bei fremder Origin ohnehin nicht
+           * und würde nur den Dateinamen des Backends überschreiben wollen.
+           *
+           * Steht außerhalb der QR-Bedingung: Auch ein Online-Event, das keinen
+           * QR-Code zeigt, gehört in den Kalender. Bei einem stornierten Ticket
+           * nicht.
+           *
+           * `ticketId` ist Pflicht: Ohne den Parameter liefert das Backend die
+           * .ics nur für öffentliche Events aus.
+           */}
+          {!isCancelled && calendarEventId && (
+            <Button variant="outline" className="w-full" asChild>
+              <a href={`${CONFIG.API_URL}/events/${calendarEventId}/calendar.ics?ticketId=${ticket._id || ticket.id}`}>
+                <Calendar className="h-4 w-4 mr-2" />
+                {t('tickets.addToCalendar', { defaultValue: 'In den Kalender' })}
+              </a>
+            </Button>
           )}
 
           {/* Event Details */}

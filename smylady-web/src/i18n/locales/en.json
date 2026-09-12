@@ -250,6 +250,7 @@
     "joinNow": "Join now"
   },
   "tickets": {
+    "addToCalendar": "Add to calendar",
     "useBalance": "Use balance",
     "purchasedWithBalance": "Ticket purchased with balance!",
     "title": "Tickets",

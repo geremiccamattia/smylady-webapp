@@ -24,6 +24,7 @@ import { PaymentWrapper, usePaymentModal } from '@/components/payment'
 import { useCreatePaymentIntent, useBuyFreeEvent } from '@/hooks/useStripe'
 import { PurchaseQuestionsDialog } from '@/components/PurchaseQuestionsDialog'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import { CONFIG } from '@/lib/constants'
 import type { PurchaseAnswer } from '@/services/stripe'
 import { MemoryGallery } from '@/components/memories'
 import BoostModal from '@/components/events/BoostModal'
@@ -1287,6 +1288,25 @@ export default function EventDetailClient({ id }: Props) {
                       {t('tickets.viewDetails')}
                     </Button>
                   </Link>
+
+                  {/*
+                   * Kalender-Export — steht im selben Block wie der QR-Code und
+                   * ist damit an dieselbe Bedingung geknüpft: nur mit Ticket
+                   * (`purchasedTicket && !isExternalEvent`, siehe oben).
+                   * Schlichter Link; Content-Disposition kommt vom Backend.
+                   *
+                   * `ticketId` ist Pflicht: Ohne den Parameter liefert das
+                   * Backend die .ics nur für öffentliche Events aus.
+                   */}
+                  <a
+                    href={`${CONFIG.API_URL}/events/${eventId}/calendar.ics?ticketId=${purchasedTicket._id || purchasedTicket.id}`}
+                    className="block"
+                  >
+                    <Button variant="outline" className="w-full gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {t('tickets.addToCalendar', { defaultValue: 'In den Kalender' })}
+                    </Button>
+                  </a>
 
                   {/* Safety Companion Link */}
                   <Link href="/safety-companions" className="block">
