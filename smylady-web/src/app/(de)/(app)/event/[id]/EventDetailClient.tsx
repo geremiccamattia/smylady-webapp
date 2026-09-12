@@ -760,7 +760,15 @@ export default function EventDetailClient({ id }: Props) {
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        {/*
+         * min-w-0: Grid-Kinder haben implizit min-width: auto und können damit
+         * nicht schmaler werden als ihr breitester Inhalt. Auf dem Handy bilden
+         * beide Kinder EINE gemeinsame Spalte — ein zu breites Element in einem
+         * der beiden zieht die Spur auf, und der Fließtext daneben läuft über
+         * den rechten Rand. Eine globale overflow-x-Regel gibt es nicht, die
+         * ganze Seite scrollt dann seitlich.
+         */}
+        <div className="lg:col-span-2 space-y-6 min-w-0">
           {/* Title & Category */}
           <div>
             <div className="flex flex-wrap gap-2 mb-3">
@@ -798,7 +806,8 @@ export default function EventDetailClient({ id }: Props) {
                   {getInitials(creator.name)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              {/* min-w-0: gleiche Ursache wie oben, hier im Flex-Kontext neben dem Avatar. */}
+              <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground">{t('events.organizer')}</p>
                 <p className="font-semibold">{creator.name}</p>
                 {organizerReviewCount > 0 && (
@@ -1317,15 +1326,17 @@ export default function EventDetailClient({ id }: Props) {
         </div>
 
         {/* Sidebar - Ticket Purchase */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 min-w-0">
           <div id="ticket-section" className="sticky top-24 p-6 bg-card rounded-xl border shadow-lg space-y-4">
             {/* Date & Time */}
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+                {/* shrink-0 am Symbol, min-w-0 am Text: sonst staucht der Flex-Kontext
+                    das Symbol und der Text bleibt trotzdem zu breit. */}
+                <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                   <Calendar className="h-5 w-5 text-primary" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">{t('events.date')}</p>
                   <p className="font-semibold">
                     {formatDate(event.eventDate)}
@@ -1334,10 +1345,10 @@ export default function EventDetailClient({ id }: Props) {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+                <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                   <Clock className="h-5 w-5 text-primary" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">{t('events.time')}</p>
                   <p className="font-semibold">
                     {formatEventTime(event.eventStartTime)}{event.eventEndTime ? ` - ${formatEventTime(event.eventEndTime)}` : ''}
@@ -1345,7 +1356,7 @@ export default function EventDetailClient({ id }: Props) {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+                <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                   {(event as any).locationType === 'online' ? (
                     <span className="h-5 w-5 flex items-center justify-center">💻</span>
                   ) : (event as any).locationType === 'tba' ? (
@@ -1354,7 +1365,9 @@ export default function EventDetailClient({ id }: Props) {
                     <MapPin className="h-5 w-5 text-primary" />
                   )}
                 </div>
-                <div>
+                {/* Der längste Wert der Seitenleiste: Nominatim-Adressen werden zwar
+                    von shortenAddress gekürzt, bleiben aber lang. */}
+                <div className="min-w-0 break-words">
                   <p className="text-sm text-muted-foreground">{t('events.location')}</p>
                   {(event as any).locationType === 'online' ? (
                     <p className="font-semibold">{t('event.online', { defaultValue: 'Online-Event' })}</p>

@@ -385,7 +385,9 @@ export default function TicketDetail() {
               {event.locationName && (
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  <span>{event.locationName}</span>
+                  {/* Hier steht die ROHE Nominatim-Adresse, ungekürzt — ohne min-w-0
+                      kann das Flex-Kind nicht schmaler werden als sein längstes Wort. */}
+                  <span className="min-w-0 break-words">{event.locationName}</span>
                 </div>
               )}
               {event.restrictions && (
@@ -399,7 +401,9 @@ export default function TicketDetail() {
               {event.description && (
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <MarkdownContent content={event.description} className="text-sm text-muted-foreground" />
+                  {/* min-w-0 geht an die Wurzel von MarkdownContent — sie ist hier
+                      das Flex-Kind und trüge sonst min-width: auto. */}
+                  <MarkdownContent content={event.description} className="text-sm text-muted-foreground min-w-0" />
                 </div>
               )}
             </div>
@@ -414,7 +418,7 @@ export default function TicketDetail() {
                   {getInitials(organizerName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Veranstalter</p>
                 <Link href={`/user/${organizerUserId}`} className="font-medium text-primary hover:underline">
                   {organizerName}
