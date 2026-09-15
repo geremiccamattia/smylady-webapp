@@ -1792,6 +1792,11 @@
   },
   "_comment_influencerEvents": "Namespace is still influencerEvents.*, the display name is Creator Events. See _comment_influencer.",
   "influencerEvents": {
+    "casesEyebrow": "Our work",
+    "casesHeadline": "Creators in action",
+    "casesInstagramLink": "View the original on Instagram →",
+    "caseReelPlay": "Watch reel",
+    "caseReelAria": "Load reel for {{title}}",
     "navLabel": "Creator Events",
     "eyebrow": "Creator Marketing for Businesses",
     "heroHeadline1": "The right creators.",

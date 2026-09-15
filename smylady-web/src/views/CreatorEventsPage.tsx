@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { Target, Megaphone, Star, ClipboardList, Check, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import CaseStudiesSection from '@/components/creator-events/CaseStudiesSection'
+import type { CaseStudy } from '@/services/cases'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -71,7 +73,16 @@ const INITIAL_FORM: FormState = {
   message: '',
 }
 
-export default function CreatorEventsPage() {
+interface CreatorEventsPageProps {
+  /**
+   * Case Studies aus WordPress. Kommen aus der server-seitigen page.tsx —
+   * diese Komponente ist 'use client' und darf nicht selbst am CMS hängen.
+   * Standard ist ein leeres Array, dann entfällt der Abschnitt.
+   */
+  cases?: CaseStudy[]
+}
+
+export default function CreatorEventsPage({ cases = [] }: CreatorEventsPageProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const localePath = useLocalePath()
@@ -329,6 +340,9 @@ export default function CreatorEventsPage() {
           </button>
         </div>
       </section>
+
+      {/* Case Studies aus WordPress — rendert sich selbst weg, wenn nichts ankommt */}
+      <CaseStudiesSection cases={cases} />
 
       {/* FAQ */}
       <section className="mt-20 px-2 max-w-3xl mx-auto">

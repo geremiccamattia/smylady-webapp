@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { localeAlternates } from '@/lib/seo'
 import CreatorEventsPage from '@/views/CreatorEventsPage'
+import { fetchCaseStudiesSafe } from '@/services/cases'
 
 export async function generateMetadata(): Promise<Metadata> {
   const url = 'https://shareyourparty.de/creator-events'
@@ -75,14 +76,20 @@ const jsonLd = {
   },
 }
 
-export default function CreatorEventsRoute() {
+export default async function CreatorEventsRoute() {
+  // Server-seitig geholt und als Prop durchgereicht: CreatorEventsPage ist
+  // 'use client' (Kontaktformular) und darf nicht selbst am CMS hängen.
+  // fetchCaseStudiesSafe schluckt Fehler und liefert dann ein leeres Array —
+  // der Abschnitt entfällt, die Seite bleibt bestehen.
+  const cases = await fetchCaseStudiesSafe('de')
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <CreatorEventsPage />
+      <CreatorEventsPage cases={cases} />
     </>
   )
 }
