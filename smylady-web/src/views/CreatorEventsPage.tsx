@@ -246,6 +246,9 @@ export default function CreatorEventsPage({ cases = [] }: CreatorEventsPageProps
         </div>
       </section>
 
+      {/* Case Studies aus WordPress — rendert sich selbst weg, wenn nichts ankommt */}
+      <CaseStudiesSection cases={cases} />
+
       {/* Service */}
       <section className="mt-20 px-2">
         <p className="text-center text-[13px] font-black uppercase tracking-wide text-[#e9548c] mb-3">
@@ -340,9 +343,6 @@ export default function CreatorEventsPage({ cases = [] }: CreatorEventsPageProps
           </button>
         </div>
       </section>
-
-      {/* Case Studies aus WordPress — rendert sich selbst weg, wenn nichts ankommt */}
-      <CaseStudiesSection cases={cases} />
 
       {/* FAQ */}
       <section className="mt-20 px-2 max-w-3xl mx-auto">
