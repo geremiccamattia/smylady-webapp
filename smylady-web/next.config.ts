@@ -260,6 +260,23 @@ const nextConfig: NextConfig = {
           { key: 'Content-Security-Policy-Report-Only', value: contentSecurityPolicy },
         ],
       },
+      /*
+       * Preview-Deployments aus dem Index halten. Vercel setzt hier keinen
+       * X-Robots-Tag von sich aus (geprüft).
+       *
+       * In Production darf dieser Eintrag NICHT entstehen — deshalb als bedingter
+       * Spread statt als Header mit leerem Wert. Ausgewertet beim Build, wie die
+       * Preview-Einträge der CSP oben: Jede Vercel-Umgebung baut getrennt, eine
+       * Production-Build hat VERCEL_ENV 'production' und bekommt den Header nie.
+       */
+      ...(isVercelPreview
+        ? [
+            {
+              source: '/:path*',
+              headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+            },
+          ]
+        : []),
     ]
   },
 }

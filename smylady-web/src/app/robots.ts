@@ -1,6 +1,21 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
+  /*
+   * Preview-Deployments sperren alles und nennen keine Sitemap. Sonst sagte die
+   * robots.txt einer Preview dasselbe wie die der Produktion — einschließlich
+   * der Sitemap-Verweise auf shareyourparty.de.
+   *
+   * Ergänzt den X-Robots-Tag aus next.config.ts, ersetzt ihn aber nicht: Ein
+   * Crawler, der robots.txt befolgt, ruft die Seiten gar nicht erst ab und sieht
+   * den Header damit nie. Der Header greift für alles, was trotzdem geholt wird.
+   */
+  if (process.env.VERCEL_ENV === 'preview') {
+    return {
+      rules: { userAgent: '*', disallow: '/' },
+    }
+  }
+
   return {
     rules: {
       userAgent: '*',
