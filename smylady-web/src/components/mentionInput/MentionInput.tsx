@@ -33,8 +33,69 @@ export interface MentionUser {
   profileImage?: string
 }
 
+/**
+ * Der Text, der hinter dem @ im Beitrag steht.
+ *
+ * Jetzt der echte Anzeigename MIT Leerzeichen. Vorher wurde der Name entweder
+ * durch den username ersetzt oder entleert („Share your Party" → „ShareyourParty"),
+ * damit er sich später per Regex an Wortgrenzen wiederfinden ließ. Das ist nicht
+ * mehr nötig: Die Auflösung läuft über die Liste der ausgewählten Nutzer, nicht
+ * über ein Muster im Text.
+ */
 export function getMentionDisplayName(user: Pick<MentionUser, 'name' | 'username'>): string {
-  return user.username || user.name.replace(/\s+/g, '')
+  return user.name || user.username || ''
+}
+
+/** Zeichen, die eine Markierung im Text beenden dürfen — wie in RenderTextWithMentions. */
+const MENTION_BOUNDARY = /[\s.,!?;:()[\]{}"']/
+
+/**
+ * Steht „@<eingefügter Text>" noch im Beitrag, an einer Wortgrenze?
+ *
+ * Bewusst per indexOf statt per Regex: Der eingefügte Text ist ein freier
+ * Anzeigename und kann Leerzeichen, Punkte oder Klammern enthalten — als Regex
+ * wäre er nicht sicher verwendbar, ohne jedes Sonderzeichen zu maskieren.
+ */
+function containsMentionAtBoundary(text: string, insertedText: string): boolean {
+  if (!insertedText) return false
+
+  const needle = `@${insertedText}`.toLowerCase()
+  const haystack = text.toLowerCase()
+  let from = 0
+
+  for (;;) {
+    const index = haystack.indexOf(needle, from)
+    if (index === -1) return false
+
+    const charBefore = index === 0 ? '' : text.charAt(index - 1)
+    const charAfter = text.charAt(index + needle.length)
+    const startsCleanly = !charBefore || MENTION_BOUNDARY.test(charBefore)
+    const endsCleanly = !charAfter || MENTION_BOUNDARY.test(charAfter)
+
+    if (startsCleanly && endsCleanly) return true
+    from = index + 1
+  }
+}
+
+/**
+ * Trifft die Eingabe diesen Nutzer?
+ *
+ * Geprüft werden Name und Benutzername, Groß-/Kleinschreibung egal. Mehrteilige
+ * Namen sind auch über ein späteres Wort erreichbar: „@party" findet
+ * „Share your Party". Bewusst Wortanfänge statt `includes` — sonst fände „art"
+ * ebenfalls „Party", und die Vorschlagsliste füllte sich mit Zufallstreffern.
+ */
+function matchesMentionQuery(user: MentionUser, query: string): boolean {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+
+  for (const candidate of [user.name ?? '', user.username ?? '']) {
+    const lower = candidate.toLowerCase()
+    if (lower.startsWith(needle)) return true
+    if (lower.split(/\s+/).some(word => word.startsWith(needle))) return true
+  }
+
+  return false
 }
 
 interface MentionInputProps {
@@ -42,6 +103,14 @@ interface MentionInputProps {
   onChangeText: (text: string) => void
   onMentionsChange?: (mentions: string[]) => void
   initialMentions?: MentionUser[]
+  /**
+   * Feste Vorschlagsliste, etwa die Teilnehmer eines Events.
+   *
+   * Ist sie gesetzt, filtert die Komponente ausschließlich lokal und ruft weder
+   * /users/search noch die Freundesliste auf. Ohne die Prop bleibt alles wie
+   * bisher — die übrigen Einsatzorte sind davon unberührt.
+   */
+  suggestionUsers?: MentionUser[]
   placeholder?: string
   className?: string
   maxLength?: number
@@ -55,6 +124,7 @@ export default function MentionInput({
   onChangeText,
   onMentionsChange,
   initialMentions,
+  suggestionUsers,
   placeholder,
   className,
   maxLength,
@@ -69,61 +139,73 @@ export default function MentionInput({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mentionStartIndex, setMentionStartIndex] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [mentionedUsers, setMentionedUsers] = useState<Map<string, MentionUser>>(new Map())
+  /*
+   * Die tatsächlich ausgewählten Markierungen, mit der ID und genau dem Text,
+   * der beim Antippen eingefügt wurde.
+   *
+   * Vorher wurden die IDs beim Absenden aus dem Text zurückgerechnet: Ein
+   * /@([^\s@]+)/ zog den ersten Wortteil heraus und schlug ihn in einer Map
+   * nach. Namen mit Leerzeichen zerfielen dabei, und ein zufällig getipptes
+   * „@irgendwas" konnte einen fremden Treffer erzeugen. Die Zuordnung steht
+   * jetzt beim Auswählen fest und wird nicht mehr geraten.
+   */
+  const [selectedMentions, setSelectedMentions] = useState<
+    Array<{ id: string; insertedText: string }>
+  >([])
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null)
 
-  // Seed mentionedUsers when initialMentions provided
+  // Beim Bearbeiten eines bestehenden Beitrags die schon vorhandenen
+  // Markierungen übernehmen, damit sie beim Speichern nicht verloren gehen.
   useEffect(() => {
-    if (initialMentions && initialMentions.length > 0) {
-      setMentionedUsers(prev => {
-        const newMap = new Map(prev)
-        for (const u of initialMentions) {
-          const displayName = getMentionDisplayName(u)
-          newMap.set(displayName, u)
-          newMap.set(displayName.toLowerCase(), u)
-        }
-        return newMap
-      })
-    }
-  }, [initialMentions])
+    if (!initialMentions || initialMentions.length === 0) return
 
-  // Extract @mentions from text
-  const extractMentionsFromText = useCallback((text: string): string[] => {
-    const mentionPattern = /@([^\s@]+)/g
-    const mentions: string[] = []
-    let match
+    setSelectedMentions(prev => {
+      const known = new Set(prev.map(entry => `${entry.id}|${entry.insertedText}`))
+      const merged = [...prev]
 
-    while ((match = mentionPattern.exec(text)) !== null) {
-      mentions.push(match[1])
-    }
-
-    return mentions
-  }, [])
-
-  // Update parent with mention IDs
-  useEffect(() => {
-    if (onMentionsChange) {
-      const mentionUsernames = extractMentionsFromText(value)
-      const mentionIds: string[] = []
-      const addedIds = new Set<string>()
-
-      for (const mentionUsername of mentionUsernames) {
-        let mentionUser = mentionedUsers.get(mentionUsername)
-        if (!mentionUser) {
-          mentionUser = mentionedUsers.get(mentionUsername.toLowerCase())
-        }
-        if (mentionUser && !addedIds.has(mentionUser.id)) {
-          mentionIds.push(mentionUser.id)
-          addedIds.add(mentionUser.id)
-        }
+      for (const mentionUser of initialMentions) {
+        const insertedText = getMentionDisplayName(mentionUser)
+        if (!insertedText) continue
+        const key = `${mentionUser.id}|${insertedText}`
+        if (known.has(key)) continue
+        known.add(key)
+        merged.push({ id: mentionUser.id, insertedText })
       }
 
-      onMentionsChange(mentionIds)
+      return merged.length === prev.length ? prev : merged
+    })
+  }, [initialMentions])
+
+  /*
+   * Gemeldet werden die IDs aller ausgewählten Nutzer, deren eingefügter Text
+   * noch im Beitrag steht. Wer seine Markierung wieder herauslöscht, fällt
+   * damit automatisch heraus.
+   */
+  useEffect(() => {
+    if (!onMentionsChange) return
+
+    const mentionIds: string[] = []
+    const addedIds = new Set<string>()
+
+    for (const entry of selectedMentions) {
+      if (addedIds.has(entry.id)) continue
+      if (!containsMentionAtBoundary(value, entry.insertedText)) continue
+      mentionIds.push(entry.id)
+      addedIds.add(entry.id)
     }
-  }, [value, mentionedUsers, extractMentionsFromText, onMentionsChange])
+
+    onMentionsChange(mentionIds)
+  }, [value, selectedMentions, onMentionsChange])
 
   // Fetch friends for suggestions
   const fetchFriendSuggestions = useCallback(async () => {
+    // Feste Liste: ohne Eingabe einfach die ersten Einträge zeigen.
+    if (suggestionUsers) {
+      setSuggestions(suggestionUsers.slice(0, 10))
+      setIsLoading(false)
+      return
+    }
+
     if (!user?.id) return
 
     setIsLoading(true)
@@ -147,6 +229,13 @@ export default function MentionInput({
 
   // Search users API call
   const searchUsers = useCallback(async (query: string) => {
+    // Feste Liste: rein lokal filtern, kein Netzaufruf.
+    if (suggestionUsers) {
+      setSuggestions(suggestionUsers.filter(u => matchesMentionQuery(u, query)).slice(0, 10))
+      setIsLoading(false)
+      return
+    }
+
     if (!query || query.length < 1) {
       fetchFriendSuggestions()
       return
@@ -199,7 +288,13 @@ export default function MentionInput({
         setMentionStartIndex(lastAtIndex)
         setSearchQuery(textAfterAt)
         setShowSuggestions(true)
-        debouncedSearch(textAfterAt)
+        // Lokale Liste sofort filtern — die 300 ms Entprellung sind nur für den
+        // Netzaufruf da und würden hier beim Tippen spürbar nachhinken.
+        if (suggestionUsers) {
+          searchUsers(textAfterAt)
+        } else {
+          debouncedSearch(textAfterAt)
+        }
       }
     } else {
       setShowSuggestions(false)
@@ -217,11 +312,12 @@ export default function MentionInput({
     const afterMention = value.substring(mentionStartIndex + 1 + searchQuery.length)
     const newText = `${beforeMention}@${displayName} ${afterMention}`
 
-    setMentionedUsers(prev => {
-      const newMap = new Map(prev)
-      newMap.set(displayName, selectedUser)
-      newMap.set(displayName.toLowerCase(), selectedUser)
-      return newMap
+    // Zuordnung hier festhalten — genau der Text, der gleich im Beitrag steht.
+    setSelectedMentions(prev => {
+      const alreadyKnown = prev.some(
+        entry => entry.id === selectedUser.id && entry.insertedText === displayName,
+      )
+      return alreadyKnown ? prev : [...prev, { id: selectedUser.id, insertedText: displayName }]
     })
 
     onChangeText(newText)
