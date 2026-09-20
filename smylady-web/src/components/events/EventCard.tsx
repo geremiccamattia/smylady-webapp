@@ -20,6 +20,23 @@ import { useToast } from '@/hooks/use-toast'
 import { useTranslation } from 'react-i18next'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 
+/**
+ * Kategorien, bei denen die Musikrichtung NICHT als Tag erscheint.
+ *
+ * Die Karte rendert `musicType` bisher unabhängig vom Eventtyp. Das Anlegen
+ * setzt das Feld aber auch dort, wo es nichts zur Sache tut — auf
+ * Business-Karten stand dadurch „Pop" neben „Business".
+ *
+ * Reine Darstellungsfrage: Am Datenmodell ändert sich nichts, `musicType`
+ * bleibt gespeichert und wird auf der Detailseite weiterhin angezeigt.
+ */
+const CATEGORIES_WITHOUT_MUSIC_TAG = new Set([
+  'business',
+  'workshop',
+  'conference',
+  'konferenz',
+])
+
 interface EventCardProps {
   event: Event
   onFavoriteChange?: (eventId: string, isFavorite: boolean) => void
@@ -321,8 +338,11 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
             </span>
           )}
           {/* musicType ist ein Array — direkt gerendert verkettet React die Werte
-              ohne Trennzeichen zu „rockpop“. */}
-          {formatMusicTypes(event.musicType, t) && (
+              ohne Trennzeichen zu „rockpop“. Bei Business-, Workshop- und
+              Konferenz-Events entfällt der Tag ganz, siehe
+              CATEGORIES_WITHOUT_MUSIC_TAG. */}
+          {!CATEGORIES_WITHOUT_MUSIC_TAG.has(String(event.category ?? '').toLowerCase()) &&
+            formatMusicTypes(event.musicType, t) && (
             <span className="px-2 py-1 bg-secondary/10 text-secondary rounded-md text-xs font-medium">
               {formatMusicTypes(event.musicType, t)}
             </span>
