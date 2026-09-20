@@ -1,5 +1,6 @@
 {
   "common": {
+    "previous": "Previous",
     "aiShort": "AI",
     "remove": "Remove",
     "optional": "optional",
@@ -523,6 +524,7 @@
     "viewers": "Viewers"
   },
   "memories": {
+    "react": "React",
     "title": "Memories",
     "addMemory": "Add Memory",
     "noMemories": "No memories yet",
