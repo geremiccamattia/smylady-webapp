@@ -48,6 +48,8 @@ export default function EventMemories() {
   const navState = null as { memoryId?: string; memoryIndex?: number } | null
 
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
+  // 'react' = Einstieg über die Reaktionszeile der Kachel, Picker sofort offen.
+  const [pendingAction, setPendingAction] = useState<'react' | undefined>(undefined)
   const [showUpload, setShowUpload] = useState(false)
   const [reportingMemory, setReportingMemory] = useState<Memory | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('newest')
@@ -488,14 +490,28 @@ export default function EventMemories() {
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                 {/* Stats */}
                 <div className="flex items-center gap-4 text-white">
-                  <div className="flex items-center gap-1">
+                  {/*
+                   * Reaktionszeile als eigener Knopf: öffnet den Viewer mit
+                   * bereits geöffneter Emoji-Auswahl. stopPropagation, damit
+                   * nicht zusätzlich der Kachel-Klick greift.
+                   */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPendingAction('react')
+                      setSelectedMemory(memory)
+                    }}
+                    aria-label={t('memories.react', { defaultValue: 'Reagieren' })}
+                    className="flex items-center justify-center gap-1 min-w-[44px] min-h-[44px]"
+                  >
                     {isLiked(memory) ? (
                       <Heart className="w-5 h-5 fill-red-500 text-red-500" />
                     ) : (
                       <span className="text-lg">👍</span>
                     )}
                     <span className="text-sm">{getReactionCount(memory)}</span>
-                  </div>
+                  </button>
                   <div className="flex items-center gap-1">
                     <MessageCircle className="w-5 h-5" />
                     <span className="text-sm">{memory.comments?.length || 0}</span>
@@ -532,7 +548,11 @@ export default function EventMemories() {
           ticketId={selectedMemory.ticketId || userTicket.ticketId}
           eventId={eventId}
           eventTitle={event?.name}
-          onClose={() => setSelectedMemory(null)}
+          initialAction={pendingAction}
+          onClose={() => {
+            setSelectedMemory(null)
+            setPendingAction(undefined)
+          }}
           onDelete={isOwnMemory(selectedMemory) ? () => handleDelete(getMemoryId(selectedMemory)) : undefined}
           onReaction={(emoji) => handleReaction(getMemoryId(selectedMemory), emoji)}
           userReaction={getUserMemoryReaction(selectedMemory)}

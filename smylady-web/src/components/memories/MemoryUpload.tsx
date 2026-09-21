@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { X, Upload, Image, Video, Loader2, Globe, Lock, Users, Share2 } from 'lucide-react'
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { memoriesService } from '@/services/memories'
 import { apiClient } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
-import MentionInput from '@/components/mentionInput/MentionInput'
+import MentionInput, { type MentionUser } from '@/components/mentionInput/MentionInput'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials, resolveImageUrl, cn } from '@/lib/utils'
 
@@ -30,7 +30,9 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [caption, setCaption] = useState('')
-  const [, setCaptionMentions] = useState<string[]>([])
+  // Die IDs der in der Beschreibung markierten Personen. Wurden bisher
+  // eingesammelt und verworfen — das Backend nimmt sie jetzt entgegen.
+  const [captionMentions, setCaptionMentions] = useState<string[]>([])
   const [privacy, setPrivacy] = useState<PrivacyOption>('public')
   const [showViewerPicker, setShowViewerPicker] = useState(false)
   const [selectedViewers, setSelectedViewers] = useState<string[]>([])
@@ -43,6 +45,23 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
     enabled: !!eventId,
   })
 
+  /*
+   * Dieselben Teilnehmer als Vorschläge für die Markierungen in der
+   * Beschreibung — markieren lässt sich nur, wer beim Event dabei war.
+   * useMemo, damit die Liste eine stabile Referenz behält: MentionInput führt
+   * sie in den Abhängigkeiten seiner Such-Callbacks.
+   */
+  const participantSuggestions: MentionUser[] = useMemo(
+    () =>
+      participants.map(p => ({
+        id: p._id,
+        name: p.name,
+        username: p.username,
+        profileImage: p.profileImage,
+      })),
+    [participants],
+  )
+
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -54,7 +73,8 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
           file,
           caption,
           privacy,
-          privacy === 'custom' ? selectedViewers : undefined
+          privacy === 'custom' ? selectedViewers : undefined,
+          captionMentions
         )
         uploadedMemories.push(memory)
       }
@@ -223,6 +243,7 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
               value={caption}
               onChangeText={setCaption}
               onMentionsChange={setCaptionMentions}
+              suggestionUsers={participantSuggestions}
               placeholder={t('memories.descriptionPlaceholder')}
               className="text-sm"
               rows={2}

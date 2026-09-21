@@ -168,7 +168,8 @@ export const memoriesService = {
     file: File,
     caption?: string,
     privacy: 'public' | 'private' | 'custom' = 'public',
-    selectedViewers?: string[]
+    selectedViewers?: string[],
+    mentions?: string[]
   ): Promise<Memory> {
     const formData = new FormData()
     formData.append('file', file)
@@ -181,6 +182,13 @@ export const memoriesService = {
 
     if (selectedViewers && selectedViewers.length > 0) {
       formData.append('selectedViewers', JSON.stringify(selectedViewers))
+    }
+
+    // Als JSON-String, wie selectedViewers: multipart/form-data kann keine
+    // echten Arrays tragen. Nur anhängen, wenn etwas markiert wurde — ein
+    // leeres "[]" wäre unnötiger Ballast.
+    if (mentions && mentions.length > 0) {
+      formData.append('mentions', JSON.stringify(mentions))
     }
 
     const response = await apiClient.post(`/tickets/${ticketId}/memories`, formData, {

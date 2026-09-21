@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { cn, resolveImageUrl } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 
@@ -46,9 +47,22 @@ export function EmojiReactionPicker({
     onSelectEmoji(emoji)
   }
 
-  return (
+  /*
+   * Portal nach document.body statt an Ort und Stelle.
+   *
+   * Zwei Gründe: Der Picker lag bisher als Kind des MemoryViewer-Overlays,
+   * dessen Wurzel bei JEDEM Klick den Viewer schließt — ein Klick auf den
+   * Hintergrund des Pickers schloss also beides. Und er lag dort nur wegen der
+   * DOM-Reihenfolge oben, nicht wegen seiner Ebene. Mit z-[70] liegt er
+   * verlässlich über dem Viewer (z-50) und dessen Untermodalen (z-[60]).
+   *
+   * Die Prüfung auf `document` ist für das serverseitige Rendern nötig.
+   */
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center"
+      className="fixed inset-0 z-[70] bg-black/30 flex items-center justify-center"
       onClick={onClose}
     >
       <div
@@ -59,9 +73,10 @@ export function EmojiReactionPicker({
           {REACTION_EMOJIS.map(({ emoji }) => (
             <button
               key={emoji}
+              type="button"
               onClick={() => handleEmojiClick(emoji)}
               className={cn(
-                'p-2 rounded-full hover:bg-muted transition-colors',
+                'min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-muted transition-colors',
                 currentUserReaction === emoji && 'bg-primary/20'
               )}
             >
@@ -70,7 +85,8 @@ export function EmojiReactionPicker({
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -194,9 +210,12 @@ export function ReactionsModal({
   const { t } = useTranslation()
   if (!visible) return null
 
-  return (
+  // Gleiche Begründung wie beim Picker oben: Portal und z-[70].
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -260,7 +279,8 @@ export function ReactionsModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

@@ -33,6 +33,12 @@ export interface User {
   partiesAttended?: boolean
   partiesHosted?: boolean
   language?: 'en' | 'de'
+  /**
+   * Eigener Einladungscode. Kommt aus GET /users/me — und nur von dort: Das
+   * öffentliche Profil gibt ihn künftig ausschließlich an den Inhaber heraus,
+   * und die WebApp ruft es ohne Token auf.
+   */
+  referralCode?: string
 }
 
 // Auth Types

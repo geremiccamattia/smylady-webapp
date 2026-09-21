@@ -14,7 +14,9 @@ export async function generateMetadata(
   if (search) {
     return { ...base, robots: { index: false, follow: true } }
   }
-  return { ...base, title: 'Events entdecken | Share Your Party' }
+  // Ohne Brand-Suffix — den hängt das Template im Root-Layout an. Die englische
+  // Fassung war bereits richtig ('Discover Events').
+  return { ...base, title: 'Events entdecken' }
 }
 
 export default function ExplorePage() {

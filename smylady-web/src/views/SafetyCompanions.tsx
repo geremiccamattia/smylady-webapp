@@ -522,7 +522,9 @@ export default function SafetyCompanions() {
                         <div className="flex-1">
                           <p className="text-sm font-medium">{user.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {user.email || (user.username ? `@${user.username}` : '')}
+                            {/* Nur der Benutzername — die E-Mail anderer Nutzer liefert
+                                das Backend nicht mehr aus und gehört nicht in eine Suchliste. */}
+                            {user.username ? `@${user.username}` : ''}
                           </p>
                         </div>
                         <UserPlus className="h-5 w-5 text-primary flex-shrink-0" />

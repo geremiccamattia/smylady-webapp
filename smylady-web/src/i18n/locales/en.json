@@ -1,5 +1,6 @@
 {
   "common": {
+    "previous": "Previous",
     "aiShort": "AI",
     "remove": "Remove",
     "optional": "optional",
@@ -313,6 +314,8 @@
     "doorSuccessDesc": "Your spot is confirmed. Payment is made at the door."
   },
   "profile": {
+    "profileUnavailable": "Profile not available",
+    "profileUnavailableDesc": "This profile cannot be displayed right now.",
     "title": "Profile",
     "imageHint": "Ideal format: square (e.g. 500 × 500 px)",
     "editProfileBtn": "Edit Profile",
@@ -523,6 +526,7 @@
     "viewers": "Viewers"
   },
   "memories": {
+    "react": "React",
     "title": "Memories",
     "addMemory": "Add Memory",
     "noMemories": "No memories yet",

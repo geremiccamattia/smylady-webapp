@@ -26,7 +26,8 @@ import { PurchaseQuestionsDialog } from '@/components/PurchaseQuestionsDialog'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { CONFIG } from '@/lib/constants'
 import type { PurchaseAnswer } from '@/services/stripe'
-import { MemoryGallery } from '@/components/memories'
+import { MemoryGallery, MemoryViewer } from '@/components/memories'
+import { getUserReaction, type Reaction } from '@/components/emojiReaction/EmojiReactionPicker'
 import BoostModal from '@/components/events/BoostModal'
 import { ticketsService } from '@/services/tickets'
 import { chatService } from '@/services/chat'
@@ -89,6 +90,8 @@ export default function EventDetailClient({ id }: Props) {
   const [imageViewerOpen, setImageViewerOpen] = useState(false)
   const [imageViewerIndex, setImageViewerIndex] = useState(0)
   const [fullscreenMemoryIndex, setFullscreenMemoryIndex] = useState<number | null>(null)
+  // 'react' = Einstieg über die Reaktionszeile der Kachel, Picker sofort offen.
+  const [fullscreenMemoryAction, setFullscreenMemoryAction] = useState<'react' | undefined>(undefined)
   const [showRaffleBanner, setShowRaffleBanner] = useState(true)
   const memoriesRef = useRef<HTMLDivElement>(null)
 
@@ -1105,7 +1108,12 @@ export default function EventDetailClient({ id }: Props) {
                       <div
                         key={getMemoryId(memory)}
                         className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
-                        onClick={() => setFullscreenMemoryIndex(index)}
+                        onClick={() => {
+                          // Ohne Auswahl öffnen — die Reaktionszeile darunter
+                          // setzt 'react' selbst.
+                          setFullscreenMemoryAction(undefined)
+                          setFullscreenMemoryIndex(index)
+                        }}
                       >
                         {memType === 'video' ? (
                           <div className="relative w-full h-full bg-black">
@@ -1139,10 +1147,25 @@ export default function EventDetailClient({ id }: Props) {
                           </Avatar>
                         </div>
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                          <div className="flex items-center gap-1 text-white">
+                          {/*
+                           * Reaktionszeile als eigener Knopf: öffnet den Viewer
+                           * mit bereits geöffneter Emoji-Auswahl. stopPropagation,
+                           * damit nicht zusätzlich der Kachel-Klick greift, der
+                           * den Viewer ohne Auswahl öffnet.
+                           */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setFullscreenMemoryAction('react')
+                              setFullscreenMemoryIndex(index)
+                            }}
+                            aria-label={t('memories.react', { defaultValue: 'Reagieren' })}
+                            className="flex items-center justify-center gap-1 text-white min-w-[44px] min-h-[44px]"
+                          >
                             <Heart className="w-5 h-5" />
                             <span>{memory.reactions?.length || memory.likes?.length || 0}</span>
-                          </div>
+                          </button>
                           <div className="flex items-center gap-1 text-white">
                             <MessageCircle className="w-5 h-5" />
                             <span>{memory.comments?.length || 0}</span>
@@ -2004,97 +2027,50 @@ export default function EventDetailClient({ id }: Props) {
         }}
       />
 
-      {fullscreenMemoryIndex !== null && eventMemories[fullscreenMemoryIndex] && (() => {
-        const memory = eventMemories[fullscreenMemoryIndex]
-        const memUrl = resolveImageUrl(getMemoryUrl(memory))
-        const memType = getMemoryType(memory)
-        const uploaderInfo = getUploadedByInfo(memory)
-        const hasPrev = fullscreenMemoryIndex > 0
-        const hasNext = fullscreenMemoryIndex < eventMemories.length - 1
+      {/*
+       * Vollbild-Ansicht der Event-Memories.
+       *
+       * Hier stand bis zuletzt eine Eigenbau-Lightbox ganz ohne Interaktion:
+       * Zähler, Medium, Uploader-Chip — kein 👍, kein Smile, keine Kommentare.
+       * Reagieren ging deshalb nur über MemoryGallery, und die rendert nur für
+       * Ticket-Besitzer. Jetzt öffnet überall derselbe MemoryViewer.
+       *
+       * `ticketId` kommt pro Memory aus GET /events/:id/memories — das Backend
+       * hängt sie an jede Memory an (event.service.ts), und Reaktionen laufen
+       * über /tickets/:ticketId/memories/:memoryId/reactions.
+       */}
+      {fullscreenMemoryIndex !== null && eventMemories[fullscreenMemoryIndex] && (
+        <MemoryViewer
+          memory={eventMemories[fullscreenMemoryIndex]}
+          ticketId={eventMemories[fullscreenMemoryIndex].ticketId || ''}
+          eventId={eventId!}
+          eventTitle={event.name}
+          memoryIndex={fullscreenMemoryIndex}
+          totalCount={eventMemories.length}
+          onNavigate={(index) => setFullscreenMemoryIndex(index)}
+          initialAction={fullscreenMemoryAction}
+          onClose={() => {
+            setFullscreenMemoryIndex(null)
+            setFullscreenMemoryAction(undefined)
+          }}
+          userReaction={getUserReaction(
+            (eventMemories[fullscreenMemoryIndex].reactions || []) as Reaction[],
+            user?.id || user?._id,
+          )}
+          reactionCount={eventMemories[fullscreenMemoryIndex].reactions?.length || 0}
+          isPublicEvent={event.visibility === 'public'}
+          onMemoryUpdate={(updated) => {
+            // Optimistisch auch in der Kachel-Liste nachziehen, damit Zahl und
+            // eigene Reaktion dort sofort stimmen und nicht erst nach dem Refetch.
+            queryClient.setQueryData(['eventMemories', id], (old: any[] | undefined) =>
+              (old || []).map((m) =>
+                getMemoryId(m) === getMemoryId(updated) ? { ...m, ...updated } : m,
+              ),
+            )
+          }}
+        />
+      )}
 
-        return (
-          <div
-            className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center"
-            onClick={() => setFullscreenMemoryIndex(null)}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowLeft' && hasPrev) setFullscreenMemoryIndex(fullscreenMemoryIndex - 1)
-              if (e.key === 'ArrowRight' && hasNext) setFullscreenMemoryIndex(fullscreenMemoryIndex + 1)
-              if (e.key === 'Escape') setFullscreenMemoryIndex(null)
-            }}
-            tabIndex={0}
-            ref={(el) => el?.focus()}
-          >
-            {/* Close */}
-            <button
-              className="absolute top-4 right-4 z-10 text-white/80 hover:text-white text-3xl"
-              onClick={(e) => {
-                e.stopPropagation()
-                setFullscreenMemoryIndex(null)
-              }}
-            >
-              ✕
-            </button>
-
-            {/* Counter */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
-              {fullscreenMemoryIndex + 1} / {eventMemories.length}
-            </div>
-
-            {/* Previous */}
-            {hasPrev && (
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setFullscreenMemoryIndex(fullscreenMemoryIndex - 1)
-                }}
-              >
-                ‹
-              </button>
-            )}
-
-            {/* Next */}
-            {hasNext && (
-              <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setFullscreenMemoryIndex(fullscreenMemoryIndex + 1)
-                }}
-              >
-                ›
-              </button>
-            )}
-
-            {/* Image/Video */}
-            <div className="max-w-[90vw] max-h-[80vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-              {memType === 'video' ? (
-                <video
-                  src={memUrl}
-                  controls
-                  autoPlay
-                  className="max-w-full max-h-[80vh] rounded-lg"
-                />
-              ) : (
-                <img
-                  src={memUrl}
-                  alt="Memory"
-                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                />
-              )}
-            </div>
-
-            {/* Uploader info */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/50 rounded-full px-4 py-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={resolveImageUrl(uploaderInfo.profileImage)} />
-                <AvatarFallback className="text-xs">{uploaderInfo.name?.charAt(0) || '?'}</AvatarFallback>
-              </Avatar>
-              <span className="text-white text-sm">{uploaderInfo.name || 'User'}</span>
-            </div>
-          </div>
-        )
-      })()}
     </div>
   )
 }

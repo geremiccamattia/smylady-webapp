@@ -72,6 +72,17 @@ interface MemoryViewerProps {
   onReport?: () => void
   onMemoryUpdate?: (updatedMemory: Memory) => void
   isPublicEvent?: boolean
+  /**
+   * Blättern innerhalb einer Liste. Nur wenn `onNavigate` gesetzt ist, erscheinen
+   * Zähler und Pfeile — MemoryGallery zeigt weiterhin eine einzelne Memory.
+   */
+  onNavigate?: (index: number) => void
+  totalCount?: number
+  /**
+   * 'react' öffnet die Emoji-Auswahl sofort beim Öffnen. Für den Einstieg über
+   * die Reaktionszeile einer Kachel.
+   */
+  initialAction?: 'react'
 }
 
 export default function MemoryViewer({
@@ -79,6 +90,7 @@ export default function MemoryViewer({
   ticketId,
   eventId: _eventId,
   eventTitle,
+  memoryIndex,
   onClose,
   onDelete,
   onReaction: _onReaction,
@@ -93,6 +105,9 @@ export default function MemoryViewer({
   onReport,
   onMemoryUpdate,
   isPublicEvent = false,
+  onNavigate,
+  totalCount,
+  initialAction,
 }: MemoryViewerProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -510,6 +525,75 @@ export default function MemoryViewer({
     setShowEmojiPicker(true)
   }
 
+  /*
+   * initialAction 'react': Einstieg über die Reaktionszeile einer Kachel — die
+   * Auswahl soll sofort offen stehen. Nur einmal je geöffnetem Viewer, sonst
+   * ginge sie nach jedem Schließen wieder auf.
+   */
+  const initialActionApplied = useRef(false)
+  useEffect(() => {
+    if (initialAction === 'react' && !initialActionApplied.current) {
+      initialActionApplied.current = true
+      openMemoryEmojiPicker()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialAction])
+
+  /*
+   * Blättern ist optional: Nur wenn die Aufrufstelle onNavigate UND memoryIndex
+   * mitgibt, erscheinen Zähler und Pfeile. MemoryGallery zeigt weiterhin eine
+   * einzelne Memory und bleibt dadurch unverändert.
+   */
+  const canNavigate = typeof onNavigate === 'function' && typeof memoryIndex === 'number'
+  const currentIndex = memoryIndex ?? 0
+  const hasPrev = canNavigate && currentIndex > 0
+  const hasNext =
+    canNavigate && typeof totalCount === 'number' && currentIndex < totalCount - 1
+
+  /*
+   * Pfeiltasten blättern.
+   *
+   * Bewusst ein eigener Effekt an dieser Stelle und nicht im Escape-Effekt weiter
+   * oben: Der steht VOR diesen Ableitungen, seine Abhängigkeitsliste würde bei
+   * der Auswertung während des Renderns in die temporale Totzone von hasPrev und
+   * hasNext laufen.
+   *
+   * Nicht geblättert wird, während jemand tippt (sonst springt das Bild beim
+   * Schreiben eines Kommentars) oder während ein Overlay offen ist — dort hat die
+   * Pfeiltaste eine andere Bedeutung.
+   */
+  useEffect(() => {
+    if (!canNavigate) return
+
+    const handleArrowKeys = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      if (
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+      ) {
+        return
+      }
+      if (showEmojiPicker || showTagPicker || showReactionsModal || showShareModal) return
+
+      if (e.key === 'ArrowLeft' && hasPrev) onNavigate?.(currentIndex - 1)
+      if (e.key === 'ArrowRight' && hasNext) onNavigate?.(currentIndex + 1)
+    }
+
+    window.addEventListener('keydown', handleArrowKeys)
+    return () => window.removeEventListener('keydown', handleArrowKeys)
+  }, [
+    canNavigate,
+    hasPrev,
+    hasNext,
+    currentIndex,
+    onNavigate,
+    showEmojiPicker,
+    showTagPicker,
+    showReactionsModal,
+    showShareModal,
+  ])
+
   const openCommentEmojiPicker = (commentIndex: number) => {
     const target = { type: 'comment' as const, commentIndex }
     reactionTargetRef.current = target
@@ -601,6 +685,43 @@ export default function MemoryViewer({
 
       {/* Media Section - stop propagation to prevent closing when clicking image */}
       <div className="flex-1 flex items-center justify-center p-4 relative min-h-0 min-w-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/*
+         * Zähler und Blättern. Erscheinen nur, wenn die Aufrufstelle onNavigate
+         * mitgibt — ersetzt die frühere Eigenbau-Lightbox auf der Eventseite.
+         * Klickfläche mindestens 44x44; type="button", weil ein <button> ohne
+         * type in einem Formular absenden würde.
+         */}
+        {canNavigate && typeof totalCount === 'number' && totalCount > 1 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] bg-black/50 text-white text-sm px-3 py-1 rounded-full pointer-events-none">
+            {currentIndex + 1} / {totalCount}
+          </div>
+        )}
+        {hasPrev && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onNavigate?.(currentIndex - 1)
+            }}
+            aria-label={t('common.previous', { defaultValue: 'Zurück' })}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-[60] min-w-[44px] min-h-[44px] flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full text-white text-2xl leading-none transition-colors"
+          >
+            ‹
+          </button>
+        )}
+        {hasNext && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onNavigate?.(currentIndex + 1)
+            }}
+            aria-label={t('common.next', { defaultValue: 'Weiter' })}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-[60] min-w-[44px] min-h-[44px] flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full text-white text-2xl leading-none transition-colors"
+          >
+            ›
+          </button>
+        )}
         {memoryType === 'video' ? (
           <video
             src={resolveImageUrl(memoryUrl)}
@@ -1086,7 +1207,7 @@ export default function MemoryViewer({
 
       {/* Tag Picker Modal */}
       {showTagPicker && (
-        <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
           <div className="bg-background rounded-lg w-full max-w-sm max-h-[60vh] overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between">
               <h3 className="font-semibold">{t('memories.tagPerson')}</h3>
@@ -1176,7 +1297,7 @@ export default function MemoryViewer({
 
       {/* Reactions Modal (Who reacted - memory level) */}
       {showReactionsModal && (
-        <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
           <div className="bg-background rounded-lg w-full max-w-sm max-h-[60vh] overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between">
               <h3 className="font-semibold">{t('posts.reactions')}</h3>
