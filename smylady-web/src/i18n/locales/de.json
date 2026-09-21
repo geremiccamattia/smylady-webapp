@@ -333,6 +333,8 @@
     "doorSuccessDesc": "Dein Platz ist bestätigt. Zahlung erfolgt an der Abendkasse."
   },
   "profile": {
+    "profileUnavailable": "Profil nicht verfügbar",
+    "profileUnavailableDesc": "Dieses Profil kann gerade nicht angezeigt werden.",
     "title": "Profil",
     "imageHint": "Ideales Format: quadratisch (z.B. 500 × 500 px)",
     "editProfileBtn": "Profil bearbeiten",

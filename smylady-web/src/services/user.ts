@@ -56,6 +56,14 @@ export interface BlockStatus {
   isBlockedBy: boolean
 }
 
+/**
+ * War das die Absage „Profil gesperrt" (403, einer hat den anderen blockiert)?
+ * Von getUserProfileForPage weitergeworfen und auf der Profilseite ausgewertet.
+ */
+export function isProfileUnavailableError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 403
+}
+
 export const userService = {
   // Get user by ID (public profile) - uses /users/:id/profile endpoint (same as mobile app)
   async getUserById(id: string): Promise<UserProfile | null> {
@@ -63,6 +71,39 @@ export const userService = {
       const response = await publicClient.get(`/users/${id}/profile`)
       return response.data.data || null
     } catch (error) {
+      console.error('Error getting user profile:', error)
+      return null
+    }
+  },
+
+  /**
+   * Profil für die Profilseite — AUTHENTIFIZIERT.
+   *
+   * Über apiClient statt publicClient, damit das Backend den Betrachter kennt.
+   * Die Route läuft über OptionalAuthGuard: Nur mit Token setzt sie `viewerId`,
+   * und erst dann greifen Blockierprüfung (403), isSubscribed, isMuted und der
+   * referralCode für den Inhaber. Vorher rief die WebApp anonym auf — Blockieren
+   * wirkte auf der Profilseite gar nicht.
+   *
+   * Nicht angemeldet: apiClient hängt den Token nur an, wenn einer im
+   * localStorage liegt. Ein Gast ruft also weiterhin ohne Token auf und wird
+   * vom Backend als Gast behandelt.
+   *
+   * Dieselbe Datenform wie getUserById (`UserProfile | null`). Ein 403 wird
+   * dagegen WEITERGEWORFEN statt zu `null` geschluckt — nur so kann die Seite
+   * „nicht verfügbar" von „nicht gefunden" unterscheiden. Alle übrigen Fehler
+   * enden wie bisher in `null`.
+   *
+   * getUserById bleibt unverändert: Seine übrigen Aufrufer (Markierungen,
+   * Reaktions-Nutzer, Veranstalterseiten) verlassen sich auf das anonyme
+   * Verhalten und das stille `null`.
+   */
+  async getUserProfileForPage(id: string): Promise<UserProfile | null> {
+    try {
+      const response = await apiClient.get(`/users/${id}/profile`)
+      return response.data.data || null
+    } catch (error) {
+      if (isProfileUnavailableError(error)) throw error
       console.error('Error getting user profile:', error)
       return null
     }

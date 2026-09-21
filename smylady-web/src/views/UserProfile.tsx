@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
-import { userService } from '@/services/user'
+import { userService, isProfileUnavailableError } from '@/services/user'
 import { postsService, Post, Comment, LikedByUser } from '@/services/posts'
 import { memoriesService } from '@/services/memories'
 import { apiClient } from '@/services/api'
@@ -137,11 +137,39 @@ export default function UserProfile() {
   const currentUserId = currentUser?.id || currentUser?._id
 
   // Fetch user profile
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['userProfile', userId],
-    queryFn: () => userService.getUserById(userId!),
+  /*
+   * Eigener Schlüssel für die Profilseite: ['userProfile', userId, 'viewer'].
+   *
+   * Die Daten hier sind betrachterabhängig (authentifizierter Aufruf:
+   * isSubscribed, isMuted, referralCode für den Inhaber, 403 bei Blockierung).
+   * Unter ['userProfile', userId] liegt dagegen die ANONYME Sicht, die
+   * HostEvents, OrganizerReviews und Profile über getUserById holen. Teilten sich
+   * beide den Schlüssel, überschriebe je nach Reihenfolge die eine Sicht die
+   * andere — etwa ein fehlendes isSubscribed nach einem Besuch der
+   * Veranstalterseite.
+   *
+   * Die Form bleibt dieselbe (UserProfile | null), der Rest der Seite liest
+   * `profile` unverändert. Und weil React Query bei invalidateQueries nach
+   * Präfix filtert, erreichen alle bestehenden Aufrufe mit ['userProfile'] bzw.
+   * ['userProfile', userId] diesen Eintrag weiterhin.
+   */
+  const profilePageKey = ['userProfile', userId, 'viewer'] as const
+
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useQuery({
+    queryKey: profilePageKey,
+    queryFn: () => userService.getUserProfileForPage(userId!),
     enabled: !!userId,
+    // Ein 403 ist endgültig; die drei Standard-Wiederholungen würden die
+    // Meldung nur um Sekunden verzögern.
+    retry: (failureCount, error) => !isProfileUnavailableError(error) && failureCount < 2,
   })
+
+  // 403: Einer hat den anderen blockiert.
+  const profileUnavailable = isProfileUnavailableError(profileError)
 
 
   // Fetch user posts
@@ -260,10 +288,15 @@ export default function UserProfile() {
     mutationFn: ({ ticketId, memoryId }: { ticketId: string; memoryId: string }) =>
       memoriesService.toggleHighlight(ticketId, memoryId),
     onMutate: async ({ ticketId, memoryId }) => {
-      await queryClient.cancelQueries({ queryKey: ['userProfile', userId] })
-      const previousProfile = queryClient.getQueryData(['userProfile', userId])
+      /*
+       * Der Schlüssel der Profilseite (profilePageKey). getQueryData und
+       * setQueryData treffen EXAKT — mit ['userProfile', userId] liefe das
+       * optimistische Update am angezeigten Profil vorbei.
+       */
+      await queryClient.cancelQueries({ queryKey: profilePageKey })
+      const previousProfile = queryClient.getQueryData(profilePageKey)
 
-      queryClient.setQueryData(['userProfile', userId], (old: any) => {
+      queryClient.setQueryData(profilePageKey, (old: any) => {
         if (!old?.memories) return old
         return {
           ...old,
@@ -283,7 +316,8 @@ export default function UserProfile() {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousProfile) {
-        queryClient.setQueryData(['userProfile', userId], context.previousProfile)
+        // Rückrollen auf denselben Schlüssel, auf den oben geschrieben wurde.
+        queryClient.setQueryData(profilePageKey, context.previousProfile)
       }
       toast({ title: t('common.error'), description: t('profile.highlightError'), variant: 'destructive' })
     },
@@ -403,6 +437,28 @@ export default function UserProfile() {
   }
 
   if (!profile) {
+    /*
+     * 403: Einer von beiden hat den anderen blockiert. Bewusst neutral und für
+     * beide Richtungen gleich — die Meldung soll nicht verraten, WER blockiert
+     * hat. Das Backend unterscheidet das zwar im Fehlertext, der hier aber
+     * nicht angezeigt wird.
+     */
+    if (profileUnavailable) {
+      return (
+        <div className="text-center py-16">
+          <h2 className="text-2xl font-bold mb-4">
+            {t('profile.profileUnavailable', { defaultValue: 'Profil nicht verfügbar' })}
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            {t('profile.profileUnavailableDesc', {
+              defaultValue: 'Dieses Profil kann gerade nicht angezeigt werden.',
+            })}
+          </p>
+          <Button onClick={() => router.back()}>{t('common.back')}</Button>
+        </div>
+      )
+    }
+
     return (
       <div className="text-center py-16">
         <h2 className="text-2xl font-bold mb-4">{t('profile.userNotFound')}</h2>
@@ -558,7 +614,8 @@ export default function UserProfile() {
                     </Button>
                   </Link>
                 </div>
-                <InviteButton referralCode={profile?.referralCode} />
+                {/* Wie in Profile.tsx: Code aus dem Auth-Kontext, Rückfall auf profile. */}
+                <InviteButton referralCode={currentUser?.referralCode ?? profile?.referralCode} />
               </div>
             )}
           </div>

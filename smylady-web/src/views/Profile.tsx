@@ -537,7 +537,14 @@ export default function Profile() {
                     {t('profile.editProfile', { defaultValue: 'Profil bearbeiten' })}
                   </Button>
                 </div>
-                <InviteButton referralCode={profile?.referralCode} />
+                {/*
+                  * Code des ANGEMELDETEN Nutzers aus dem Auth-Kontext
+                  * (GET /users/me). Das öffentliche Profil liefert ihn künftig
+                  * nur noch an den Inhaber, und getUserById ruft ohne Token auf.
+                  * Der Rückfall auf profile hält den Knopf, solange das Backend
+                  * den Code noch dort mitschickt.
+                  */}
+                <InviteButton referralCode={user?.referralCode ?? profile?.referralCode} />
               </div>
             </div>
           </CardContent>
