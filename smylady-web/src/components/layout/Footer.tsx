@@ -133,6 +133,11 @@ export default function Footer() {
                   {t('footer.workshopsVienna', { defaultValue: 'Workshops in Wien' })}
                 </Link>
               </li>
+              <li>
+                <Link href={localePath('/events/halloween-wien')} className="hover:text-foreground">
+                  {t('footer.halloweenVienna', { defaultValue: 'Halloween in Wien' })}
+                </Link>
+              </li>
             </ul>
           </div>
 

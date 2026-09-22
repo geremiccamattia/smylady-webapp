@@ -6,6 +6,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smylady-backend.onre
 const staticPages = [
   { url: '/explore',      priority: '1.0', changefreq: 'daily'   },
   { url: '/events/wien',  priority: '0.8', changefreq: 'daily'   },
+  // Saisonale Kategorieseite. Die übrigen Kategorieseiten (business-events-wien,
+  // workshops-wien, clubbing-wien, konzerte-wien) fehlen hier bislang — siehe
+  // Bericht; bewusst nicht im Vorbeigehen mit aufgenommen.
+  { url: '/events/halloween-wien', priority: '0.8', changefreq: 'daily' },
   // Nur die neuen URLs — /influencer-* wird per 308 weitergeleitet und gehoert
   // deshalb nicht in die Sitemap.
   { url: '/creator-events', priority: '0.7', changefreq: 'monthly' },
