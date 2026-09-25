@@ -9,17 +9,9 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { communityService } from '@/services/community'
-import { EVENT_CATEGORIES } from '@/lib/constants'
+import { COMMUNITY_CATEGORIES } from '@/lib/constants'
+import { categoryLabel } from '@/lib/eventFields'
 import CommunityCard from './CommunityCard'
-
-// Same categories as events, in the display order requested for the community chips
-const CATEGORY_ORDER = [
-  'Music', 'Clubbing', 'Business', 'Nature', 'Sports',
-  'Workshop', 'Gastronomy', 'Yoga', 'Theme', 'On the Roof', 'Other',
-]
-const COMMUNITY_CATEGORIES = CATEGORY_ORDER
-  .map((value) => EVENT_CATEGORIES.find((c) => c.value === value))
-  .filter((c): c is typeof EVENT_CATEGORIES[number] => !!c)
 
 export default function CommunityExplore() {
   const { t } = useTranslation()
@@ -72,10 +64,6 @@ export default function CommunityExplore() {
 
   const allCommunities = allCommunitiesData?.pages.flatMap((page) => page?.communities || []) || []
 
-  const categoryLabel = (value: string) => {
-    const cat = COMMUNITY_CATEGORIES.find((c) => c.value === value)
-    return t(`categories.${value}`, { defaultValue: cat?.label || value })
-  }
 
   return (
     <div className="space-y-6">
@@ -110,7 +98,7 @@ export default function CommunityExplore() {
                 : 'bg-muted hover:bg-muted/80 text-foreground'
             }`}
           >
-            {categoryLabel(cat.value)}
+            {categoryLabel(cat.value, t)}
           </button>
         ))}
       </div>
@@ -159,7 +147,7 @@ export default function CommunityExplore() {
       {activeCategory && (
         <div className="space-y-3">
           <h2 className="text-xl font-bold tracking-tight">
-            {categoryLabel(activeCategory)} {t('community.title', { defaultValue: 'Communities' })}
+            {categoryLabel(activeCategory, t)} {t('community.title', { defaultValue: 'Communities' })}
           </h2>
           {isLoadingCategoryPreview ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

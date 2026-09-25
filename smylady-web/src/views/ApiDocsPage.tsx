@@ -11,7 +11,9 @@ import { CONFIG, STORAGE_KEYS } from '@/lib/constants'
 
 const CSV_TEMPLATE_URL = 'https://docs.google.com/spreadsheets/d/1YWqArillO-1ypGs6Yg9-q4nkhmCwUbupjQVCyUyOY-o/copy'
 
-const CATEGORIES = ['Gastronomy', 'Business', 'Sports', 'Nature', 'Theme', 'Music', 'On the Roof', 'Clubbing', 'Workshop', 'Yoga', 'Other']
+// Öffentliche Doku für den Bulk-Upload: Reihenfolge und Werte folgen dem
+// Backend-Enum EventCategory. 'Yoga' ist dort entfallen.
+const CATEGORIES = ['Gastronomy', 'Business', 'Sports', 'Nature', 'Theme', 'Music', 'On the Roof', 'Clubbing', 'Workshop', 'Popup', 'Other']
 const PARTY_TYPES = ['birthday', 'wedding', 'corporate', 'social', 'other']
 // `as const` ist Absicht: Erst dadurch entsteht ein Literal-Typ, den
 // src/lib/musicTypes.guard.ts gegen MUSIC_TYPE_VALUES prüfen kann.

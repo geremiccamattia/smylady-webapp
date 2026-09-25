@@ -35,7 +35,8 @@ import {
 import RecurringEventModal from '@/components/events/RecurringEventModal'
 import { SubscriberPicker } from '@/components/events/SubscriberPicker'
 import { MultiSelectChips } from '@/components/events/MultiSelectChips'
-import { MUSIC_TYPE_VALUES, OFFERING_VALUES } from '@/lib/eventFields'
+import { categoryLabel, MUSIC_TYPE_VALUES, OFFERING_VALUES } from '@/lib/eventFields'
+import { EVENT_FORM_CATEGORIES } from '@/lib/constants'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 
@@ -107,19 +108,6 @@ function CreateEventContent() {
   ) => {
     setQuestions(prev => prev.map((q, i) => (i === idx ? { ...q, ...patch } : q)))
   }
-
-  const EVENT_CATEGORIES = [
-    { value: 'Music', label: t('categories.music', { defaultValue: 'Musik' }) },
-    { value: 'Gastronomy', label: t('categories.gastronomy', { defaultValue: 'Gastronomie' }) },
-    { value: 'Nature', label: t('categories.outdoor', { defaultValue: 'Outdoor' }) },
-    { value: 'Business', label: t('categories.business', { defaultValue: 'Business' }) },
-    { value: 'On the Roof', label: t('categories.onTheRoof', { defaultValue: 'Auf dem Dach' }) },
-    { value: 'Theme', label: t('categories.theme', { defaultValue: 'Themen-Event' }) },
-    { value: 'Sports', label: t('categories.sports', { defaultValue: 'Sport' }) },
-    { value: 'Clubbing', label: t('categories.clubbing', { defaultValue: 'Clubbing' }) },
-    { value: 'Other', label: t('categories.other', { defaultValue: 'Sonstiges' }) },
-    { value: 'Workshop', label: t('categories.workshop', { defaultValue: 'Workshop' }) },
-  ]
 
   const PARTY_TYPES = [
     { value: 'birthday', label: t('partyTypes.birthday', { defaultValue: 'Geburtstag' }) },
@@ -1118,9 +1106,9 @@ function CreateEventContent() {
                     required
                   >
                     <option value="">{t('createEvent.clickToSelect')}</option>
-                    {EVENT_CATEGORIES.map((cat) => (
+                    {EVENT_FORM_CATEGORIES.map((cat) => (
                       <option key={cat.value} value={cat.value}>
-                        {cat.label}
+                        {categoryLabel(cat.value, t)}
                       </option>
                     ))}
                   </select>

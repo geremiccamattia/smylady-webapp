@@ -26,7 +26,8 @@ import { CreatePostModal } from '@/views/Feed'
 import { PostCard } from '@/components/PostCard'
 import { resolveImageUrl, getInitials, generateCommunitySlug } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
-import { EVENT_CATEGORIES } from '@/lib/constants'
+import { COMMUNITY_CATEGORIES } from '@/lib/constants'
+import { categoryLabel } from '@/lib/eventFields'
 
 interface CommunityDetailPageProps {
   communityId: string
@@ -398,7 +399,7 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
           <div className="flex flex-wrap gap-1">
             {categories.map((cat) => (
               <span key={cat} className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium">
-                {t(`categories.${cat}`, { defaultValue: EVENT_CATEGORIES.find((c) => c.value === cat)?.label || cat })}
+                {categoryLabel(cat, t)}
               </span>
             ))}
           </div>
@@ -502,19 +503,7 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
                 {t('community.categoryHint', { defaultValue: 'Wähle eine oder mehrere Kategorien.' })}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {[
-                  { value: 'Music', label: t('categories.Music', { defaultValue: 'Musik' }), emoji: '🎵' },
-                  { value: 'Clubbing', label: t('categories.Clubbing', { defaultValue: 'Clubbing' }), emoji: '🎶' },
-                  { value: 'Business', label: t('categories.Business', { defaultValue: 'Business' }), emoji: '💼' },
-                  { value: 'Nature', label: t('categories.Nature', { defaultValue: 'Outdoor' }), emoji: '🌿' },
-                  { value: 'Sports', label: t('categories.Sports', { defaultValue: 'Sport' }), emoji: '⚽' },
-                  { value: 'Workshop', label: t('categories.Workshop', { defaultValue: 'Workshop' }), emoji: '🛠' },
-                  { value: 'Gastronomy', label: t('categories.Gastronomy', { defaultValue: 'Gastronomie' }), emoji: '🍽' },
-                  { value: 'Yoga', label: t('categories.Yoga', { defaultValue: 'Yoga' }), emoji: '🧘' },
-                  { value: 'Theme', label: t('categories.Theme', { defaultValue: 'Themenparty' }), emoji: '🎭' },
-                  { value: 'On the Roof', label: t('categories.On the Roof', { defaultValue: 'Auf dem Dach' }), emoji: '🏙' },
-                  { value: 'Other', label: t('categories.Other', { defaultValue: 'Sonstiges' }), emoji: '🎉' },
-                ].map((cat) => {
+                {COMMUNITY_CATEGORIES.map((cat) => {
                   const isSelected = editForm.categories.includes(cat.value)
                   return (
                     <button
@@ -534,8 +523,10 @@ export default function CommunityDetailPage({ communityId }: CommunityDetailPage
                           : 'border-border hover:border-muted-foreground/30'
                       }`}
                     >
-                      <span>{cat.emoji}</span>
-                      <span className={isSelected ? 'font-medium text-primary' : ''}>{cat.label}</span>
+                      <span>{categoryEmojis[cat.value] || '🎉'}</span>
+                      <span className={isSelected ? 'font-medium text-primary' : ''}>
+                        {categoryLabel(cat.value, t)}
+                      </span>
                     </button>
                   )
                 })}

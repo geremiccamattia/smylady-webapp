@@ -16,7 +16,7 @@ import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImage
 import { SITE_URL } from '@/lib/seo'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { isRaffleDrawn } from '@/lib/raffle'
-import { formatMusicTypes, toStringArray } from '@/lib/eventFields'
+import { categoryLabel, formatMusicTypes, toStringArray } from '@/lib/eventFields'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -782,9 +782,13 @@ export default function EventDetailClient({ id }: Props) {
                   Ticketmaster
                 </span>
               )}
-              <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                {event.category}
-              </span>
+              {/* Guard wie auf der Karte: Ohne ihn rendert ein Event ohne
+                  Kategorie ein leeres Badge. */}
+              {event.category && (
+                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                  {categoryLabel(String(event.category), t)}
+                </span>
+              )}
               {/* musicType ist ein Array — siehe lib/eventFields */}
               {formatMusicTypes(event.musicType, t) && (
                 <span className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-sm font-medium">

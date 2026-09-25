@@ -41,6 +41,7 @@ import {
   MessageCircle,
 } from 'lucide-react'
 import { EVENT_CATEGORIES } from '@/lib/constants'
+import { categoryLabel } from '@/lib/eventFields'
 import { resolveImageUrl } from '@/lib/utils'
 import { isRaffleOpen } from '@/lib/raffle'
 import { postsService } from '@/services/posts'
@@ -1173,12 +1174,10 @@ function ExploreContent() {
 
               {/* Kategorie-Sektionen */}
               {categoriesWithEvents.map(([category, evs]) => {
-                const catInfo = EVENT_CATEGORIES.find((c) => c.value === category)
-                const catLabel = catInfo?.label || category
                 return (
                   <EventSection
                     key={category}
-                    title={catLabel}
+                    title={categoryLabel(category, t)}
                     events={evs}
                     onShowAll={() => scrollToAllEvents({ selectedCategory: category })}
                   />

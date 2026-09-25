@@ -1004,6 +1004,17 @@ export default function EditEvent() {
                   required
                 >
                   <option value="">{t('common.select')}</option>
+                  {/*
+                    * Kategorien, die EVENT_CATEGORIES nicht (mehr) kennt — das
+                    * entfallene „Yoga", ein neuer Backend-Wert — bekommen ihre
+                    * eigene Option mit dem Rohwert als Beschriftung. Ohne sie
+                    * fiele das Select auf „Bitte wählen" zurück und das
+                    * Pflichtfeld überschriebe die Kategorie beim Speichern.
+                    */}
+                  {formData.category &&
+                    !EVENT_CATEGORIES.some(cat => cat.value === formData.category) && (
+                    <option value={formData.category}>{formData.category}</option>
+                  )}
                   {EVENT_CATEGORIES.map(cat => (
                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                   ))}

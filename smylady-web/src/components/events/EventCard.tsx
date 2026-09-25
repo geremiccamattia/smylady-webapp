@@ -10,7 +10,7 @@ import { Event } from '@/types'
 import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { isRaffleDrawn } from '@/lib/raffle'
-import { formatMusicTypes } from '@/lib/eventFields'
+import { categoryLabel, formatMusicTypes } from '@/lib/eventFields'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -334,7 +334,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
         <div className="flex items-center gap-2 flex-wrap">
           {event.category && (
             <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium">
-              {event.category}
+              {categoryLabel(String(event.category), t)}
             </span>
           )}
           {/* musicType ist ein Array — direkt gerendert verkettet React die Werte
