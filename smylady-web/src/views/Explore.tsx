@@ -65,6 +65,28 @@ const FALLBACK_LOCATION: LocationResult = {
   lng: 16.3738,
 }
 
+/*
+ * Datumshelfer für den „Datum wählen"-Filter.
+ *
+ * <input type="date"> arbeitet mit „YYYY-MM-DD". new Date() parst diese Form
+ * nach UTC-Mitternacht, während startOfDay/endOfDay und die Chip-Beschriftung
+ * mit lokalen Gettern arbeiten. Westlich von UTC fällt der UTC-Zeitpunkt lokal
+ * noch in den Vortag — Filter und Chip lagen dort einen Tag daneben.
+ */
+
+/** Ein Wert aus <input type="date"> als lokales Datum. */
+function parseInputDate(value: string): Date {
+  return new Date(`${value}T00:00:00`)
+}
+
+/** Heute im Format von <input type="date">, in lokaler Zeit. */
+function todayAsInputValue(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
 function ExploreContent() {
   const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuth()
@@ -357,7 +379,7 @@ function ExploreContent() {
           break
         case 'custom': {
           if (customDate) {
-            const selected = new Date(customDate)
+            const selected = parseInputDate(customDate)
             from = startOfDay(selected)
             to = endOfDay(selected)
           }
@@ -843,7 +865,7 @@ function ExploreContent() {
               }`}
             >
               {customDate && dateFilter === 'custom'
-                ? new Date(customDate).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })
+                ? parseInputDate(customDate).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' })
                 : t('explore.dateChoose', { defaultValue: 'Datum wählen' })}
             </button>
           </div>
@@ -853,12 +875,27 @@ function ExploreContent() {
                 type="date"
                 className="px-3 py-1.5 border rounded-lg text-sm bg-background"
                 value={customDate}
-                min={new Date().toISOString().split('T')[0]}
+                min={todayAsInputValue()}
                 onChange={(e) => {
+                  /*
+                   * Hier wird der Picker NICHT geschlossen.
+                   *
+                   * iOS Safari öffnet ein natives Rad-Widget und feuert `change`
+                   * bei jedem Rad-Schritt, nicht erst bei „Fertig". Stand hier
+                   * setShowDatePicker(false), verschwand das <input> beim ersten
+                   * Dreh aus dem DOM — das Widget verlor sein Eingabefeld und
+                   * die Auswahl lief ins Leere. Genau das war der Effekt, dass
+                   * erst der zweite Versuch griff.
+                   *
+                   * Geschlossen wird deshalb in onBlur, also wenn das Widget
+                   * fertig ist. Auf dem Desktop feuert `change` weiterhin beim
+                   * Klick auf einen Tag und der Filter greift sofort.
+                   */
                   setCustomDate(e.target.value)
-                  setDateFilter('custom')
-                  setShowDatePicker(false)
+                  // Leert der Nutzer das Feld, darf der Chip nicht aktiv bleiben.
+                  setDateFilter(e.target.value ? 'custom' : 'all')
                 }}
+                onBlur={() => setShowDatePicker(false)}
               />
             </div>
           )}
