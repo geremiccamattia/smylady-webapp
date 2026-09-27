@@ -1,13 +1,17 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { eventsService } from '@/services/events'
 import EventCard from '@/components/events/EventCard'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { injectJsonLd, removeJsonLd } from '@/lib/utils'
 import { MapPin } from 'lucide-react'
 
 export default function WienEvents() {
+  const localePath = useLocalePath()
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events', 'wien'],
     queryFn: () => eventsService.getPublicEvents({
@@ -100,6 +104,13 @@ export default function WienEvents() {
           Konzerten und Dinner-Shows bis hin zu Underground-Partys und Open-Air-Events
           am Donaukanal. Share Your Party bringt Veranstalter und Feierwillige
           direkt zusammen – ohne Umwege, ohne versteckte Gebühren.
+        </p>
+        <p className="text-muted-foreground mt-3">
+          Kurzfristig und nur für ein paar Tage geöffnet:{' '}
+          <Link href={localePath('/events/pop-up-wien')} className="text-primary hover:underline">
+            Pop-up Stores & Pop-up Events in Wien
+          </Link>
+          .
         </p>
       </div>
 

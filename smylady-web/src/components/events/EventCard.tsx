@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
-import { formatDate, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
+import { formatDate, formatEventDateRange, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { isRaffleDrawn } from '@/lib/raffle'
 import { categoryLabel, formatMusicTypes } from '@/lib/eventFields'
@@ -60,6 +60,19 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
     const date = new Date(dateStr)
     return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
   }
+
+  /*
+   * Zeitraum statt Einzeldatum — nur für die Kategorie „Popup".
+   *
+   * Absichtlich an der Kategorie festgemacht und nicht an einem Prop: Pop-ups
+   * sollen überall als Zeitraum erscheinen, auch in Explore und in der Suche,
+   * nicht nur auf der Kategorieseite. Alle anderen Kategorien laufen weiter
+   * durch isMultiDayEvent, ihre Karten ändern sich nicht.
+   */
+  const popupDateRange =
+    event.category === 'Popup'
+      ? formatEventDateRange(event.eventDate, event.eventEndTime, { locale: lang })
+      : null
 
   const eventId = event.id || event._id
   // Handle different image structures: locationImages array with url property, or direct images array
@@ -258,11 +271,20 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
             <span>
-              {event.eventDate
-                ? isMultiDayEvent(event.eventDate, event.eventEndTime)
-                  ? `${formatDateShort(event.eventDate)} – ${formatDate(event.eventEndTime)}`
-                  : formatDate(event.eventDate)
-                : '-'}
+              {/*
+                * Pop-ups laufen über Tage oder Wochen, nicht über einen Abend.
+                * Sie bekommen deshalb einen Zeitraum („1.10. – 12.10.") und,
+                * sobald sie laufen, „noch bis 12.10.". formatEventDateRange
+                * liefert null, wenn kein echter Zeitraum vorliegt — dann greift
+                * dieselbe Darstellung wie bei allen anderen Kategorien, die hier
+                * bewusst unverändert bleibt.
+                */}
+              {popupDateRange ??
+                (event.eventDate
+                  ? isMultiDayEvent(event.eventDate, event.eventEndTime)
+                    ? `${formatDateShort(event.eventDate)} – ${formatDate(event.eventEndTime)}`
+                    : formatDate(event.eventDate)
+                  : '-')}
             </span>
           </div>
           {event.eventStartTime && (
