@@ -1,4 +1,4 @@
-import { MUSIC_TYPES } from '@/lib/constants'
+import { EVENT_CATEGORIES, MUSIC_TYPES } from '@/lib/constants'
 
 /**
  * Normalisierung der Event-Felder, die das Backend inzwischen als Array liefert.
@@ -123,6 +123,28 @@ export function formatMusicTypes(value: unknown, t: TFunc): string {
   return toStringArray(value)
     .map((v) => musicTypeLabel(v, t))
     .join(', ')
+}
+
+const CATEGORY_LABELS = new Map<string, string>(
+  EVENT_CATEGORIES.map((c) => [c.value, c.label] as [string, string]),
+)
+
+/**
+ * Anzeigename einer Eventkategorie.
+ *
+ * Gleiches Muster wie musicTypeLabel: `categories.<wert>` mit dem Label aus
+ * EVENT_CATEGORIES als Zwischenfallback und dem Rohwert als letzter Stufe. Der
+ * Schlüssel ist der Enum-Wert selbst („On the Roof", nicht „onTheRoof") — das
+ * ist die Konvention, an der Explore, CommunityCard und CommunityExplore schon
+ * hängen.
+ *
+ * Unbekannte Werte — die ausgemusterte Kategorie „Yoga", ein neuer Wert aus dem
+ * Backend, eine Ticketmaster-Kategorie — erscheinen unverändert, statt zu
+ * verschwinden.
+ */
+export function categoryLabel(value: string, t: TFunc): string {
+  const fallback = CATEGORY_LABELS.get(value) ?? value
+  return t(`categories.${value}`, { defaultValue: fallback })
 }
 
 /**

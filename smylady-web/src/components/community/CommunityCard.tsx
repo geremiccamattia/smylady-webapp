@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@/components/ui/card'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { resolveThumbnailUrl, generateCommunitySlug } from '@/lib/utils'
-import { EVENT_CATEGORIES } from '@/lib/constants'
+import { categoryLabel } from '@/lib/eventFields'
 
 interface CommunityCardProps {
   community: {
@@ -21,17 +21,22 @@ interface CommunityCardProps {
   }
 }
 
+/*
+ * Reine Anzeige-Lookups, keine Auswahllisten. 'Yoga' steht hier weiterhin drin,
+ * damit Bestands-Communities mit dieser Kategorie ihre Darstellung behalten —
+ * zur Auswahl angeboten wird sie nirgends mehr.
+ */
 export const categoryEmojis: Record<string, string> = {
   Music: '🎵', Clubbing: '🎶', Business: '💼', Nature: '🌿',
   Theme: '🎭', Sports: '⚽', Workshop: '🛠', Gastronomy: '🍽',
-  Yoga: '🧘', 'On the Roof': '🏙', Other: '🎉',
+  Popup: '🛍️', Yoga: '🧘', 'On the Roof': '🏙', Other: '🎉',
 }
 
 export const categoryColors: Record<string, string> = {
   Music: '#FFF0F6', Clubbing: '#F5F0FF', Business: '#F0F4FF',
   Nature: '#F0FFF4', Theme: '#FFFBF0', Sports: '#FFF0F0',
-  Workshop: '#F0FFFF', Gastronomy: '#FFF8F0', Yoga: '#F5FFF0',
-  'On the Roof': '#F0F8FF', Other: '#F5F5F5',
+  Workshop: '#F0FFFF', Gastronomy: '#FFF8F0', Popup: '#FFF0FA',
+  Yoga: '#F5FFF0', 'On the Roof': '#F0F8FF', Other: '#F5F5F5',
 }
 
 export default function CommunityCard({ community }: CommunityCardProps) {
@@ -75,7 +80,7 @@ export default function CommunityCard({ community }: CommunityCardProps) {
           <div className="flex flex-wrap gap-1">
             {categories.map((cat) => (
               <span key={cat} className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-medium">
-                {t(`categories.${cat}`, { defaultValue: EVENT_CATEGORIES.find((c) => c.value === cat)?.label || cat })}
+                {categoryLabel(cat, t)}
               </span>
             ))}
           </div>

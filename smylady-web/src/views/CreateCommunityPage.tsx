@@ -17,6 +17,9 @@ import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Globe, ArrowLeft, Upload, Settings, Crop, Share2, ChevronDown } from 'lucide-react'
 import { generateCommunitySlug } from '@/lib/utils'
 import { isHeicFile } from '@/lib/heic'
+import { COMMUNITY_CATEGORIES } from '@/lib/constants'
+import { categoryLabel } from '@/lib/eventFields'
+import { categoryEmojis } from '@/components/community/CommunityCard'
 
 export default function CreateCommunityPage() {
   const { isAuthenticated } = useAuth()
@@ -285,19 +288,7 @@ export default function CreateCommunityPage() {
                 {t('community.categoryHint', { defaultValue: 'Wähle eine oder mehrere Kategorien.' })}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {[
-                  { value: 'Music', label: t('categories.music', { defaultValue: 'Musik' }), emoji: '🎵' },
-                  { value: 'Clubbing', label: t('categories.clubbing', { defaultValue: 'Clubbing' }), emoji: '🎶' },
-                  { value: 'Business', label: t('categories.business', { defaultValue: 'Business' }), emoji: '💼' },
-                  { value: 'Nature', label: t('categories.outdoor', { defaultValue: 'Outdoor' }), emoji: '🌿' },
-                  { value: 'Sports', label: t('categories.sport', { defaultValue: 'Sport' }), emoji: '⚽' },
-                  { value: 'Workshop', label: t('categories.workshop', { defaultValue: 'Workshop' }), emoji: '🛠' },
-                  { value: 'Gastronomy', label: t('categories.gastronomy', { defaultValue: 'Gastronomie' }), emoji: '🍽' },
-                  { value: 'Yoga', label: t('categories.yoga', { defaultValue: 'Yoga' }), emoji: '🧘' },
-                  { value: 'Theme', label: t('categories.theme', { defaultValue: 'Themenparty' }), emoji: '🎭' },
-                  { value: 'On the Roof', label: t('categories.onTheRoof', { defaultValue: 'Auf dem Dach' }), emoji: '🏙' },
-                  { value: 'Other', label: t('categories.other', { defaultValue: 'Sonstiges' }), emoji: '🎉' },
-                ].map((cat) => {
+                {COMMUNITY_CATEGORIES.map((cat) => {
                   const isSelected = form.categories.includes(cat.value)
                   return (
                     <button
@@ -317,8 +308,10 @@ export default function CreateCommunityPage() {
                           : 'border-border hover:border-muted-foreground/30'
                       }`}
                     >
-                      <span>{cat.emoji}</span>
-                      <span className={isSelected ? 'font-medium text-primary' : ''}>{cat.label}</span>
+                      <span>{categoryEmojis[cat.value] || '🎉'}</span>
+                      <span className={isSelected ? 'font-medium text-primary' : ''}>
+                        {categoryLabel(cat.value, t)}
+                      </span>
                     </button>
                   )
                 })}

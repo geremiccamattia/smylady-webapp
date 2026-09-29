@@ -141,6 +141,62 @@ export function isMultiDayEvent(startDate: string | Date, endDate?: string | Dat
 }
 
 /**
+ * Zeitraum eines über mehrere Tage laufenden Events: „1.10. – 12.10.", und
+ * sobald es begonnen hat „noch bis 12.10.".
+ *
+ * Gibt `null` zurück, wenn kein echter Zeitraum vorliegt — bei fehlendem oder
+ * unbrauchbarem Enddatum und wenn Anfang und Ende auf denselben Kalendertag
+ * fallen. Der Aufrufer bleibt in diesem Fall bei der Einzeldatum-Darstellung,
+ * womit die Funktion auch für Events ohne Enddatum gefahrlos aufrufbar ist.
+ *
+ * Bewusst KEIN Ersatz für {@link isMultiDayEvent}: Dort entscheidet die Dauer
+ * (>24h), damit eine Party von 22:00 bis 04:00 eintägig bleibt. Hier
+ * entscheidet der Kalendertag, weil ein Pop-up, das an zwei Tagen je vier
+ * Stunden offen hat, sehr wohl ein Zeitraum ist. Beide Definitionen sind
+ * richtig — für unterschiedliche Formate.
+ *
+ * Angelegt für die Pop-up-Kategorie, aber absichtlich ohne Bezug auf sie:
+ * Messen, Festivals und Ausstellungen können sie unverändert nutzen.
+ */
+export function formatEventDateRange(
+  startDate?: string | Date | null,
+  endDate?: string | Date | null,
+  options: { locale?: string; now?: Date } = {},
+): string | null {
+  if (!startDate || !endDate) return null
+
+  // Eine nackte Uhrzeit ("19:00") ergibt ein Invalid Date — truthy, aber unbrauchbar.
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
+  if (end.getTime() < start.getTime()) return null
+
+  const sameCalendarDay =
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth() &&
+    start.getDate() === end.getDate()
+  if (sameCalendarDay) return null
+
+  const isEnglish = (options.locale || 'de').startsWith('en')
+  const intlLocale = isEnglish ? 'en-GB' : 'de-DE'
+  // „1.10." im Deutschen, „1 Oct" im Englischen — dort ist „1/10" mehrdeutig.
+  const dateFormat: Intl.DateTimeFormatOptions = isEnglish
+    ? { day: 'numeric', month: 'short' }
+    : { day: 'numeric', month: 'numeric' }
+
+  const format = (date: Date) => date.toLocaleDateString(intlLocale, dateFormat)
+
+  const now = options.now || new Date()
+  const hasStarted = start.getTime() <= now.getTime()
+
+  if (hasStarted) {
+    return isEnglish ? `until ${format(end)}` : `noch bis ${format(end)}`
+  }
+
+  return `${format(start)} – ${format(end)}`
+}
+
+/**
  * Whether an event is over. `eventEndTime` decides on its own when it is a
  * usable timestamp; otherwise `fallbackDate` (normally `eventDate`) takes over.
  *
