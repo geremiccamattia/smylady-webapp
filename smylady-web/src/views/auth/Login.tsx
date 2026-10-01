@@ -898,7 +898,7 @@ export default function Login() {
                 const ctaCard = index === 5 ? (
                   <Link
                     key="cta-register"
-                    href="/register"
+                    href="/join"
                     className="group relative overflow-hidden rounded-3xl col-span-2 row-span-1 bento-item"
                     style={{ animationDelay: `${5 * 70}ms` }}
                   >
@@ -1143,7 +1143,7 @@ export default function Login() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-3">
-                <Link href="/register">
+                <Link href="/join">
                   <Button size="lg" className="rounded-full px-6 bg-white text-pink-600 hover:bg-white/90 font-bold shadow-xl">
                     {t('cta.startNow')}
                     <ArrowRight className="ml-2 h-4 w-4" />

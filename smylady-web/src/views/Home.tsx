@@ -243,7 +243,7 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-              <Link href="/register">
+              <Link href="/join">
                 <Button size="lg" variant="gradient" className="text-lg px-8 py-6 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
                   {t('auth.registerFree')}
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -619,7 +619,7 @@ export default function Home() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-                  <Link href="/register">
+                  <Link href="/join">
                     <Button size="lg" variant="gradient" className="text-lg px-8 py-6 rounded-full shadow-lg shadow-primary/25">
                       {t('home.startNow')}
                       <ArrowRight className="ml-2 h-5 w-5" />

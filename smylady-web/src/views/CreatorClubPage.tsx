@@ -730,6 +730,20 @@ export default function CreatorClubPage() {
         </div>
       </section>
 
+      {/*
+        * Abzweig für Marken.
+        *
+        * Bewusst nur ein Satz unterhalb des Formulars und ohne Eingriff in die
+        * Bewerbungslogik: Wer hier gelandet ist, aber eine Marke vertritt,
+        * findet so den richtigen Weg, ohne dass der Creator-Flow gestört wird.
+        */}
+      <p className="text-center mt-10 text-sm text-muted-foreground">
+        {t('influencer.brandHint', { defaultValue: 'Du bist eine Marke statt Creator?' })}{' '}
+        <Link href={localePath('/register/brand')} className="text-primary hover:underline font-medium">
+          {t('influencer.brandHintLink', { defaultValue: 'Hier geht es zur Markenregistrierung' })}
+        </Link>
+      </p>
+
       {/* Closing */}
       <p className="text-center mt-14 mb-1 text-xs tracking-[0.4em] uppercase text-muted-foreground">
         {t('influencer.closingLine', { defaultValue: 'Be part of something real.' })}

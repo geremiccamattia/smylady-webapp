@@ -204,7 +204,7 @@ export default function Header() {
               >
                 {t('auth.login')}
               </Button>
-              <Link href={localePath("/register")}>
+              <Link href={localePath("/join")}>
                 <Button suppressHydrationWarning variant="gradient" size="sm">{t('auth.register')}</Button>
               </Link>
               <LanguageSwitcher />
@@ -372,7 +372,7 @@ export default function Header() {
                     className="w-full"
                     onClick={() => {
                       closeSidebar()
-                      router.push(localePath('/register'))
+                      router.push(localePath('/join'))
                     }}
                   >
                     {t('nav.register', { defaultValue: 'Sei dabei' })}

@@ -54,7 +54,7 @@ export default function ScrollSignupPrompt() {
             className="w-full gap-2 rounded-full"
             onClick={() => {
               setOpen(false)
-              router.push('/register')
+              router.push('/join')
             }}
           >
             <UserPlus className="h-5 w-5" />
