@@ -52,7 +52,11 @@ apiClient.interceptors.response.use(
       // Redirect-Logik bleibt bewusst UNABHÄNGIG von hadAuthHeader: ein Gast auf
       // einer geschützten (nicht-öffentlichen) Seite soll weiterhin zu /login.
       const publicPaths = [
-        '/explore', '/login', '/register', '/event/', '/user/', '/feed', '/post/',
+        // '/register' deckt auch /register/brand ab — die Markenregistrierung
+        // liegt genau deshalb dort und nicht unter einem eigenen Zweig.
+        // '/join' ist die Auswahlseite davor und muss für Gäste erreichbar
+        // bleiben, sonst wirft eine beliebige 401-Nebenanfrage sie auf /login.
+        '/explore', '/login', '/register', '/join', '/event/', '/user/', '/feed', '/post/',
         // '/influencer' bleibt zusaetzlich drin, solange die 308-Weiterleitungen
         // in next.config.ts auf die alten URLs zeigen (Instagram, Mails, Google).
         '/creator', '/influencer', '/api', '/communities',

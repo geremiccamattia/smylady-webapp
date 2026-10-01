@@ -18,7 +18,7 @@ const navItems = [
   // Gäste-Einstieg — entspricht den Tabs "Login" und "Sei Dabei" in der Mobile-App.
   // Ohne diese Tabs sieht ein neuer Nutzer auf Mobile keinen Weg zur Anmeldung.
   { icon: LogIn, label: 'Anmelden', path: '/login', guestOnly: true, key: 'login', i18nKey: 'nav.login' },
-  { icon: UserPlus, label: 'Sei dabei', path: '/register', guestOnly: true, key: 'register', i18nKey: 'nav.register', highlight: true },
+  { icon: UserPlus, label: 'Sei dabei', path: '/join', guestOnly: true, key: 'register', i18nKey: 'nav.register', highlight: true },
 ]
 
 export default function MobileNav() {
