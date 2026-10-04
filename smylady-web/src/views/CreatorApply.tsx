@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { Clock, Check, Sparkles, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { apiClient } from '@/services/api'
 import CreatorApplicationForm from '@/components/creator/CreatorApplicationForm'
@@ -32,16 +33,43 @@ type View = 'loading' | 'form' | 'pending' | 'approved' | 'rejected' | 'member' 
 export default function CreatorApply() {
   const { t } = useTranslation()
   const localePath = useLocalePath()
+  const { user, refreshUser, isLoading: authLoading } = useAuth()
   const [view, setView] = useState<View>('loading')
+  // Der Abruf läuft genau einmal; refreshUser() ändert `user` und würde einen
+  // Effekt mit `user` in den Abhängigkeiten sonst erneut auslösen.
+  const hasLoaded = useRef(false)
 
   useEffect(() => {
+    if (authLoading || hasLoaded.current) return
+    hasLoaded.current = true
+
     let active = true
 
     const load = async () => {
+      /*
+       * Fehlt das Geburtsdatum im Kontext, einmal nachfassen.
+       *
+       * Das Nutzerobjekt kann beim Start aus dem localStorage kommen, ohne dass
+       * /users/me erneut gefragt wurde (siehe AuthContext) — ein veralteter
+       * Eintrag ließe sich so auffrischen. Liefert der Endpunkt das Feld gar
+       * nicht, bleibt es dabei und das Formular fragt das Alter ab.
+       *
+       * Läuft parallel zum Statusabruf und wird mitabgewartet, damit das
+       * Formular nicht erst ohne und dann mit Geburtsdatum erscheint.
+       */
+      const refresh = user?.dateOfBirth
+        ? Promise.resolve()
+        : refreshUser().catch(() => {
+            // Nicht kritisch — ohne Geburtsdatum wird das Alter abgefragt.
+          })
+
       try {
-        const response = await apiClient.get<{ data?: MyApplicationResponse } & MyApplicationResponse>(
-          '/influencer/my-application',
-        )
+        const [response] = await Promise.all([
+          apiClient.get<{ data?: MyApplicationResponse } & MyApplicationResponse>(
+            '/influencer/my-application',
+          ),
+          refresh,
+        ])
         if (!active) return
 
         // Das Backend antwortet je nach Endpunkt mit oder ohne data-Hülle.
@@ -62,7 +90,7 @@ export default function CreatorApply() {
     return () => {
       active = false
     }
-  }, [])
+  }, [authLoading, refreshUser, user?.dateOfBirth])
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">

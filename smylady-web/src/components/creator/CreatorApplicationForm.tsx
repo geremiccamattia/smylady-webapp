@@ -134,21 +134,47 @@ interface CreatorApplicationFormProps {
   /** Optionaler Ausstieg, im Registrierungsflow „Später bewerben". */
   onSkip?: () => void
   skipLabel?: string
+  /**
+   * Geburtsdatum aus dem aufrufenden Formular.
+   *
+   * Hat Vorrang vor dem Kontext: In der Registrierung steht der Wert im
+   * Formularzustand, während das Nutzerobjekt aus GET /users/me kommt — und
+   * dort fehlt das Feld. Ohne diese Prop fragte der Creator-Schritt direkt
+   * nach dem Geburtsdatum noch einmal nach dem Alter.
+   */
+  dateOfBirth?: string | null
 }
 
 export default function CreatorApplicationForm({
   onSubmitted,
   onSkip,
   skipLabel,
+  dateOfBirth,
 }: CreatorApplicationFormProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const localePath = useLocalePath()
   const { user } = useAuth()
 
-  // Aus dem Konto abgeleitet, nicht erneut abgefragt.
-  const accountAge = useMemo(() => ageFromDateOfBirth(user?.dateOfBirth), [user?.dateOfBirth])
+  /*
+   * Alter aus dem Geburtsdatum, nicht abgefragt.
+   *
+   * Reihenfolge: Prop vor Kontext. `null`, wenn beides fehlt oder unbrauchbar
+   * ist — dann erscheint das Altersfeld wie bisher.
+   */
+  const accountAge = useMemo(
+    () => ageFromDateOfBirth(dateOfBirth) ?? ageFromDateOfBirth(user?.dateOfBirth),
+    [dateOfBirth, user?.dateOfBirth],
+  )
   const nameParts = useMemo(() => splitFullName(user?.name), [user?.name])
+
+  /*
+   * Zu jung: Das Alter steht fest und lässt sich nicht einfach hochsetzen, wie
+   * es im freien Altersfeld möglich wäre. Das Backend lehnt ohnehin ab, aber
+   * erst nach dem Ausfüllen aller vier Schritte — der Hinweis gehört an den
+   * Anfang.
+   */
+  const isUnderage = accountAge !== null && accountAge < 18
 
   const [currentStep, setCurrentStep] = useState(0)
   const [form, setForm] = useState<FormState>({
@@ -357,6 +383,38 @@ export default function CreatorApplicationForm({
   }
 
   const stepIcons = [User, Instagram, Sparkles, Check]
+
+  /*
+   * Unter 18: gar kein Formular.
+   *
+   * Statt das Altersfeld anzubieten, das sich einfach hochsetzen ließe, endet
+   * der Weg hier. Der optionale Ausstieg bleibt, damit niemand in der
+   * Registrierung festhängt.
+   */
+  if (isUnderage) {
+    return (
+      <div className="text-center py-10 px-4">
+        <h3 className="text-lg font-bold mb-2">
+          {t('influencer.underageTitle', { defaultValue: 'Der Creator Club ist ab 18 Jahren.' })}
+        </h3>
+        <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
+          {t('influencer.underageDesc', {
+            defaultValue:
+              'Schau gern wieder vorbei, sobald du 18 bist. Share Your Party kannst du natürlich weiter nutzen.',
+          })}
+        </p>
+        {onSkip && (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="text-xs font-semibold uppercase tracking-wide text-primary hover:underline"
+          >
+            {skipLabel || t('common.continue', { defaultValue: 'Weiter' })}
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <>

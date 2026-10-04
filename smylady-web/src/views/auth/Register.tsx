@@ -186,6 +186,16 @@ export default function Register() {
         <CardContent>
           {step === 'creator' ? (
             <CreatorApplicationForm
+              /*
+               * Das Geburtsdatum direkt aus dem Formularzustand durchreichen.
+               *
+               * Der Umweg über den AuthContext greift hier nicht: Dessen
+               * Nutzerobjekt stammt aus GET /users/me, und dort fehlt das Feld
+               * (siehe Kommentar in CreatorApplicationForm). Die Person hat es
+               * zwei Schritte zuvor eingegeben — sie danach erneut nach ihrem
+               * Alter zu fragen, wäre schwer zu erklären.
+               */
+              dateOfBirth={dateOfBirth}
               onSubmitted={() => router.replace('/interests')}
               onSkip={() => router.replace('/interests')}
             />
