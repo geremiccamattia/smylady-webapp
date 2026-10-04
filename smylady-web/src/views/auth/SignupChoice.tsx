@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { ArrowLeft, ArrowRight, Building2, Sparkles, User } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Building2, User } from 'lucide-react'
 
 /*
  * Auswahl vor der Registrierung: User, Creator oder Marke.
@@ -27,6 +27,14 @@ interface ChoiceCard {
   descriptionDefault: string
 }
 
+/*
+ * Zwei Wege, nicht drei.
+ *
+ * Die Creator-Karte ist entfallen: Die Bewerbung setzt ein Konto voraus, damit
+ * das Backend sie mit der userId verknüpfen kann, und läuft deshalb als
+ * Zusatzschritt in der Nutzerregistrierung. Ein eigener dritter Einstieg hätte
+ * nur auf denselben Weg geführt.
+ */
 const CHOICES: ChoiceCard[] = [
   {
     id: 'user',
@@ -36,19 +44,7 @@ const CHOICES: ChoiceCard[] = [
     titleDefault: 'Ich will Events entdecken',
     descriptionKey: 'signupChoice.userDescription',
     descriptionDefault:
-      'Finde Partys, Konzerte und Workshops in deiner Nähe, sichere dir Tickets und sei mit deinen Leuten dabei.',
-  },
-  {
-    id: 'creator',
-    icon: Sparkles,
-    // Die Creator-Bewerbung läuft über die bestehende Landingpage, nicht über ein
-    // eigenes Formular — deshalb hier /creator-club und nicht /register/creator.
-    href: '/creator-club',
-    titleKey: 'signupChoice.creatorTitle',
-    titleDefault: 'Ich bin Creator',
-    descriptionKey: 'signupChoice.creatorDescription',
-    descriptionDefault:
-      'Bewirb dich für den Creator Club: exklusive Events, VIP-Zugang und faire Kooperationen.',
+      'Finde Partys, Konzerte und Workshops in deiner Nähe und sichere dir Tickets. Creator können sich hier direkt für den Creator Club bewerben.',
   },
   {
     id: 'brand',
@@ -69,7 +65,7 @@ export default function SignupChoice() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
-      <Card className="relative w-full max-w-3xl">
+      <Card className="relative w-full max-w-2xl">
         <CardHeader className="text-center">
           <button
             onClick={() => router.back()}
@@ -94,7 +90,7 @@ export default function SignupChoice() {
         </CardHeader>
         <CardContent>
           {/* Nebeneinander ab sm, darunter gestapelt. */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {CHOICES.map(choice => {
               const Icon = choice.icon
               return (
