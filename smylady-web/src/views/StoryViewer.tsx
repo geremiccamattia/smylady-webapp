@@ -219,6 +219,11 @@ function StoryViewerContent() {
     if (currentStory && !isOwnStory) {
       viewStoryMutation.mutate(currentStory._id)
     }
+    // currentStory und viewStoryMutation fehlen bewusst: Gemeldet werden soll
+    // je Story genau einmal, deshalb hängt der Effekt an der ID statt am
+    // Objekt. viewStoryMutation ist zudem bei jedem Render neu — aufgenommen
+    // liefe die Meldung bei jedem Render erneut.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStory?._id, isOwnStory])
 
   // Progress animation
@@ -255,6 +260,11 @@ function StoryViewerContent() {
         clearInterval(progressInterval.current)
       }
     }
+    // goToNextStory fehlt bewusst: Die Funktion ist weiter unten definiert und
+    // hängt selbst an currentStoryIndex/currentUserIndex, die der Timer über
+    // goToNextStory verändert. Aufgenommen würde der Timer bei jedem
+    // Fortschritt neu aufgesetzt und die Story liefe nie ab.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStory?._id, isPaused, showReplyInput, currentStoryIndex, currentUserIndex])
 
   const goToNextStory = useCallback(() => {
@@ -270,6 +280,10 @@ function StoryViewerContent() {
     } else {
       handleClose()
     }
+    // handleClose fehlt bewusst: Die Funktion ist weiter unten definiert und
+    // bei jedem Render neu. Aufgenommen wäre goToNextStory nie stabil und der
+    // Fortschrittstimer, der daran hängt, setzte sich ständig zurück.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStoryIndex, currentUserIndex, currentUserStories, userStories.length])
 
   const goToPrevStory = useCallback(() => {

@@ -225,6 +225,11 @@ export default function MentionInput({
     } finally {
       setIsLoading(false)
     }
+    // suggestionUsers fehlt bewusst: Die Prop ist eine feste Liste, die
+    // Aufrufer meist als Array-Literal übergeben — also bei jedem Render eine
+    // neue Referenz. Aufgenommen wäre dieser Callback nie stabil und risse den
+    // darauf aufbauenden Debounce mit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   // Search users API call
@@ -258,6 +263,9 @@ export default function MentionInput({
     } finally {
       setIsLoading(false)
     }
+    // suggestionUsers fehlt bewusst, aus demselben Grund wie bei
+    // fetchFriendSuggestions weiter oben: instabile Array-Prop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFriendSuggestions])
 
   // Debounced search

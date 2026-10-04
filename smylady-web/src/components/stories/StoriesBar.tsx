@@ -171,6 +171,11 @@ export function StoriesBar({ onStoryClick, currentUserId: _currentUserId }: Stor
 
     console.log('[StoriesBar] Final merged storiesFeed:', result.length, 'user groups')
     return result
+    // isAuthenticated, loadingFeed und loadingMy fehlen bewusst: Sie steuern
+    // nur, OB die Abfragen laufen, nicht das Ergebnis. Die zusammengeführte
+    // Liste hängt allein an den geladenen Daten; die Ladeflags aufzunehmen
+    // berechnete sie bei jedem Wechsel des Ladezustands ohne neues Ergebnis.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedStories, myStories, currentUserId, user?.name, user?.username, user?.profileImage])
 
   const createStoryMutation = useMutation({
@@ -425,6 +430,12 @@ function StoryViewer({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
+    // currentStory, goToNextStory, isOwnStory und viewMutation fehlen bewusst:
+    // goToNextStory ist unmemoisiert und wird bei jedem Render neu erzeugt.
+    // Aufgenommen setzte sich der Fortschrittstimer bei jedem Tick neu auf und
+    // die Story wechselte nie weiter. Der Neustart soll allein am Wechsel der
+    // Story (currentStory?._id) und am Pausieren hängen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStory?._id, isPaused])
 
   const goToNextStory = () => {

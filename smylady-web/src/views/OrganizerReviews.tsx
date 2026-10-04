@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -52,17 +52,29 @@ function OrganizerReviewsContent() {
     enabled: !!userId,
   })
 
-  const pastEvents = userProfile?.pastEvents || []
+  /*
+   * In useMemo, sonst liefert der `|| []`-Zweig bei jedem Render ein neues
+   * Array. Alles, was davon abhängt — unten der Abruf der Bewertungen —, würde
+   * dadurch jedes Mal neu anlaufen.
+   */
+  // Der Rückgabetyp steht explizit dran: Sonst leitet TypeScript aus
+  // `any[] || []` die Union `any[] | never[]` ab, womit weiter unten die
+  // Parameter von .filter() und .map() implizit `any` wären.
+  const pastEvents = useMemo<any[]>(
+    () => userProfile?.pastEvents || [],
+    [userProfile?.pastEvents],
+  )
 
-  useEffect(() => {
-    if (pastEvents.length > 0) {
-      loadRatingsForEvents()
-    } else {
-      setLoadingRatings(false)
-    }
-  }, [pastEvents])
-
-  const loadRatingsForEvents = async () => {
+  /*
+   * In useCallback und vor den Effekt gezogen, weil `const` nicht gehoistet
+   * wird und das Abhängigkeitsarray beim Rendern ausgewertet wird.
+   *
+   * Einzige Abhängigkeit ist pastEvents, das dank useMemo oben stabil bleibt,
+   * solange das Profil unverändert ist. Der Abruf läuft damit einmal, sobald
+   * das Profil geladen ist — und danach erst wieder, wenn sich die Eventliste
+   * tatsächlich ändert.
+   */
+  const loadRatingsForEvents = useCallback(async () => {
     setLoadingRatings(true)
     try {
       const validEvents = pastEvents.filter(
@@ -114,7 +126,15 @@ function OrganizerReviewsContent() {
     } finally {
       setLoadingRatings(false)
     }
-  }
+  }, [pastEvents])
+
+  useEffect(() => {
+    if (pastEvents.length > 0) {
+      loadRatingsForEvents()
+    } else {
+      setLoadingRatings(false)
+    }
+  }, [pastEvents, loadRatingsForEvents])
 
   const handleEventPress = (event: EventWithRating) => {
     router.push(`/event/${event._id}/reviews?name=${encodeURIComponent(event.name || '')}`)

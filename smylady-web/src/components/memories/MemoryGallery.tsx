@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Image, Video, MessageCircle, Upload, Loader2, Clock, TrendingUp, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, isMemoryHighlighted, getUploadedByInfo } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, isMemoryHighlighted, getUploadedByInfo, hasMemoryChanged } from '@/services/memories'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, resolveImageUrl, resolveThumbnailUrl, cn } from '@/lib/utils'
@@ -102,15 +102,27 @@ export default function MemoryGallery({
     }
   }, [initialMemoryId, memories, selectedMemory])
 
-  // Keep selectedMemory in sync with fresh query data
+  /*
+   * Die geöffnete Memory mit frischen Query-Daten abgleichen.
+   *
+   * Der Abgleich läuft über die ID und einen inhaltlichen Vergleich. Vorher
+   * stand hier `freshMemory !== selectedMemory`, also ein Referenzvergleich —
+   * der traf bei jedem Refetch zu, weil die lokale Kopie im State nie dasselbe
+   * Objekt ist wie das aus dem Cache. Die Folge war ein überflüssiger setState
+   * mit Render bei jeder Aktualisierung.
+   *
+   * selectedMemory bleibt bewusst aus den Abhängigkeiten: Der Effekt setzt es
+   * selbst, es dort aufzunehmen ließe ihn im Kreis laufen. Die jeweils aktuelle
+   * Fassung kommt deshalb über die Updater-Form von setSelectedMemory.
+   */
   useEffect(() => {
-    if (selectedMemory && memories.length > 0) {
-      const freshMemory = memories.find(m => getMemoryId(m) === getMemoryId(selectedMemory))
-      if (freshMemory && freshMemory !== selectedMemory) {
-        setSelectedMemory(freshMemory)
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (memories.length === 0) return
+
+    setSelectedMemory(current => {
+      if (!current) return current
+      const fresh = memories.find(m => getMemoryId(m) === getMemoryId(current))
+      return fresh && hasMemoryChanged(current, fresh) ? fresh : current
+    })
   }, [memories])
 
   // Handle memory update from MemoryViewer (instant update before query refetch)

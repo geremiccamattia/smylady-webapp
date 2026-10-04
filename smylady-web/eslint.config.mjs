@@ -65,6 +65,17 @@ export default defineConfig([
        * dafür eine begründete Ausnahme trägt (views/ApiDocsPage.tsx).
        */
       'react/jsx-key': 'error',
+      /*
+       * Unvollständige Abhängigkeiten sind die Quelle veralteter Anzeigen,
+       * doppelter Abfragen und Endlosschleifen: Der Effekt arbeitet dann mit
+       * Werten aus einem früheren Render.
+       *
+       * Die verbliebenen Stellen, an denen die Liste bewusst kurz bleibt,
+       * tragen vor Ort ein eslint-disable-next-line mit Begründung. Jede neue
+       * Abweichung muss diesen Weg ebenfalls gehen und wird damit zur
+       * bewussten Entscheidung statt zum Versehen.
+       */
+      'react-hooks/exhaustive-deps': 'error',
 
       // ── Warnungen: Altlasten, nach Häufigkeit ───────────────────────────
       /*
@@ -79,11 +90,29 @@ export default defineConfig([
        */
       'react/no-unescaped-entities': 'warn',
       /*
-       * 35 Treffer. setState im Effekt löst einen zweiten Renderdurchlauf aus.
-       * Oft vermeidbar, manchmal gewollt — die Fälle einzeln zu bewerten ist
-       * Arbeit, die diese Umstellung nicht nebenbei leisten kann.
+       * Abgeschaltet, nicht auf 'warn' zurückgestuft.
+       *
+       * Alle 35 Treffer wurden einzeln durchgesehen: Kein einziger war ein
+       * Fehler. Die Regel warnt pauschal vor setState im Effekt, trifft damit
+       * aber genau die vier Muster, für die Effekte gedacht sind:
+       *
+       *   1. Zurücksetzen bei Prop-Wechsel — etwa setDisplaySrc(src), wenn ein
+       *      neues Bild hereinkommt (ImageViewer, StoryViewer, image-crop-modal).
+       *   2. Lesen aus localStorage/sessionStorage beim Mount — ein externes
+       *      System (Register, RafflePromoBanner, ApiDocsPage, Settings).
+       *   3. Formular aus Serverdaten füllen, sobald die Abfrage da ist
+       *      (EditEvent, Profile, CommunityDetailPage).
+       *   4. Debounce-Zurücksetzen: Trefferliste leeren, solange die Eingabe zu
+       *      kurz ist (CreateEvent, EditEvent).
+       *
+       * Dazu kommen Fehlmeldungen, bei denen die Regel connect()/disconnect()
+       * für State-Setter hält (SocketContext).
+       *
+       * Als Warnung stünde sie dauerhaft im Rauschen und verdeckte echte
+       * Befunde, ohne je etwas zu finden. 35 Einzelausnahmen im Code wären
+       * dasselbe, nur verstreut.
        */
-      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/set-state-in-effect': 'off',
       // 10 Treffer. Direkte Mutation von Props oder State in Komponenten.
       'react-hooks/immutability': 'warn',
       // 10 Treffer. Komponenten, die in einer anderen Komponente definiert

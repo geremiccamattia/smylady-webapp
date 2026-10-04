@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsService } from '@/services/events'
-import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, isMemoryHighlighted } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, isMemoryHighlighted, hasMemoryChanged } from '@/services/memories'
 import { ticketsService } from '@/services/tickets'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -213,14 +213,23 @@ export default function EventMemories() {
     }
   }, [memories, sortBy])
 
-  // Keep selectedMemory in sync with fresh query data
+  /*
+   * Die geöffnete Memory mit frischen Query-Daten abgleichen — siehe die
+   * gleichlautende Stelle in components/memories/MemoryGallery.tsx.
+   *
+   * Abgeglichen wird über die ID und einen inhaltlichen Vergleich; der frühere
+   * Referenzvergleich traf bei jedem Refetch zu und erzwang jedes Mal einen
+   * zusätzlichen Render. selectedMemory bleibt bewusst aus den Abhängigkeiten,
+   * der aktuelle Wert kommt über die Updater-Form.
+   */
   useEffect(() => {
-    if (selectedMemory && memories.length > 0) {
-      const freshMemory = memories.find(m => getMemoryId(m) === getMemoryId(selectedMemory))
-      if (freshMemory && freshMemory !== selectedMemory) {
-        setSelectedMemory(freshMemory)
-      }
-    }
+    if (memories.length === 0) return
+
+    setSelectedMemory(current => {
+      if (!current) return current
+      const fresh = memories.find(m => getMemoryId(m) === getMemoryId(current))
+      return fresh && hasMemoryChanged(current, fresh) ? fresh : current
+    })
   }, [memories])
 
   // Open specific memory when navigating from notification

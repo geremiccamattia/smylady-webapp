@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/contexts/SocketContext'
 import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Send, ArrowLeft, MessageCircle, Image as ImageIcon, Wifi, WifiOff, MapPin, ExternalLink } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
@@ -72,8 +72,20 @@ export default function Chat() {
     })
   }, [conversationId, chatData])
 
-  // Get messages array from response
-  const messages = chatData?.messages || []
+  /*
+   * Get messages array from response
+   *
+   * In useMemo, weil der `|| []`-Zweig sonst bei jedem Render ein neues Array
+   * liefert. Der Effekt unten hängt daran und scrollte dadurch bei jedem
+   * Render ans Ende der Liste — nicht nur bei neuen Nachrichten.
+   */
+  const messages = useMemo<ChatMessage[]>(
+    // Der Rückgabetyp steht explizit dran: Sonst leitet TypeScript aus
+    // `ChatMessage[] || []` die Union `ChatMessage[] | never[]` ab, und in
+    // messages.map() unten wäre der Parameter implizit `any`.
+    () => chatData?.messages || [],
+    [chatData?.messages],
+  )
 
   // Scroll to bottom when messages change
   useEffect(() => {

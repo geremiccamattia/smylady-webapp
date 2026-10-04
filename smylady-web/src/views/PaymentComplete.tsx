@@ -51,6 +51,10 @@ function PaymentCompleteContent() {
   useEffect(() => {
     window.dataLayer = window.dataLayer || []
     window.dataLayer.push({ event: 'ticket_purchased', ticket_id: ticketId })
+    // ticketId fehlt bewusst: Der Kauf soll genau einmal gemeldet werden.
+    // Aufgenommen feuerte das Tracking-Event erneut, sobald sich die ID ändert,
+    // und ein Kauf stünde doppelt in der Auswertung.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const setValue = (id: string, v: string | string[]) =>

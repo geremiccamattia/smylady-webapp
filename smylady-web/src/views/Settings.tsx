@@ -107,6 +107,11 @@ function SettingsContent() {
       // Remove the query parameter
       router.replace(pathname)
     }
+    // t fehlt bewusst: Die Funktion wechselt bei einem Sprachwechsel die
+    // Referenz. Aufgenommen liefe der Effekt dann erneut und könnte die
+    // Stripe-Rückmeldung ein zweites Mal einblenden. Ausgelöst werden soll sie
+    // allein durch den Query-Parameter der Rückkehr.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, router, pathname, toast])
 
   // Load settings on mount

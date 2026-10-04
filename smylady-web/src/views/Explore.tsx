@@ -121,6 +121,10 @@ function ExploreContent() {
       setSubmittedSearch(urlSearch)
       setSearchTrigger(prev => prev + 1)
     }
+    // submittedSearch fehlt bewusst: Der Effekt setzt es selbst. Aufgenommen
+    // liefe er nach jedem eigenen Lauf erneut — der Vergleich darüber dient
+    // allein dazu, die Übernahme aus der URL einmalig zu halten.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
   // Load saved location on mount - prioritize: saved > live geolocation > auto-detect > fallback
@@ -553,7 +557,10 @@ function ExploreContent() {
     if (priceFilter && priceFilter !== 'all') params.set('price', priceFilter)
     const newUrl = pathname + (params.toString() ? '?' + params.toString() : '')
     window.history.replaceState(null, '', newUrl)
-  }, [submittedSearch, selectedCategory, dateFilter, priceFilter])
+    // pathname ergänzt: Er geht in die geschriebene URL ein. Fehlte er, würde
+    // nach einem Sprachwechsel ohne Neumontage der alte Pfad in die Adresszeile
+    // geschrieben — der Effekt liefe mit der Fassung von vorher.
+  }, [submittedSearch, selectedCategory, dateFilter, priceFilter, pathname])
 
   useEffect(() => {
     return () => {
