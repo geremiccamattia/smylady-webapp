@@ -57,6 +57,14 @@ export default defineConfig([
       // Eine im JSX verwendete, aber nirgends definierte Komponente ist ein
       // sicherer Laufzeitfehler. Stand: 0 Treffer.
       'react/jsx-no-undef': 'error',
+      /*
+       * Fehlende keys lassen React Komponenten beim Sortieren oder Filtern
+       * einer Liste falsch wiederverwenden — falsche Daten in Karten,
+       * springende Eingabefelder. Die 66 Treffer des ersten Laufs waren
+       * sämtlich falsch positiv und stammten aus einer einzigen Datei, die
+       * dafür eine begründete Ausnahme trägt (views/ApiDocsPage.tsx).
+       */
+      'react/jsx-key': 'error',
 
       // ── Warnungen: Altlasten, nach Häufigkeit ───────────────────────────
       /*
@@ -65,13 +73,6 @@ export default defineConfig([
        * zu typisieren ist ein eigenes Vorhaben, kein Nebenbei-Fix.
        */
       '@typescript-eslint/no-explicit-any': 'warn',
-      /*
-       * 66 Treffer. Von allen Warnungen hier die fachlich ernsteste: Fehlende
-       * keys führen zu falsch wiederverwendeten Komponenten beim Neusortieren
-       * einer Liste — ein echter Darstellungsfehler, nur eben keiner, der sofort
-       * knallt. Erster Kandidat fürs Aufräumen und fürs Hochstufen.
-       */
-      'react/jsx-key': 'warn',
       /*
        * 48 Treffer. Nicht maskierte Apostrophe in deutschen Texten. Rein
        * kosmetisch; React gibt den Text korrekt aus.

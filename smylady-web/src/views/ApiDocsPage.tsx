@@ -1,5 +1,25 @@
 'use client'
 
+/* eslint-disable react/jsx-key --
+ * Die 66 Treffer dieser Regel in dieser Datei sind alle falsch positiv.
+ *
+ * Die Tabellen übergeben ihre Zeilen als Array von Arrays, etwa
+ * `rows={[[<Code>name</Code>, 'String', …], …]}`. ESLint sieht JSX in einem
+ * Array-Literal und verlangt einen key. Diese Arrays werden aber nie als
+ * children gerendert: Table (siehe unten) zerlegt sie mit
+ * `row.map((cell, j) => <td key={j}>{cell}</td>)`, jede Zelle landet also als
+ * EINZELNES Kind in einem <td>, das seinen key bereits hat. React verlangt für
+ * ein einzelnes Kind keinen key und warnt hier auch nicht.
+ *
+ * Keys zu ergänzen würde die Meldung zum Schweigen bringen, ohne dass React
+ * sie je benutzt — 66 Stellen Attrappe. Deshalb die Ausnahme an dieser einen
+ * Datei, statt die Regel projektweit zu entschärfen: Überall sonst bleibt sie
+ * scharf und fängt echte Fälle.
+ *
+ * Fällt die Ausnahme weg, müsste zuerst die Datenstruktur von Table geändert
+ * werden (Zellen als Objekte oder Render-Funktion statt JSX-Array).
+ */
+
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePathname } from 'next/navigation'
