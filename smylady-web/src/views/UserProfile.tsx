@@ -190,8 +190,16 @@ export default function UserProfile() {
 
   const isOwnProfile = currentUser && (currentUser.id === userId || currentUser._id === userId)
 
-  // All memories from profile
-  const allMemories: ProfileMemory[] = profile?.memories || []
+  /*
+   * In useMemo, damit die abgeleiteten Listen unten nicht bei jedem Render neu
+   * rechnen: `profile?.memories || []` erzeugt bei fehlendem Profil jedes Mal
+   * ein neues leeres Array, womit die useMemo-Abhängigkeit immer als geändert
+   * gilt und die Memoisierung ins Leere läuft.
+   */
+  const allMemories: ProfileMemory[] = useMemo(
+    () => profile?.memories || [],
+    [profile?.memories],
+  )
 
   // Highlighted memories (for Highlights tab)
   const highlightedMemories = useMemo(() => {
@@ -281,6 +289,10 @@ export default function UserProfile() {
     if (activeTab === 'memories' && expandedEvents.size === 0 && groupedMemories.length > 0) {
       setExpandedEvents(new Set(groupedMemories.map(g => g.eventId)))
     }
+    // expandedEvents.size fehlt bewusst: Der Effekt setzt expandedEvents selbst.
+    // Aufgenommen klappte er die Liste erneut auf, sobald jemand das letzte
+    // Event zuklappt — das Aufklappen soll nur beim Tabwechsel geschehen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, groupedMemories])
 
   // Highlight toggle mutation
@@ -2372,9 +2384,21 @@ function ProfileMemoryViewer({
     staleTime: 60000,
   })
 
-  // Use live data (from mutations) > fetched data (from query) > profile data (prop)
-  const activeMemoryReactions = liveMemoryData?.reactions || fetchedMemory?.reactions || memory.reactions || []
-  const activeComments = liveMemoryData?.comments || fetchedMemory?.comments || memory.comments || []
+  /*
+   * Use live data (from mutations) > fetched data (from query) > profile data (prop)
+   *
+   * In useMemo aus demselben Grund wie bei allMemories weiter oben: Der
+   * `|| []`-Zweig liefert sonst bei jedem Render ein neues Array und macht die
+   * davon abhängigen useMemo-Blöcke wirkungslos.
+   */
+  const activeMemoryReactions = useMemo(
+    () => liveMemoryData?.reactions || fetchedMemory?.reactions || memory.reactions || [],
+    [liveMemoryData?.reactions, fetchedMemory?.reactions, memory.reactions],
+  )
+  const activeComments = useMemo(
+    () => liveMemoryData?.comments || fetchedMemory?.comments || memory.comments || [],
+    [liveMemoryData?.comments, fetchedMemory?.comments, memory.comments],
+  )
   const activeUploadedBy = liveMemoryData?.uploadedBy || fetchedMemory?.uploadedBy || memory.uploadedBy
 
   const mentionedUserIds = useMemo(() => {
@@ -2523,6 +2547,10 @@ function ProfileMemoryViewer({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+    // onClose und onNavigate fehlen bewusst: Beide kommen unmemoisiert von der
+    // Elternkomponente und wechseln bei jedem Render die Referenz. Aufgenommen
+    // würde der Tastatur-Listener bei jedem Render ab- und neu angemeldet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, hasPrev, hasNext])
 
   // Helper: update live data from mutation response and also refresh background queries

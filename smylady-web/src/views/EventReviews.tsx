@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -43,12 +43,19 @@ function EventReviewsContent() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
 
-  useEffect(() => {
-    if (!eventId) return
-    loadData()
-  }, [eventId])
-
-  const loadData = async () => {
+  /*
+   * In useCallback und vor den Effekt gezogen.
+   *
+   * Die Reihenfolge ist nicht kosmetisch: `const loadData = …` wird nicht
+   * gehoistet, und das Abhängigkeitsarray des Effekts wird schon beim Rendern
+   * ausgewertet. Stünde die Definition weiterhin darunter, gäbe es einen
+   * ReferenceError.
+   *
+   * Abhängigkeit ist allein eventId; die setState-Funktionen sind von React
+   * garantiert stabil. Damit ändert sich loadData nur bei einem Eventwechsel,
+   * und der Effekt unten läuft genauso oft wie zuvor.
+   */
+  const loadData = useCallback(async () => {
     if (!eventId) return
     setLoading(true)
     try {
@@ -69,7 +76,12 @@ function EventReviewsContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    if (!eventId) return
+    loadData()
+  }, [eventId, loadData])
 
   const loadMore = async () => {
     if (!hasMore || loading || !eventId) return

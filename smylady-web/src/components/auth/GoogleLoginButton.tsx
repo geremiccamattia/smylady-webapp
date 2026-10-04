@@ -78,7 +78,9 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
         setIsLoading(false)
       }
     },
-    [login, toast, onSuccess]
+    // queryClient ergänzt: Die Instanz aus useQueryClient ist über die Lebenszeit
+    // des Providers stabil, der Callback wird dadurch nicht häufiger neu erzeugt.
+    [login, toast, onSuccess, queryClient]
   )
 
   useEffect(() => {

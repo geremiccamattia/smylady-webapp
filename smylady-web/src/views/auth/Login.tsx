@@ -318,6 +318,11 @@ export default function Login() {
     }
 
     fetchAllEvents()
+    // selectedCategory fehlt bewusst: Der Abruf holt alle Events der Stadt,
+    // gefiltert wird erst im Effekt darunter. Aufgenommen liefe bei jedem
+    // Kategoriewechsel eine vollständige Netzwerkabfrage statt einer lokalen
+    // Filterung.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCity])
 
   // Filter Ticketmaster events when category changes

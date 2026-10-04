@@ -221,16 +221,33 @@ export default function EventDetailClient({ id }: Props) {
     }
   }, [isExternalEvent, externalUrl, router])
 
+  /*
+   * Erste verfügbare Ticketkategorie vorbelegen — aber eine getroffene Auswahl
+   * nie überschreiben.
+   *
+   * Der Effekt lief vorher bei jeder neuen `event`-Referenz, also auch bei
+   * jedem Refetch des Queries (etwa beim Zurückwechseln in den Tab). Wer
+   * Kategorie 3 gewählt hatte, sprang dadurch unvermittelt auf die erste
+   * zurück — unmittelbar vor dem Kauf.
+   *
+   * Neu gesetzt wird nur noch, wenn es gute Gründe gibt: Es ist noch nichts
+   * gewählt, die gewählte Kategorie gibt es nicht mehr, oder sie ist inzwischen
+   * ausverkauft. In allen drei Fällen zeigt das Formular sonst etwas an, das
+   * sich nicht kaufen lässt.
+   */
   useEffect(() => {
-    if (event?.ticketTiers && event?.ticketTiers?.length > 0) {
-      const firstAvailable = event?.ticketTiers?.find((tier: any) =>
-        tier.quantity == null || tier.soldCount < tier.quantity
-      )
-      if (firstAvailable) {
-        setSelectedTierId(firstAvailable._id)
-      }
+    const tiers = event?.ticketTiers
+    if (!tiers || tiers.length === 0) return
+
+    const isAvailable = (tier: any) => tier.quantity == null || tier.soldCount < tier.quantity
+    const current = selectedTierId ? tiers.find((tier: any) => tier._id === selectedTierId) : undefined
+    if (current && isAvailable(current)) return
+
+    const firstAvailable = tiers.find(isAvailable)
+    if (firstAvailable) {
+      setSelectedTierId(firstAvailable._id)
     }
-  }, [event])
+  }, [event, selectedTierId])
 
   const { data: raffleStatus } = useQuery({
     queryKey: ['raffleStatus', eventId],

@@ -30,6 +30,40 @@ export function getMemoryDate(memory: Memory): string {
   return memory.uploadedAt || memory.createdAt || new Date().toISOString()
 }
 
+/**
+ * Hat sich an einer geöffneten Memory inhaltlich etwas geändert?
+ *
+ * Gedacht für die Ansichten, die eine ausgewählte Memory mit frischen
+ * Query-Daten abgleichen (MemoryGallery, EventMemories). Dort stand vorher ein
+ * Referenzvergleich `fresh !== selected`. Der schlug bei jedem Refetch an, weil
+ * das Objekt aus dem Cache nie dasselbe ist wie die lokale Kopie im State —
+ * besonders nach einer optimistischen Aktualisierung. Jedes Mal folgte ein
+ * überflüssiger setState samt Render.
+ *
+ * Verglichen wird nur, was sich durch Benutzung ändern kann und sichtbar ist.
+ * Verschachtelte Listen gehen über JSON: Das ist hier billig, weil die Prüfung
+ * eine einzelne Memory betrifft und nur bei neuen Query-Daten läuft.
+ */
+export function hasMemoryChanged(current: Memory, incoming: Memory): boolean {
+  if (current === incoming) return false
+
+  if (
+    current.caption !== incoming.caption ||
+    current.text !== incoming.text ||
+    current.privacy !== incoming.privacy ||
+    isMemoryHighlighted(current) !== isMemoryHighlighted(incoming) ||
+    getMemoryUrl(current) !== getMemoryUrl(incoming)
+  ) {
+    return true
+  }
+
+  const serialize = (value: unknown) => JSON.stringify(value ?? null)
+  return (
+    serialize(current.reactions) !== serialize(incoming.reactions) ||
+    serialize(current.comments) !== serialize(incoming.comments)
+  )
+}
+
 // Helper to check if memory is highlighted (supports both isHighlighted and isHighlight)
 export function isMemoryHighlighted(memory: Memory): boolean {
   return memory.isHighlighted || memory.isHighlight || false

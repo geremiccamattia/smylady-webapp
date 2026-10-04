@@ -61,6 +61,10 @@ function FeedContent() {
     setActiveTab('feed')
     // Gäste bekommen erst das Login-Modal — Posten geht nur eingeloggt.
     requireAuth(() => setShowCreatePost(true))
+    // requireAuth fehlt bewusst: Der Hook gibt bei jedem Render eine neue
+    // Funktion zurück. Aufgenommen öffnete sich das Erstellen-Fenster bei jedem
+    // Render erneut, statt einmal beim Aufruf mit ?shareEvent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareEventId, isAuthLoading])
 
   // Nach dem Schließen die share-Parameter aus der URL nehmen, sonst öffnet sich
