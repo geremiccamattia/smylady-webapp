@@ -15,6 +15,7 @@ import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { apiClient } from '@/services/api'
 import { authService } from '@/services/auth'
 import { useFingerprint } from '@/hooks/useFingerprint'
+import CreatorApplicationForm from '@/components/creator/CreatorApplicationForm'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -24,10 +25,11 @@ export default function Register() {
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [step, setStep] = useState<'register' | 'verify'>('register')
+  const [step, setStep] = useState<'register' | 'verify' | 'creator'>('register')
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [referralInput, setReferralInput] = useState('')
+  const [wantsCreator, setWantsCreator] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -38,6 +40,18 @@ export default function Register() {
     const storedCode = localStorage.getItem('referral_code')
     if (storedCode) {
       setReferralInput(storedCode)
+    }
+
+    /*
+     * ?creator=1 hakt die Creator-Checkbox vor — so verlinkt die
+     * Creator-Club-Seite Besucher ohne Konto direkt in den richtigen Flow.
+     *
+     * Bewusst über window.location statt useSearchParams: Letzteres verlangt
+     * beim Prerendering eine Suspense-Boundary, die diese Seite nicht hat. Für
+     * eine reine Vorbelegung reicht das Auslesen nach dem Mount.
+     */
+    if (new URLSearchParams(window.location.search).get('creator') === '1') {
+      setWantsCreator(true)
     }
   }, [])
 
@@ -116,6 +130,17 @@ export default function Register() {
       toast({
         title: t('auth.emailConfirmed', { defaultValue: 'Email confirmed!' }),
       })
+      /*
+       * Creator-Bewerbung als Zwischenschritt.
+       *
+       * Sie braucht ein Token, läuft also erst nach login(). Wer die Checkbox
+       * nicht gesetzt hat, geht wie bisher direkt zu /interests — an diesem Weg
+       * ändert sich nichts.
+       */
+      if (wantsCreator) {
+        setStep('creator')
+        return
+      }
       router.replace('/interests')
     } catch (error: any) {
       toast({
@@ -130,7 +155,8 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
-      <Card className="relative w-full max-w-md">
+      {/* Der Creator-Schritt braucht mehr Platz: vier Schritte, Kategorieraster. */}
+      <Card className={`relative w-full ${step === 'creator' ? 'max-w-2xl' : 'max-w-md'}`}>
         <CardHeader className="text-center">
           <button
             onClick={() => router.back()}
@@ -144,13 +170,26 @@ export default function Register() {
             alt="Share Your Party"
             className="mx-auto w-16 h-16 rounded-full object-cover mb-4"
           />
-          <CardTitle className="text-2xl gradient-text">{t('auth.createAccount', { defaultValue: 'Join now' })}</CardTitle>
+          <CardTitle className="text-2xl gradient-text">
+            {step === 'creator'
+              ? t('influencer.applyTitle', { defaultValue: 'Bewirb dich beim Creator Club' })
+              : t('auth.createAccount', { defaultValue: 'Join now' })}
+          </CardTitle>
           <CardDescription>
-            {t('auth.registerSubtitle', { defaultValue: 'Discover and share the best events' })}
+            {step === 'creator'
+              ? t('influencer.applySubtitle', {
+                  defaultValue: 'Dein Konto steht. Erzähl uns jetzt von deinen Kanälen.',
+                })
+              : t('auth.registerSubtitle', { defaultValue: 'Discover and share the best events' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 'verify' ? (
+          {step === 'creator' ? (
+            <CreatorApplicationForm
+              onSubmitted={() => router.replace('/interests')}
+              onSkip={() => router.replace('/interests')}
+            />
+          ) : step === 'verify' ? (
             <form onSubmit={handleVerify} className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
                 {t('auth.verificationSent', { email: registeredEmail, defaultValue: `We have sent a verification code to ${registeredEmail}.` })}
@@ -205,6 +244,27 @@ export default function Register() {
                 required
               />
             </div>
+            {/*
+              * Creator-Einstieg direkt in der Registrierung.
+              *
+              * Ersetzt den früheren eigenen Bewerbungsflow auf der
+              * Creator-Club-Seite: Die Bewerbung braucht ohnehin ein Konto,
+              * damit das Backend sie mit der userId verknüpfen kann.
+              */}
+            <label className="flex items-start gap-2 rounded-lg border p-3 cursor-pointer hover:bg-muted/40 transition-colors">
+              <input
+                type="checkbox"
+                checked={wantsCreator}
+                onChange={(e) => setWantsCreator(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-input"
+              />
+              <span className="text-sm">
+                {t('auth.creatorOptIn', {
+                  defaultValue: 'Ich bin Creator und möchte mich beim Creator Club bewerben',
+                })}
+              </span>
+            </label>
+
             <div className="space-y-2">
               <Label htmlFor="password">{t('auth.password', { defaultValue: 'Password' })}</Label>
               <div className="relative">
@@ -262,6 +322,12 @@ export default function Register() {
           </form>
           )}
 
+          {/*
+            * Im Creator-Schritt ist das Konto bereits angelegt — Social Login,
+            * der Login-Hinweis und die AGB-Zeile gehören dort nicht mehr hin.
+            */}
+          {step !== 'creator' && (
+          <>
           {/* Social Login */}
           <div className="mt-6">
             <div className="relative">
@@ -301,7 +367,16 @@ export default function Register() {
                     }
                   }
 
-                  router.push('/explore')
+                  /*
+                   * Die Creator-Checkbox steht über diesem Button und bleibt
+                   * auch beim Google-Weg sichtbar. Sie hier zu ignorieren wäre
+                   * eine Falle: Angehakt, Google geklickt, und die Bewerbung
+                   * fiele stillschweigend unter den Tisch. Der Zusatzschritt
+                   * der E-Mail-Registrierung lässt sich hier nicht einhängen —
+                   * der Google-Flow endet mit einer Weiterleitung —, deshalb
+                   * geht es zur eigenständigen Seite.
+                   */
+                  router.push(wantsCreator ? '/creator/apply' : '/explore')
                 }}
                 className="w-full"
               />
@@ -326,6 +401,8 @@ export default function Register() {
             </Link>
             {'.'}
           </p>
+          </>
+          )}
         </CardContent>
       </Card>
     </div>

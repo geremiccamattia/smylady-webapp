@@ -59,7 +59,11 @@ apiClient.interceptors.response.use(
         '/explore', '/login', '/register', '/join', '/event/', '/user/', '/feed', '/post/',
         // '/influencer' bleibt zusaetzlich drin, solange die 308-Weiterleitungen
         // in next.config.ts auf die alten URLs zeigen (Instagram, Mails, Google).
-        '/creator', '/influencer', '/api', '/communities',
+        // '/creator-' mit Bindestrich, NICHT '/creator': Sonst gälte per
+        // startsWith auch /creator/apply als öffentlich, und ein Gast bliebe
+        // dort auf einer Seite stehen, die ohne Token nichts laden kann.
+        // Gemeint sind die Landingpages /creator-club und /creator-events.
+        '/creator-', '/influencer', '/api', '/communities',
         // Scan-Zugang für Personal ohne Konto. Muss hier stehen, sonst wirft eine
         // beliebige 401-Nebenanfrage (z.B. getCurrentUser mit abgelaufenem Token
         // im localStorage) das Einlasspersonal auf /login — wo es sich mangels
