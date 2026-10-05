@@ -2456,11 +2456,6 @@ function ProfileMemoryViewer({
   const userReaction = getUserReaction(activeMemoryReactions as Reaction[] || [], currentUserId)
   const reactionCount = activeMemoryReactions.length || memory.likeCount || 0
 
-  // Get unique emojis for reaction summary
-  const getUniqueEmojis = (): string[] => {
-    const emojis: string[] = activeMemoryReactions.map((r: any) => String(r.emoji))
-    return Array.from(new Set(emojis)).slice(0, 3)
-  }
 
   // Extract unique user IDs from reactions for profile lookup
   const reactionUserIds = useMemo(() => {
@@ -2703,11 +2698,6 @@ function ProfileMemoryViewer({
     } else {
       memoryReactionMutation.mutate({ emoji: DEFAULT_LIKE_EMOJI })
     }
-  }
-
-  const handleMemoryReactionLongPress = () => {
-    if (!hasApiIds) return
-    setShowMemoryEmojiPicker(true)
   }
 
   const handleMemoryEmojiSelect = (emoji: string) => {
@@ -3006,48 +2996,49 @@ function ProfileMemoryViewer({
         {/* Reactions Section */}
         {hasApiIds && (
           <div className="p-4 border-b">
+            {/*
+              * Dieselbe Aufteilung wie in components/memories/MemoryViewer.tsx:
+              * erster Knopf deine Reaktion, zweiter die Auswahl, rechts die
+              * Anzahl der anderen. Vorher zeigten Knopf und Zusammenfassung
+              * dieselbe Emoji nebeneinander.
+              */}
             <div className="flex items-center gap-4">
-              {/* Reaction button */}
               <div className="flex items-center gap-2">
+                {/* Ein Klick reagiert sofort; der Rechtsklick-Picker entfällt. */}
                 <button
                   onClick={handleMemoryReactionClick}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    handleMemoryReactionLongPress()
-                  }}
+                  aria-label={
+                    userReaction
+                      ? t('posts.removeReaction', { defaultValue: 'Reaktion entfernen' })
+                      : t('posts.react', { defaultValue: 'Reagieren' })
+                  }
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
                   {userReaction ? (
                     <span className="text-2xl">{userReaction}</span>
                   ) : (
-                    <span className="text-2xl opacity-50 hover:opacity-100">👍</span>
+                    <span className="text-2xl opacity-50 hover:opacity-100">{DEFAULT_LIKE_EMOJI}</span>
                   )}
                 </button>
+                {/* Einziger Weg zur Emoji-Auswahl. */}
                 <button
                   onClick={() => setShowMemoryEmojiPicker(true)}
+                  aria-label={t('posts.chooseReaction', { defaultValue: 'Reaktion auswählen' })}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <Smile className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Reaction summary */}
+              {/* Anzahl statt Emoji-Bubbles — wer womit reagiert hat, steht im Modal. */}
               {reactionCount > 0 && (
                 <button
                   onClick={() => setShowReactionsModal(true)}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                  className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
                 >
-                  <div className="flex -space-x-1">
-                    {getUniqueEmojis().map((emoji, idx) => (
-                      <span
-                        key={idx}
-                        className="w-5 h-5 bg-muted rounded-full flex items-center justify-center text-xs border border-background"
-                      >
-                        {emoji}
-                      </span>
-                    ))}
-                  </div>
-                  <span>{reactionCount}</span>
+                  {reactionCount === 1
+                    ? t('common.person')
+                    : t('common.persons', { count: reactionCount })}
                 </button>
               )}
 
