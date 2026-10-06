@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { eventsService } from '@/services/events'
 import { favoritesService } from '@/services/favorites'
 import { apiClient } from '@/services/api'
@@ -31,7 +31,7 @@ import { getUserReaction, type Reaction } from '@/components/emojiReaction/Emoji
 import BoostModal from '@/components/events/BoostModal'
 import { ticketsService } from '@/services/tickets'
 import { chatService } from '@/services/chat'
-import { memoriesService, getMemoryUrl, getMemoryType, getMemoryId, getUploadedByInfo } from '@/services/memories'
+import { memoriesService, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, isMemoryHighlighted, type Memory } from '@/services/memories'
 import { useTranslation } from 'react-i18next'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
@@ -74,6 +74,7 @@ import {
   Gift,
   PenSquare,
   Star,
+  TrendingUp,
 } from 'lucide-react'
 
 interface Props { id: string }
@@ -92,6 +93,7 @@ export default function EventDetailClient({ id }: Props) {
   const [fullscreenMemoryIndex, setFullscreenMemoryIndex] = useState<number | null>(null)
   // 'react' = Einstieg über die Reaktionszeile der Kachel, Picker sofort offen.
   const [fullscreenMemoryAction, setFullscreenMemoryAction] = useState<'react' | undefined>(undefined)
+  const [memorySort, setMemorySort] = useState<'newest' | 'popular'>('newest')
   const [showRaffleBanner, setShowRaffleBanner] = useState(true)
   const memoriesRef = useRef<HTMLDivElement>(null)
 
@@ -328,6 +330,85 @@ export default function EventDetailClient({ id }: Props) {
       return () => clearTimeout(timer)
     }
   }, [eventMemories])
+
+  /*
+   * Sortierung der Gesamtliste — vorher sortierten die Schalter nur die
+   * eigenen Memories in der MemoryGallery darüber. Kacheln UND Vollbild
+   * arbeiten auf dieser Liste, damit der Index beider zusammenpasst.
+   *
+   * „Beliebteste" zählt die Reaktionen: Im öffentlichen Endpunkt ist `likes`
+   * dieselbe Liste wie `reactions`, beides zu addieren zählte doppelt.
+   */
+  const sortedEventMemories = useMemo<Memory[]>(() => {
+    const list = [...(eventMemories as Memory[])]
+    if (memorySort === 'popular') {
+      return list.sort((a, b) => (b.reactions?.length || 0) - (a.reactions?.length || 0))
+    }
+    return list.sort(
+      (a, b) => new Date(getMemoryDate(b)).getTime() - new Date(getMemoryDate(a)).getTime(),
+    )
+  }, [eventMemories, memorySort])
+
+  /*
+   * Was es bisher nur in der MemoryGallery gab (eigene Memories löschen,
+   * hervorheben, Personen markieren), jetzt aus dem Vollbild der Gesamtliste.
+   * Die Galerie zeigt auf der Eventseite keine Kacheln mehr.
+   *
+   * `ticketId` steht an jeder Memory der Gesamtliste — eigene Memories
+   * liegen am eigenen Ticket.
+   */
+  const isOwnEventMemory = (memory: Memory) =>
+    !!currentUserId &&
+    getUploadedByInfo(memory)._id?.toString() === currentUserId.toString()
+
+  const refreshEventMemories = () => {
+    queryClient.invalidateQueries({ queryKey: ['eventMemories', eventId] })
+    if (userTicket?.ticketId) {
+      queryClient.invalidateQueries({ queryKey: ['memories', userTicket.ticketId] })
+    }
+  }
+
+  // Teilnehmer zum Markieren — derselbe Schlüssel, den die MemoryGallery nutzt.
+  const { data: memoryParticipants = [] } = useQuery({
+    queryKey: ['eventParticipants', eventId],
+    queryFn: () => memoriesService.getEventParticipants(eventId!),
+    enabled: !!eventId && eventHasStarted && !!userTicket?.ticketId,
+  })
+
+  const deleteMemoryMutation = useMutation({
+    mutationFn: (memory: Memory) =>
+      memoriesService.deleteMemory(memory.ticketId || '', getMemoryId(memory)),
+    onSuccess: () => {
+      setFullscreenMemoryIndex(null)
+      setFullscreenMemoryAction(undefined)
+      refreshEventMemories()
+      toast({ title: t('common.success'), description: t('memories.deleted') })
+    },
+    onError: () => {
+      toast({ title: t('common.error'), description: t('memories.deleteError'), variant: 'destructive' })
+    },
+  })
+
+  const highlightMemoryMutation = useMutation({
+    mutationFn: (memory: Memory) =>
+      memoriesService.toggleHighlight(memory.ticketId || '', getMemoryId(memory)),
+    onSuccess: refreshEventMemories,
+    onError: () => {
+      toast({ title: t('common.error'), description: t('memories.highlightError'), variant: 'destructive' })
+    },
+  })
+
+  const tagMemoryMutation = useMutation({
+    mutationFn: ({ memory, userId, x, y }: { memory: Memory; userId: string; x: number; y: number }) =>
+      memoriesService.addPhotoTag(memory.ticketId || '', getMemoryId(memory), userId, x, y),
+    onSuccess: () => {
+      refreshEventMemories()
+      toast({ title: t('common.success'), description: t('memories.personTagged') })
+    },
+    onError: () => {
+      toast({ title: t('common.error'), description: t('memories.markError'), variant: 'destructive' })
+    },
+  })
 
   // Fetch user's purchased ticket for this event (to display ticket info on event page)
   const { data: purchasedTicket } = useQuery({
@@ -1097,15 +1178,53 @@ export default function EventDetailClient({ id }: Props) {
           {/* Memories Section - Only for internal events */}
           {eventHasStarted && !isExternalEvent && (
             <div ref={memoriesRef} id="memories" className="bg-card rounded-xl border p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Image className="w-5 h-5 text-muted-foreground" />
-                <h2 className="text-xl font-semibold">{t('memories.title')}</h2>
-                <span className="text-sm text-muted-foreground">({eventMemories.length})</span>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <Image className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-xl font-semibold">{t('memories.title')}</h2>
+                  <span className="text-sm text-muted-foreground">({eventMemories.length})</span>
+                </div>
+
+                {/* Sortierung der Gesamtliste — vorher saß sie in der MemoryGallery */}
+                {eventMemories.length > 0 && (
+                  <div className="flex items-center bg-muted rounded-lg p-1">
+                    <button
+                      type="button"
+                      onClick={() => setMemorySort('newest')}
+                      className={cn(
+                        'flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors',
+                        memorySort === 'newest'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Clock className="w-4 h-4" />
+                      <span className="hidden sm:inline">{t('memories.sortNewest')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMemorySort('popular')}
+                      className={cn(
+                        'flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors',
+                        memorySort === 'popular'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      <span className="hidden sm:inline">{t('memories.sortPopular')}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Upload-Bereich nur für Ticket-Besitzer */}
+              {/*
+               * Nur Hochladen für Ticket-Besitzer. Die eigenen Memories stehen
+               * in der Gesamtliste darunter — mit Galerie erschienen sie doppelt.
+               */}
               {userTicket?.ticketId && (
                 <MemoryGallery
+                  mode="uploadOnly"
                   ticketId={userTicket.ticketId}
                   eventId={eventId!}
                   eventTitle={event.name}
@@ -1114,13 +1233,14 @@ export default function EventDetailClient({ id }: Props) {
                   isOrganizer={isOwner}
                   allowGuestMemories={event?.allowGuestMemories !== false}
                   isPublicEvent={event?.visibility === 'public'}
+                  onUploaded={refreshEventMemories}
                 />
               )}
 
               {/* Alle Event-Memories für ALLE sichtbar */}
-              {eventMemories.length > 0 ? (
+              {sortedEventMemories.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-4">
-                  {eventMemories.map((memory: any, index: number) => {
+                  {sortedEventMemories.map((memory: any, index: number) => {
                     const memUrl = getMemoryUrl(memory)
                     const memType = getMemoryType(memory)
                     const uploaderInfo = getUploadedByInfo(memory)
@@ -1157,6 +1277,11 @@ export default function EventDetailClient({ id }: Props) {
                               (e.target as HTMLImageElement).style.display = 'none'
                             }}
                           />
+                        )}
+                        {isMemoryHighlighted(memory) && (
+                          <div className="absolute top-2 right-2">
+                            <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                          </div>
                         )}
                         <div className="absolute bottom-2 left-2">
                           <Avatar className="w-6 h-6 border-2 border-white">
@@ -1195,12 +1320,14 @@ export default function EventDetailClient({ id }: Props) {
                     )
                   })}
                 </div>
-              ) : !userTicket?.ticketId ? (
-                <div className="text-center py-8 bg-muted/30 rounded-lg">
+              ) : (
+                // Für alle, auch Ticket-Besitzer: Deren leere Galerie mit
+                // eigenem Hinweis gibt es auf der Eventseite nicht mehr.
+                <div className="text-center py-8 bg-muted/30 rounded-lg mt-4">
                   <Image className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">{t('memories.noMemories')}</p>
                 </div>
-              ) : null}
+              )}
             </div>
           )}
 
@@ -2059,37 +2186,57 @@ export default function EventDetailClient({ id }: Props) {
        * hängt sie an jede Memory an (event.service.ts), und Reaktionen laufen
        * über /tickets/:ticketId/memories/:memoryId/reactions.
        */}
-      {fullscreenMemoryIndex !== null && eventMemories[fullscreenMemoryIndex] && (
-        <MemoryViewer
-          memory={eventMemories[fullscreenMemoryIndex]}
-          ticketId={eventMemories[fullscreenMemoryIndex].ticketId || ''}
-          eventId={eventId!}
-          eventTitle={event.name}
-          memoryIndex={fullscreenMemoryIndex}
-          totalCount={eventMemories.length}
-          onNavigate={(index) => setFullscreenMemoryIndex(index)}
-          initialAction={fullscreenMemoryAction}
-          onClose={() => {
-            setFullscreenMemoryIndex(null)
-            setFullscreenMemoryAction(undefined)
-          }}
-          userReaction={getUserReaction(
-            (eventMemories[fullscreenMemoryIndex].reactions || []) as Reaction[],
-            user?.id || user?._id,
-          )}
-          reactionCount={eventMemories[fullscreenMemoryIndex].reactions?.length || 0}
-          isPublicEvent={event.visibility === 'public'}
-          onMemoryUpdate={(updated) => {
-            // Optimistisch auch in der Kachel-Liste nachziehen, damit Zahl und
-            // eigene Reaktion dort sofort stimmen und nicht erst nach dem Refetch.
-            queryClient.setQueryData(['eventMemories', id], (old: any[] | undefined) =>
-              (old || []).map((m) =>
-                getMemoryId(m) === getMemoryId(updated) ? { ...m, ...updated } : m,
-              ),
-            )
-          }}
-        />
-      )}
+      {fullscreenMemoryIndex !== null && sortedEventMemories[fullscreenMemoryIndex] && (() => {
+        const memory = sortedEventMemories[fullscreenMemoryIndex]
+        const isOwn = isOwnEventMemory(memory)
+
+        return (
+          <MemoryViewer
+            memory={memory}
+            ticketId={memory.ticketId || ''}
+            eventId={eventId!}
+            eventTitle={event.name}
+            memoryIndex={fullscreenMemoryIndex}
+            totalCount={sortedEventMemories.length}
+            onNavigate={(index) => setFullscreenMemoryIndex(index)}
+            initialAction={fullscreenMemoryAction}
+            onClose={() => {
+              setFullscreenMemoryIndex(null)
+              setFullscreenMemoryAction(undefined)
+            }}
+            userReaction={getUserReaction(
+              (memory.reactions || []) as Reaction[],
+              currentUserId ?? undefined,
+            )}
+            reactionCount={memory.reactions?.length || 0}
+            isPublicEvent={event.visibility === 'public'}
+            // Bisher nur in der MemoryGallery — dort ebenfalls nur für eigene.
+            onDelete={isOwn ? () => {
+              if (confirm(t('memories.deleteConfirm'))) {
+                deleteMemoryMutation.mutate(memory)
+              }
+            } : undefined}
+            onToggleHighlight={isOwn ? () => highlightMemoryMutation.mutate(memory) : undefined}
+            isHighlighted={isMemoryHighlighted(memory)}
+            photoTags={memory.photoTags}
+            participants={memoryParticipants}
+            canTag={eventHasStarted && isOwn}
+            onAddTag={(taggedUserId, x, y) =>
+              tagMemoryMutation.mutate({ memory, userId: taggedUserId, x, y })
+            }
+            onMemoryUpdate={(updated) => {
+              // Optimistisch auch in der Kachel-Liste nachziehen, damit Zahl und
+              // eigene Reaktion dort sofort stimmen und nicht erst nach dem Refetch.
+              // Schlüssel wie bei der Abfrage oben: eventId, nicht der Routenparameter.
+              queryClient.setQueryData(['eventMemories', eventId], (old: any[] | undefined) =>
+                (old || []).map((m) =>
+                  getMemoryId(m) === getMemoryId(updated) ? { ...m, ...updated } : m,
+                ),
+              )
+            }}
+          />
+        )
+      })()}
 
     </div>
   )
