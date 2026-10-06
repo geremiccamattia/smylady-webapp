@@ -234,7 +234,18 @@ export default function MemoryGallery({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-lg font-semibold">{t('memories.title')} ({memories.length})</h3>
+        {/*
+          * Eigener Schlüssel, nicht memories.title.
+          *
+          * Diese Galerie zeigt die Memories des EIGENEN Tickets
+          * (GET /tickets/:ticketId/memories). Auf der Eventseite steht
+          * darunter eine zweite Liste mit allen Memories des Events, die
+          * memories.title trägt — mit demselben Text standen dort zweimal
+          * „Erinnerungen" mit verschiedenen Zahlen untereinander.
+          */}
+        <h3 className="text-lg font-semibold">
+          {t('memories.yourTitle', { defaultValue: 'Deine Erinnerungen' })} ({memories.length})
+        </h3>
         <div className="flex items-center gap-2">
           {/* Sort buttons */}
           {memories.length > 0 && (

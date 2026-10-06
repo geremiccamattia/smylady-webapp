@@ -34,7 +34,17 @@ import {
 type SortOption = 'newest' | 'oldest' | 'mostLiked'
 
 export default function EventMemories() {
-  const { eventId } = useParams<{ eventId: string }>()
+  /*
+   * Der Routenparameter heißt `id`, nicht `eventId` — die Route ist
+   * /event/[id]/memories. Hier stand `const { eventId } = useParams(...)`,
+   * womit der Wert immer undefined war und sämtliche Abfragen der Seite auf
+   * `enabled: !!eventId` hingen. Die Unterseite blieb dadurch dauerhaft leer.
+   *
+   * Der Wert kann ein Slug sein („name-abcd1234"). Die Event-Endpunkte lösen
+   * ihn auf, die Memory- und Ticket-Endpunkte nicht — deshalb unten die
+   * Trennung zwischen routeId und der echten ObjectId.
+   */
+  const { id: routeId } = useParams<{ id: string }>()
   const router = useRouter()
   const pathname = usePathname()
   const { t } = useTranslation()
@@ -54,12 +64,23 @@ export default function EventMemories() {
   const [reportingMemory, setReportingMemory] = useState<Memory | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('newest')
 
-  // Fetch event details
+  // Fetch event details — verträgt den Slug aus der Route.
   const { data: event, isLoading: eventLoading } = useQuery({
-    queryKey: ['event', eventId],
-    queryFn: () => eventsService.getEventById(eventId!),
-    enabled: !!eventId,
+    queryKey: ['event', routeId],
+    queryFn: () => eventsService.getEventById(routeId!),
+    enabled: !!routeId,
   })
+
+  /*
+   * Die echte ObjectId, bewusst OHNE Rückfall auf routeId.
+   *
+   * Alles darunter — Memories, Tickets, Teilnehmer — läuft gegen Endpunkte,
+   * die keine Slugs auflösen. Mit einem Rückfall liefen diese Abfragen schon
+   * vor dem Laden des Events los, und zwar mit dem Slug. So bleibt der Wert
+   * undefined, bis das Event da ist, und `enabled: !!eventId` hält sie
+   * zurück.
+   */
+  const eventId = event?._id || event?.id
 
   const eventHasStarted = event ? new Date(event.eventDate) <= new Date() : false
 
@@ -340,7 +361,8 @@ export default function EventMemories() {
 
             {/* Event Details */}
             <div className="flex-1 min-w-0">
-              <Link href={`/event/${eventId}`} className="hover:underline">
+              {/* Zurück zur Eventseite mit dem Slug aus der Route, nicht der ObjectId. */}
+              <Link href={`/event/${routeId}`} className="hover:underline">
                 <h1 className="text-xl font-bold truncate">{event.name}</h1>
               </Link>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
@@ -411,7 +433,8 @@ export default function EventMemories() {
       {!userTicket?.ticketId && isAuthenticated && (
         <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground mb-6">
           <p>{t('memories.needTicket')}</p>
-          <Link href={`/event/${eventId}`} className="text-primary hover:underline">
+          {/* Ebenfalls der Slug — siehe Link auf den Eventnamen weiter oben. */}
+          <Link href={`/event/${routeId}`} className="text-primary hover:underline">
             {t('tickets.buyNow')}
           </Link>
         </div>

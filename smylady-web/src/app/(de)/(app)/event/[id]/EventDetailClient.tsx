@@ -305,18 +305,34 @@ export default function EventDetailClient({ id }: Props) {
     enabled: !!id && !!user && !!event,
   })
 
-  // Fetch event memories - public endpoint, visible without a ticket
-  // MUST be called before any conditional returns to follow React hook rules
+  /*
+   * Fetch event memories - public endpoint, visible without a ticket
+   * MUST be called before any conditional returns to follow React hook rules
+   *
+   * `eventId`, nicht `id`: Die Route läuft unter Slugs der Form
+   * „name-abcd1234" (generateEventSlug, letzte acht Zeichen der ObjectId).
+   * Mit dem rohen Parameter lief die Anfrage gegen eine ID, die es so nicht
+   * gibt — der Zähler stand auf (0) und die Liste darunter erschien nie.
+   * eventId stammt aus dem geladenen Event und ist die echte ObjectId; alle
+   * anderen Abfragen dieser Datei nutzen sie ebenfalls.
+   */
   const { data: eventMemories = [] } = useQuery({
-    queryKey: ['eventMemories', id],
+    queryKey: ['eventMemories', eventId],
     queryFn: async () => {
       try {
-        return await eventsService.getEventMemories(id!)
-      } catch {
+        return await eventsService.getEventMemories(eventId!)
+      } catch (error) {
+        /*
+         * Der leere Rückgabewert hält die Seite am Leben — ohne Memories
+         * fehlt nur dieser Abschnitt. Lautlos darf er aber nicht sein: Genau
+         * dieses Schlucken hat die falsche ID oben jahrelang unsichtbar
+         * gemacht, denn eine leere Liste sieht aus wie „es gibt keine".
+         */
+        console.error('[EventDetail] Memories konnten nicht geladen werden', { eventId, error })
         return []
       }
     },
-    enabled: !!id && eventHasStarted,
+    enabled: !!eventId && eventHasStarted,
   })
 
   /*

@@ -570,6 +570,7 @@
   "memories": {
     "react": "React",
     "title": "Memories",
+    "yourTitle": "Your memories",
     "addMemory": "Add Memory",
     "noMemories": "No memories yet",
     "uploadPhoto": "Upload Photo",
