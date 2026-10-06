@@ -23,7 +23,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+<<<<<<< HEAD
 import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, resolveUploader } from '@/services/memories'
+=======
+import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, summarizeReactions } from '@/services/memories'
+>>>>>>> fix/memory-reaction-row
 import { apiClient } from '@/services/api'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
@@ -199,6 +203,9 @@ export default function MemoryViewer({
    */
   const uploadedByUser = resolveUploader(memory, participants)
   const uploaderName = uploadedByUser.name || t('common.user', { defaultValue: 'Nutzer' })
+
+  // Steuert, ob die Zusammenfassung Emoji-Bubbles oder nur die Personenzahl zeigt.
+  const reactionSummary = useMemo(() => summarizeReactions(memory.reactions), [memory.reactions])
 
   const mentionedUserIds = useMemo(() => {
     const ids = new Set<string>()
@@ -927,21 +934,39 @@ export default function MemoryViewer({
             </div>
 
             {/*
-              * Zusammenfassung: Anzahl statt Emoji-Bubbles.
+              * Zusammenfassung — Bubbles nur bei verschiedenen Reaktionen.
               *
-              * Die Bubbles wiederholten bei einer einzelnen Reaktion den Knopf
-              * links. Das Textlabel macht daraus eine Aussage über Personen —
-              * dasselbe Muster wie in components/PostCard.tsx. Welche Emoji von
-              * wem kam, steht weiterhin im Modal.
+              * Reagieren alle mit derselben Emoji, wiederholten die Bubbles nur
+              * den Knopf links; dann genügt die Anzahl als Personenangabe.
+              * Sobald sich die Reaktionen unterscheiden, tragen sie dagegen
+              * echte Information — nämlich DASS sie sich unterscheiden —, und
+              * die Bubbles kommen zurück, häufigste zuerst. Welche Emoji von
+              * wem kam, steht in beiden Fällen im Modal.
               */}
             {reactionCount > 0 && (
               <button
                 onClick={() => setShowReactionsModal(true)}
-                className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
               >
-                {reactionCount === 1
-                  ? t('common.person')
-                  : t('common.persons', { count: reactionCount })}
+                {reactionSummary.distinctCount > 1 ? (
+                  <>
+                    <span className="flex -space-x-1">
+                      {reactionSummary.topEmojis.map(emoji => (
+                        <span
+                          key={emoji}
+                          className="w-5 h-5 bg-muted rounded-full flex items-center justify-center text-xs border border-background"
+                        >
+                          {emoji}
+                        </span>
+                      ))}
+                    </span>
+                    <span>{reactionCount}</span>
+                  </>
+                ) : reactionCount === 1 ? (
+                  t('common.person')
+                ) : (
+                  t('common.persons', { count: reactionCount })
+                )}
               </button>
             )}
 

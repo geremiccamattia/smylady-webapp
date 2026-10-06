@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
 import { userService, isProfileUnavailableError } from '@/services/user'
 import { postsService, Post, Comment, LikedByUser } from '@/services/posts'
-import { memoriesService } from '@/services/memories'
+import { memoriesService, summarizeReactions } from '@/services/memories'
 import { apiClient } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -2456,6 +2456,12 @@ function ProfileMemoryViewer({
   const userReaction = getUserReaction(activeMemoryReactions as Reaction[] || [], currentUserId)
   const reactionCount = activeMemoryReactions.length || memory.likeCount || 0
 
+  // Steuert, ob die Zusammenfassung Emoji-Bubbles oder nur die Personenzahl zeigt.
+  const reactionSummary = useMemo(
+    () => summarizeReactions(activeMemoryReactions as Array<{ emoji?: string }>),
+    [activeMemoryReactions],
+  )
+
 
   // Extract unique user IDs from reactions for profile lookup
   const reactionUserIds = useMemo(() => {
@@ -3030,15 +3036,37 @@ function ProfileMemoryViewer({
                 </button>
               </div>
 
-              {/* Anzahl statt Emoji-Bubbles — wer womit reagiert hat, steht im Modal. */}
+              {/*
+                * Bubbles nur bei verschiedenen Reaktionen — gleiche Regel wie in
+                * components/memories/MemoryViewer.tsx, gemeinsame Logik in
+                * summarizeReactions. Reagieren alle gleich, wiederholten die
+                * Bubbles den Knopf links; unterscheiden sie sich, zeigen sie
+                * genau das.
+                */}
               {reactionCount > 0 && (
                 <button
                   onClick={() => setShowReactionsModal(true)}
-                  className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
                 >
-                  {reactionCount === 1
-                    ? t('common.person')
-                    : t('common.persons', { count: reactionCount })}
+                  {reactionSummary.distinctCount > 1 ? (
+                    <>
+                      <span className="flex -space-x-1">
+                        {reactionSummary.topEmojis.map(emoji => (
+                          <span
+                            key={emoji}
+                            className="w-5 h-5 bg-muted rounded-full flex items-center justify-center text-xs border border-background"
+                          >
+                            {emoji}
+                          </span>
+                        ))}
+                      </span>
+                      <span>{reactionCount}</span>
+                    </>
+                  ) : reactionCount === 1 ? (
+                    t('common.person')
+                  ) : (
+                    t('common.persons', { count: reactionCount })
+                  )}
                 </button>
               )}
 
