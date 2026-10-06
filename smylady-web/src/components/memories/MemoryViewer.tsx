@@ -23,12 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-<<<<<<< HEAD
-import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, resolveUploader } from '@/services/memories'
-=======
-import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, summarizeReactions } from '@/services/memories'
->>>>>>> fix/memory-reaction-row
-import { apiClient } from '@/services/api'
+import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, resolveUploader, summarizeReactions } from '@/services/memories'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
