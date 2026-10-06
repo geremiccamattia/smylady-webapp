@@ -35,8 +35,32 @@ export function isMemoryHighlighted(memory: Memory): boolean {
   return memory.isHighlighted || memory.isHighlight || false
 }
 
+export interface UploaderInfo {
+  _id: string
+  /*
+   * Fehlt, wenn der Endpunkt uploadedBy nicht befüllt hat.
+   *
+   * Vorher stand hier `name: string`, und der Objekt-Zweig unten reichte ein
+   * unvollständiges Objekt unverändert durch — der Typ behauptete also einen
+   * Namen, den es zur Laufzeit nicht gab. Aufrufer rendern den Wert ungeprüft,
+   * und ein `undefined` fällt im JSX lautlos weg. Optional zwingt dazu, einen
+   * Ersatz zu wählen.
+   */
+  name?: string
+  username?: string
+  profileImage?: string
+}
+
+/** Nur die Felder, die zum Auflösen eines Uploaders nötig sind. */
+export interface UploaderCandidate {
+  _id: string
+  name?: string
+  username?: string
+  profileImage?: string
+}
+
 // Helper to get uploadedBy user info (handles both object and string/ObjectId cases)
-export function getUploadedByInfo(memory: Memory): { _id: string; name: string; username?: string; profileImage?: string } {
+export function getUploadedByInfo(memory: Memory): UploaderInfo {
   const uploadedBy = memory.uploadedBy
 
   // If it's already an object with _id
@@ -46,11 +70,43 @@ export function getUploadedByInfo(memory: Memory): { _id: string; name: string; 
 
   // If it's a string (ObjectId), return minimal info
   if (typeof uploadedBy === 'string') {
-    return { _id: uploadedBy, name: 'User' }
+    return { _id: uploadedBy }
   }
 
   // Fallback
-  return { _id: '', name: 'Unknown' }
+  return { _id: '' }
+}
+
+/**
+ * Uploader einer Memory samt Name und Bild — notfalls über die Teilnehmerliste.
+ *
+ * Der öffentliche Endpunkt GET /events/:eventId/memories liefert `uploadedBy`
+ * nur mit `_id`, ohne Name und Bild. Die Teilnehmerliste desselben Events
+ * (GET /tickets/event/:eventId/participants) kennt beides, also wird von dort
+ * nachgeschlagen, statt eine weitere Abfrage je Memory zu starten. Dasselbe
+ * Vorgehen nutzt das Reaktions-Modal im MemoryViewer schon länger.
+ *
+ * `name` kann weiterhin fehlen, wenn auch die Teilnehmerliste nichts hergibt
+ * — etwa bei einem gelöschten Konto. Die Anzeigestelle setzt dann einen
+ * übersetzten Platzhalter; dieser Service bleibt frei von Textkonstanten.
+ */
+export function resolveUploader(
+  memory: Memory,
+  participants: ReadonlyArray<UploaderCandidate> = [],
+): UploaderInfo {
+  const info = getUploadedByInfo(memory)
+  if (info.name) return info
+  if (!info._id) return info
+
+  const participant = participants.find(candidate => candidate._id === info._id)
+  if (!participant) return info
+
+  return {
+    ...info,
+    name: participant.name,
+    username: info.username ?? participant.username,
+    profileImage: info.profileImage ?? participant.profileImage,
+  }
 }
 
 export interface Memory {
@@ -72,10 +128,21 @@ export interface Memory {
   privacy: 'public' | 'private' | 'custom'
   selectedViewers?: string[]
   ticketId?: string
-  // uploadedBy can be either a populated object or a string (ObjectId)
+  /*
+   * uploadedBy kommt in drei Formen, je nach Endpunkt:
+   *   - vollständig befülltes Objekt (GET /tickets/:ticketId/memories)
+   *   - Objekt mit _id, aber OHNE name und profileImage
+   *     (GET /events/:eventId/memories, der öffentliche Endpunkt)
+   *   - blanke ObjectId als String
+   *
+   * `name` war hier als Pflichtfeld deklariert. Der Compiler hielt die mittlere
+   * Form damit für unmöglich, obwohl sie real auftritt — der Kopfbereich des
+   * MemoryViewers rendert dann einen leeren Namen. Optional ist unbequemer,
+   * aber ehrlich: Jede Anzeigestelle muss den Fall behandeln.
+   */
   uploadedBy: {
     _id: string
-    name: string
+    name?: string
     username?: string
     profileImage?: string
   } | string

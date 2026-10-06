@@ -31,7 +31,7 @@ import { getUserReaction, type Reaction } from '@/components/emojiReaction/Emoji
 import BoostModal from '@/components/events/BoostModal'
 import { ticketsService } from '@/services/tickets'
 import { chatService } from '@/services/chat'
-import { memoriesService, getMemoryUrl, getMemoryType, getMemoryId, getUploadedByInfo } from '@/services/memories'
+import { memoriesService, getMemoryUrl, getMemoryType, getMemoryId, resolveUploader } from '@/services/memories'
 import { useTranslation } from 'react-i18next'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
@@ -300,6 +300,26 @@ export default function EventDetailClient({ id }: Props) {
       }
     },
     enabled: !!id && eventHasStarted,
+  })
+
+  /*
+   * Teilnehmer des Events — als Namensquelle für die Memories.
+   *
+   * Die Liste oben kommt aus GET /events/:id/memories, dem öffentlichen
+   * Endpunkt. Der liefert `uploadedBy` nur mit `_id`, ohne Name und Bild;
+   * GET /tickets/:ticketId/memories (von MemoryGallery benutzt) liefert das
+   * vollständige Objekt. Deshalb blieb der Kopfbereich des Viewers hier leer,
+   * während er in der Ticket-Galerie stimmte.
+   *
+   * Statt die Memories einzeln nachzuladen, wird aus dieser einen Liste
+   * aufgelöst — dieselbe Quelle, die MemoryGallery ohnehin schon für die
+   * Personenmarkierung abruft, und dieselbe, über die das Reaktions-Modal
+   * seine Namen auflöst.
+   */
+  const { data: eventParticipants = [] } = useQuery({
+    queryKey: ['eventParticipants', eventId],
+    queryFn: () => memoriesService.getEventParticipants(eventId!),
+    enabled: !!eventId && eventHasStarted,
   })
 
   useEffect(() => {
@@ -1107,7 +1127,9 @@ export default function EventDetailClient({ id }: Props) {
                   {eventMemories.map((memory: any, index: number) => {
                     const memUrl = getMemoryUrl(memory)
                     const memType = getMemoryType(memory)
-                    const uploaderInfo = getUploadedByInfo(memory)
+                    // Gleiche Auflösung wie im Viewer, sonst zeigte die Kachel
+                    // ein „?" und das geöffnete Bild darüber den Namen.
+                    const uploaderInfo = resolveUploader(memory, eventParticipants)
                     return (
                       <div
                         key={getMemoryId(memory)}
@@ -2051,6 +2073,13 @@ export default function EventDetailClient({ id }: Props) {
           eventTitle={event.name}
           memoryIndex={fullscreenMemoryIndex}
           totalCount={eventMemories.length}
+          /*
+           * Ohne diese Liste konnte der Viewer den Uploader nicht auflösen:
+           * Die Memories dieses Endpunkts tragen nur dessen _id. Die anderen
+           * Einstiegspunkte (MemoryGallery, EventMemories) reichen sie längst
+           * durch — hier fehlte sie.
+           */
+          participants={eventParticipants}
           onNavigate={(index) => setFullscreenMemoryIndex(index)}
           initialAction={fullscreenMemoryAction}
           onClose={() => {
