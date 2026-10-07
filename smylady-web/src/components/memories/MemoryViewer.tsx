@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, summarizeReactions } from '@/services/memories'
 import { apiClient } from '@/services/api'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
@@ -32,6 +32,7 @@ import { getInitials, formatRelativeTime, cn, resolveImageUrl } from '@/lib/util
 import MentionInput, { RenderTextWithMentions, MentionUser, getMentionDisplayName } from '@/components/mentionInput/MentionInput'
 import {
   EmojiReactionPicker,
+  DEFAULT_LIKE_EMOJI,
 } from '@/components/emojiReaction/EmojiReactionPicker'
 
 interface PhotoTag {
@@ -187,6 +188,9 @@ export default function MemoryViewer({
   const memoryUrl = getMemoryUrl(memory)
   const memoryType = getMemoryType(memory)
   const uploadedByUser = getUploadedByInfo(memory)
+
+  // Steuert, ob die Zusammenfassung Emoji-Bubbles oder nur die Personenzahl zeigt.
+  const reactionSummary = useMemo(() => summarizeReactions(memory.reactions), [memory.reactions])
 
   const mentionedUserIds = useMemo(() => {
     const ids = new Set<string>()
@@ -608,14 +612,17 @@ export default function MemoryViewer({
     setShowEmojiPicker(true)
   }
 
+  /*
+   * Ein Klick, eine Reaktion — wie in der App (ImageViewer.handleReactionPress).
+   *
+   * Vorher öffnete dieser Knopf ohne bestehende Reaktion den Emoji-Picker,
+   * obwohl er einen Daumen zeigte: Der angezeigte Daumen ließ sich nicht
+   * anklicken, ohne vorher eine Auswahl zu treffen. Jetzt reagiert er direkt
+   * mit dem Standard-Daumen; die Auswahl liegt beim Smiley-Knopf daneben.
+   */
   const handleMemoryReactionClick = () => {
-    if (userReaction) {
-      // Remove reaction by toggling same emoji
-      memoryReactionMutation.mutate({ emoji: userReaction })
-    } else {
-      // Show picker
-      openMemoryEmojiPicker()
-    }
+    // Dieselbe Emoji erneut zu senden, nimmt die Reaktion zurück.
+    memoryReactionMutation.mutate({ emoji: userReaction || DEFAULT_LIKE_EMOJI })
   }
 
 
@@ -661,12 +668,6 @@ export default function MemoryViewer({
     setPendingTagPosition(null)
     setIsTagMode(false)
     setTagSearchQuery('')
-  }
-
-  // Get unique emojis for memory reactions summary
-  const getUniqueEmojis = () => {
-    const emojis = memory.reactions?.map(r => r.emoji) || []
-    return [...new Set(emojis)].slice(0, 3)
   }
 
   return (
@@ -874,50 +875,83 @@ export default function MemoryViewer({
           </div>
         )}
 
-        {/* Actions - Reactions */}
+        {/*
+          * Actions - Reactions
+          *
+          * Eine Rolle je Element: Der erste Knopf ist DEINE Reaktion, der
+          * zweite öffnet die Auswahl, die Zusammenfassung zählt die ANDEREN.
+          * Vorher zeigten erster Knopf und Zusammenfassung dieselbe Emoji —
+          * wer einmal reagiert hatte, sah sie doppelt nebeneinander.
+          */}
         <div className="p-4 border-b">
           <div className="flex items-center gap-4">
-            {/* Reaction button with emoji picker */}
             <div className="flex items-center gap-2">
+              {/*
+                * Ein Klick reagiert sofort, wie in der App (ImageViewer):
+                * ohne Reaktion mit dem Standard-Daumen, mit Reaktion nimmt
+                * derselbe Klick sie zurück. Der frühere Rechtsklick auf den
+                * Picker ist entfallen — er war nicht auffindbar und tat
+                * dasselbe wie der Knopf daneben.
+                */}
               <button
                 onClick={handleMemoryReactionClick}
-                onContextMenu={(e) => {
-                  e.preventDefault()
-                  openMemoryEmojiPicker()
-                }}
+                aria-label={
+                  userReaction
+                    ? t('posts.removeReaction', { defaultValue: 'Reaktion entfernen' })
+                    : t('posts.react', { defaultValue: 'Reagieren' })
+                }
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 {userReaction ? (
                   <span className="text-2xl">{userReaction}</span>
                 ) : (
-                  <span className="text-2xl opacity-50 hover:opacity-100">👍</span>
+                  <span className="text-2xl opacity-50 hover:opacity-100">{DEFAULT_LIKE_EMOJI}</span>
                 )}
               </button>
+              {/* Einziger Weg zur Emoji-Auswahl. */}
               <button
                 onClick={openMemoryEmojiPicker}
+                aria-label={t('posts.chooseReaction', { defaultValue: 'Reaktion auswählen' })}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Smile className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Reaction summary */}
+            {/*
+              * Zusammenfassung — Bubbles nur bei verschiedenen Reaktionen.
+              *
+              * Reagieren alle mit derselben Emoji, wiederholten die Bubbles nur
+              * den Knopf links; dann genügt die Anzahl als Personenangabe.
+              * Sobald sich die Reaktionen unterscheiden, tragen sie dagegen
+              * echte Information — nämlich DASS sie sich unterscheiden —, und
+              * die Bubbles kommen zurück, häufigste zuerst. Welche Emoji von
+              * wem kam, steht in beiden Fällen im Modal.
+              */}
             {reactionCount > 0 && (
               <button
                 onClick={() => setShowReactionsModal(true)}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
               >
-                <div className="flex -space-x-1">
-                  {getUniqueEmojis().map((emoji, idx) => (
-                    <span
-                      key={idx}
-                      className="w-5 h-5 bg-muted rounded-full flex items-center justify-center text-xs border border-background"
-                    >
-                      {emoji}
+                {reactionSummary.distinctCount > 1 ? (
+                  <>
+                    <span className="flex -space-x-1">
+                      {reactionSummary.topEmojis.map(emoji => (
+                        <span
+                          key={emoji}
+                          className="w-5 h-5 bg-muted rounded-full flex items-center justify-center text-xs border border-background"
+                        >
+                          {emoji}
+                        </span>
+                      ))}
                     </span>
-                  ))}
-                </div>
-                <span>{reactionCount}</span>
+                    <span>{reactionCount}</span>
+                  </>
+                ) : reactionCount === 1 ? (
+                  t('common.person')
+                ) : (
+                  t('common.persons', { count: reactionCount })
+                )}
               </button>
             )}
 

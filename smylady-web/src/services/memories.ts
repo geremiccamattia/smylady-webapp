@@ -87,6 +87,48 @@ export function getUploadedByInfo(memory: Memory): { _id: string; name: string; 
   return { _id: '', name: 'Unknown' }
 }
 
+export interface ReactionSummary {
+  /** Verschiedene Emojis, häufigste zuerst, höchstens so viele wie `limit`. */
+  topEmojis: string[]
+  /**
+   * Wie viele VERSCHIEDENE Emojis insgesamt vorkommen — auch über `limit`
+   * hinaus. Daran entscheidet die Anzeige, ob sie Bubbles zeigt: Bei nur einer
+   * Emoji wiederholten sie bloß den Reaktionsknopf daneben.
+   */
+  distinctCount: number
+}
+
+/**
+ * Gruppiert Reaktionen nach Emoji und sortiert sie nach Häufigkeit.
+ *
+ * Liegt hier und nicht in den Ansichten, weil MemoryViewer und der
+ * ProfileMemoryViewer in UserProfile dieselbe Zusammenfassung zeigen — zwei
+ * Kopien liefen über kurz oder lang auseinander.
+ *
+ * Bei gleicher Häufigkeit entscheidet, welche Emoji zuerst reagiert wurde: Map
+ * behält die Einfügereihenfolge, und `sort` ist seit ES2019 stabil. Ohne das
+ * könnte dieselbe Reaktionslage je nach Lauf eine andere Reihenfolge ergeben.
+ */
+export function summarizeReactions(
+  reactions: ReadonlyArray<{ emoji?: string }> | null | undefined,
+  limit = 3,
+): ReactionSummary {
+  const counts = new Map<string, number>()
+
+  for (const reaction of reactions || []) {
+    const emoji = reaction?.emoji
+    if (!emoji) continue
+    counts.set(emoji, (counts.get(emoji) || 0) + 1)
+  }
+
+  const topEmojis = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([emoji]) => emoji)
+
+  return { topEmojis, distinctCount: counts.size }
+}
+
 export interface Memory {
   // Backend uses memoryId, but API may also include _id
   _id?: string
