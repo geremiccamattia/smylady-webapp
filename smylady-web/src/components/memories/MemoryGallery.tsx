@@ -28,6 +28,17 @@ interface MemoryGalleryProps {
   isOrganizer?: boolean
   allowGuestMemories?: boolean
   isPublicEvent?: boolean
+  /**
+   * 'gallery' (Standard): Überschrift, Sortierung und Kachelgitter der
+   * Memories des eigenen Tickets — so auf der Ticketseite.
+   *
+   * 'uploadOnly': nur der Hochladen-Knopf samt Hinweisen. Für die Eventseite,
+   * deren Gesamtliste alle Memories des Events zeigt, also auch die eigenen —
+   * mit Galerie standen die eigenen dort zweimal.
+   */
+  mode?: 'gallery' | 'uploadOnly'
+  /** Nach erfolgreichem Hochladen, z. B. um eine andere Liste neu zu laden. */
+  onUploaded?: () => void
 }
 
 type SortOption = 'newest' | 'popular'
@@ -41,8 +52,11 @@ export default function MemoryGallery({
   initialMemoryId,
   isOrganizer,
   allowGuestMemories,
-  isPublicEvent = false
+  isPublicEvent = false,
+  mode = 'gallery',
+  onUploaded,
 }: MemoryGalleryProps) {
+  const isUploadOnly = mode === 'uploadOnly'
   const { t } = useTranslation()
   const { user } = useAuth()
   const { toast } = useToast()
@@ -60,18 +74,18 @@ export default function MemoryGallery({
 
   const currentUserId = user?.id || user?._id
 
-  // Fetch memories
+  // Fetch memories — ohne Galerie werden sie nicht gebraucht.
   const { data: memories = [], isLoading } = useQuery({
     queryKey: ['memories', ticketId],
     queryFn: () => memoriesService.getTicketMemories(ticketId),
-    enabled: !!ticketId,
+    enabled: !!ticketId && !isUploadOnly,
   })
 
   // Fetch event participants for tagging
   const { data: participants = [] } = useQuery({
     queryKey: ['eventParticipants', eventId],
     queryFn: () => memoriesService.getEventParticipants(eventId),
-    enabled: !!eventId && eventHasStarted,
+    enabled: !!eventId && eventHasStarted && !isUploadOnly,
   })
 
   // Sort memories based on selected option
@@ -222,6 +236,62 @@ export default function MemoryGallery({
     setSelectedMemoryIndex(index)
   }
 
+  const canUploadNow =
+    (isOrganizer || (canUpload && allowGuestMemories !== false)) && eventHasStarted
+
+  const uploadButton = canUploadNow && (
+    <Button onClick={() => setShowUpload(true)} size="sm" className="gap-2">
+      <Upload className="w-4 h-4" />
+      <span className="hidden sm:inline">{t('memories.uploadPhoto')}</span>
+    </Button>
+  )
+
+  const uploadHints = (
+    <>
+      {/* Upload hint for future events */}
+      {canUpload && !eventHasStarted && (
+        <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+          <p>📸 {t('memories.uploadAfterStart')}</p>
+        </div>
+      )}
+
+      {allowGuestMemories === false && !isOrganizer && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+          <span>ℹ️</span>
+          <span>Der Veranstalter hat den Foto-Upload für Gäste deaktiviert.</span>
+        </div>
+      )}
+    </>
+  )
+
+  const uploadModal = showUpload && (
+    <MemoryUpload
+      ticketId={ticketId}
+      eventId={eventId}
+      onClose={() => setShowUpload(false)}
+      onSuccess={() => {
+        setShowUpload(false)
+        queryClient.invalidateQueries({ queryKey: ['memories', ticketId] })
+        onUploaded?.()
+      }}
+      isPublicEvent={isPublicEvent}
+    />
+  )
+
+  if (isUploadOnly) {
+    const showHints =
+      (canUpload && !eventHasStarted) || (allowGuestMemories === false && !isOrganizer)
+    if (!canUploadNow && !showHints) return null
+
+    return (
+      <div className="space-y-4">
+        {canUploadNow && <div className="flex justify-end">{uploadButton}</div>}
+        {uploadHints}
+        {uploadModal}
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -234,7 +304,15 @@ export default function MemoryGallery({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-lg font-semibold">{t('memories.title')} ({memories.length})</h3>
+        {/*
+          * Eigener Schlüssel, nicht memories.title: Diese Galerie zeigt nur
+          * die Memories des EIGENEN Tickets (GET /tickets/:ticketId/memories).
+          * Auf der Eventseite läuft sie als 'uploadOnly' ohne diese
+          * Überschrift — dort zeigt die Gesamtliste alle Memories.
+          */}
+        <h3 className="text-lg font-semibold">
+          {t('memories.yourTitle', { defaultValue: 'Deine Erinnerungen' })} ({memories.length})
+        </h3>
         <div className="flex items-center gap-2">
           {/* Sort buttons */}
           {memories.length > 0 && (
@@ -265,35 +343,18 @@ export default function MemoryGallery({
               </button>
             </div>
           )}
-          {(isOrganizer || (canUpload && allowGuestMemories !== false)) && eventHasStarted && (
-            <Button onClick={() => setShowUpload(true)} size="sm" className="gap-2">
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('memories.uploadPhoto')}</span>
-            </Button>
-          )}
+          {uploadButton}
         </div>
       </div>
 
-      {/* Upload hint for future events */}
-      {canUpload && !eventHasStarted && (
-        <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
-          <p>📸 {t('memories.uploadAfterStart')}</p>
-        </div>
-      )}
-
-      {allowGuestMemories === false && !isOrganizer && (
-        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
-          <span>ℹ️</span>
-          <span>Der Veranstalter hat den Foto-Upload für Gäste deaktiviert.</span>
-        </div>
-      )}
+      {uploadHints}
 
       {/* Empty state */}
       {memories.length === 0 && (
         <div className="text-center py-12 bg-muted/30 rounded-lg">
           <Image className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">{t('memories.noMemories')}</p>
-          {(isOrganizer || (canUpload && allowGuestMemories !== false)) && eventHasStarted && (
+          {canUploadNow && (
             <p className="text-sm text-muted-foreground mt-1">
               {t('memories.shareYourBest')}
             </p>
@@ -452,18 +513,7 @@ export default function MemoryGallery({
       )}
 
       {/* Upload Modal */}
-      {showUpload && (
-        <MemoryUpload
-          ticketId={ticketId}
-          eventId={eventId}
-          onClose={() => setShowUpload(false)}
-          onSuccess={() => {
-            setShowUpload(false)
-            queryClient.invalidateQueries({ queryKey: ['memories', ticketId] })
-          }}
-          isPublicEvent={isPublicEvent}
-        />
-      )}
+      {uploadModal}
     </div>
   )
 }

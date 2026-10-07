@@ -492,6 +492,7 @@
   },
   "memories": {
     "title": "Erinnerungen",
+    "yourTitle": "Deine Erinnerungen",
     "addMemory": "Erinnerung hinzufügen",
     "noMemories": "Noch keine Erinnerungen",
     "uploadPhoto": "Foto hochladen",
