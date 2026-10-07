@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, summarizeReactions } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, resolveUploader, summarizeReactions } from '@/services/memories'
 import { apiClient } from '@/services/api'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
@@ -187,7 +187,18 @@ export default function MemoryViewer({
   const memoryId = getMemoryId(memory)
   const memoryUrl = getMemoryUrl(memory)
   const memoryType = getMemoryType(memory)
-  const uploadedByUser = getUploadedByInfo(memory)
+
+  /*
+   * Uploader in drei Stufen: Angaben aus uploadedBy, sonst Nachschlag in der
+   * Teilnehmerliste, sonst ein übersetzter Platzhalter.
+   *
+   * Der öffentliche Endpunkt GET /events/:eventId/memories liefert uploadedBy
+   * ohne Name und Bild. Vorher landete dieses leere Feld unverändert in der
+   * Anzeige: kein Name, dafür ein „?" im Avatar. Ein leerer Name darf hier
+   * nicht mehr herauskommen.
+   */
+  const uploadedByUser = resolveUploader(memory, participants)
+  const uploaderName = uploadedByUser.name || t('common.user', { defaultValue: 'Nutzer' })
 
   // Steuert, ob die Zusammenfassung Emoji-Bubbles oder nur die Personenzahl zeigt.
   const reactionSummary = useMemo(() => summarizeReactions(memory.reactions), [memory.reactions])
@@ -788,14 +799,14 @@ export default function MemoryViewer({
             onClick={() => uploadedByUser?._id && router.push(`/user/${uploadedByUser._id}`)}
           >
             <AvatarImage src={resolveImageUrl(uploadedByUser?.profileImage)} />
-            <AvatarFallback>{getInitials(uploadedByUser?.name || '')}</AvatarFallback>
+            <AvatarFallback>{getInitials(uploaderName)}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <p
               className="font-medium cursor-pointer hover:underline"
               onClick={() => uploadedByUser?._id && router.push(`/user/${uploadedByUser._id}`)}
             >
-              {uploadedByUser.name}
+              {uploaderName}
             </p>
             <p className="text-xs text-muted-foreground">
               {formatRelativeTime(getMemoryDate(memory))}

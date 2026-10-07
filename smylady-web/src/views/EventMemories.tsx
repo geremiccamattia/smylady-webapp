@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsService } from '@/services/events'
-import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, isMemoryHighlighted, hasMemoryChanged } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryThumbnailSource, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, resolveUploader, isMemoryHighlighted, hasMemoryChanged } from '@/services/memories'
 import { ticketsService } from '@/services/tickets'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -612,16 +612,21 @@ export default function EventMemories() {
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
             <div className="max-w-4xl mx-auto">
               {(() => {
-                const selectedUploaderInfo = getUploadedByInfo(selectedMemory)
+                // Gleiche Auflösung wie im MemoryViewer: Angaben aus
+                // uploadedBy, sonst aus der Teilnehmerliste, sonst Platzhalter.
+                // Ein fehlender Name hinterließe hier sonst eine leere Zeile.
+                const selectedUploaderInfo = resolveUploader(selectedMemory, participants)
+                const selectedUploaderName =
+                  selectedUploaderInfo.name || t('common.user', { defaultValue: 'Nutzer' })
                 return (
                   <>
                     <div className="flex items-center gap-3 mb-2">
                       <Avatar className="w-10 h-10 border-2 border-white">
                         <AvatarImage src={resolveImageUrl(selectedUploaderInfo.profileImage)} />
-                        <AvatarFallback>{getInitials(selectedUploaderInfo.name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(selectedUploaderName)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-white font-medium">{selectedUploaderInfo.name}</p>
+                        <p className="text-white font-medium">{selectedUploaderName}</p>
                         <p className="text-white/70 text-sm">{formatRelativeTime(getMemoryDate(selectedMemory))}</p>
                       </div>
                     </div>
