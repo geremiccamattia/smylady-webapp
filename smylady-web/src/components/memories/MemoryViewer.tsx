@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, getUploadedByInfo, resolveUploader, summarizeReactions } from '@/services/memories'
+import { memoriesService, Memory, getMemoryUrl, getMemoryType, getMemoryId, getMemoryDate, resolveUploader, summarizeReactions } from '@/services/memories'
 import { apiClient } from '@/services/api'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
