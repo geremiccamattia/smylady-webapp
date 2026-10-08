@@ -51,7 +51,12 @@ export interface RegisterCredentials {
   name: string
   email: string
   password: string
-  dateOfBirth: string
+  /*
+   * POST /auth/signup verlangt eins von beiden: das Geburtsdatum (normale
+   * Registrierung) oder die Bestätigung, volljährig zu sein (Marken).
+   */
+  dateOfBirth?: string
+  isAdultConfirmed?: true
   referralCode?: string
   deviceFingerprint?: string
 }

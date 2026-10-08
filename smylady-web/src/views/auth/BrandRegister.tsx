@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { ArrowLeft, CheckCircle2, ChevronDown, Eye, EyeOff } from 'lucide-react'
@@ -29,6 +30,28 @@ import { useFingerprint } from '@/hooks/useFingerprint'
  */
 
 type Step = 'register' | 'verify' | 'brand-profile' | 'done'
+
+/** Der Wert ist zugleich der gespeicherte Text — Muster wie FOLLOWER_OPTIONS. */
+export const BRAND_INDUSTRY_OPTIONS = [
+  { value: 'Getränke', labelKey: 'brandRegister.industryBeverages' },
+  { value: 'Food & Gastronomie', labelKey: 'brandRegister.industryFood' },
+  { value: 'Mode & Accessoires', labelKey: 'brandRegister.industryFashion' },
+  { value: 'Beauty & Kosmetik', labelKey: 'brandRegister.industryBeauty' },
+  { value: 'Lifestyle', labelKey: 'brandRegister.industryLifestyle' },
+  { value: 'Musik & Entertainment', labelKey: 'brandRegister.industryMusic' },
+  { value: 'Tech & Gadgets', labelKey: 'brandRegister.industryTech' },
+  { value: 'Reisen & Tourismus', labelKey: 'brandRegister.industryTravel' },
+  { value: 'Sport & Fitness', labelKey: 'brandRegister.industrySport' },
+  { value: 'Gesundheit & Wellness', labelKey: 'brandRegister.industryHealth' },
+  { value: 'Finanzen & Versicherungen', labelKey: 'brandRegister.industryFinance' },
+  { value: 'Automobil', labelKey: 'brandRegister.industryAutomotive' },
+  { value: 'Handel & E-Commerce', labelKey: 'brandRegister.industryRetail' },
+  { value: 'Veranstalter & Locations', labelKey: 'brandRegister.industryEvents' },
+  { value: 'Sonstiges', labelKey: 'brandRegister.industryOther' },
+]
+
+/** Obergrenze von POST/PATCH /brands/me für `description`. */
+const DESCRIPTION_MAX_LENGTH = 1000
 
 /** Leere Optionalfelder gar nicht erst mitschicken — Muster wie referralCode in Register.tsx. */
 function optional(value: string): string | undefined {
@@ -72,7 +95,7 @@ export default function BrandRegister() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [isAdultConfirmed, setIsAdultConfirmed] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState('')
 
@@ -85,6 +108,7 @@ export default function BrandRegister() {
   const [contactEmail, setContactEmail] = useState('')
   const [contactPosition, setContactPosition] = useState('')
   const [industry, setIndustry] = useState('')
+  const [description, setDescription] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
   const [website, setWebsite] = useState('')
   const [instagram, setInstagram] = useState('')
@@ -143,13 +167,25 @@ export default function BrandRegister() {
       return
     }
 
+    if (!isAdultConfirmed) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('brandRegister.adultConfirmRequired', {
+          defaultValue: 'Bitte bestätige, dass du mindestens 18 Jahre alt und für das Unternehmen handlungsbefugt bist.',
+        }),
+      })
+      return
+    }
+
     setIsSubmitting(true)
     try {
+      // Volljährigkeit per Haken statt per Geburtsdatum — Register.tsx sendet weiter dateOfBirth.
       await authService.register({
         name,
         email,
         password,
-        dateOfBirth,
+        isAdultConfirmed: true,
         deviceFingerprint: fingerprint || undefined,
       })
       window.dataLayer = window.dataLayer || []
@@ -237,7 +273,8 @@ export default function BrandRegister() {
           email: contactEmail.trim(),
           position: optional(contactPosition),
         },
-        industry: industry.trim(),
+        industry,
+        description: optional(description),
         logoUrl: optional(logoUrl),
         website: optional(website),
         socialLinks: hasSocialLinks ? socialLinks : undefined,
@@ -349,16 +386,6 @@ export default function BrandRegister() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dob">{t('auth.dateOfBirth', { defaultValue: 'Date of birth' })}</Label>
-                  <Input
-                    id="dob"
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={e => setDateOfBirth(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="password">{t('auth.password', { defaultValue: 'Password' })}</Label>
                   <div className="relative">
                     <Input
@@ -390,6 +417,24 @@ export default function BrandRegister() {
                     onChange={e => setConfirmPassword(e.target.value)}
                     required
                   />
+                </div>
+                {/*
+                  * Bewusst ohne `required`: Die Prüfung läuft in handleRegister,
+                  * damit die Meldung als Toast kommt wie bei den anderen Feldern.
+                  */}
+                <div className="flex items-start gap-2">
+                  <input
+                    id="isAdultConfirmed"
+                    type="checkbox"
+                    checked={isAdultConfirmed}
+                    onChange={e => setIsAdultConfirmed(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <Label htmlFor="isAdultConfirmed" className="text-sm font-normal leading-snug">
+                    {t('brandRegister.adultConfirm', {
+                      defaultValue: 'Ich bin mindestens 18 Jahre alt und befugt, für das Unternehmen zu handeln.',
+                    })}
+                  </Label>
                 </div>
                 <Button type="submit" variant="gradient" className="w-full" loading={isSubmitting}>
                   {t('auth.register', { defaultValue: 'Join now' })}
@@ -535,16 +580,45 @@ export default function BrandRegister() {
                 <Label htmlFor="industry">
                   {t('brandRegister.industry', { defaultValue: 'Branche' })}
                 </Label>
-                <Input
+                <select
                   id="industry"
-                  type="text"
-                  placeholder={t('brandRegister.industryPlaceholder', {
-                    defaultValue: 'z.B. Mode, Gastronomie, Technik',
-                  })}
                   value={industry}
                   onChange={e => setIndustry(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   required
+                >
+                  <option value="">
+                    {t('brandRegister.industryPlaceholder', { defaultValue: 'Bitte wählen' })}
+                  </option>
+                  {BRAND_INDUSTRY_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {t(option.labelKey, { defaultValue: option.value })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">
+                  {t('brandRegister.description', { defaultValue: 'Über euch' })}
+                  <span className="text-muted-foreground text-xs ml-1">
+                    ({t('common.optional', { defaultValue: 'optional' })})
+                  </span>
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder={t('brandRegister.descriptionPlaceholder', {
+                    defaultValue:
+                      'Was macht eure Marke aus? Welche Produkte oder Events sind für Creator interessant?',
+                  })}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
+                  rows={4}
                 />
+                <p className="text-xs text-muted-foreground text-right">
+                  {description.length}/{DESCRIPTION_MAX_LENGTH}
+                </p>
               </div>
 
               <div className="space-y-2">
