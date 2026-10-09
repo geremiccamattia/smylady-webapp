@@ -15,6 +15,7 @@ import { ChangeEmailModal } from '@/components/settings/ChangeEmailModal'
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal'
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal'
 import { TutorialsCard } from '@/components/settings/TutorialsCard'
+import { CreatorCard } from '@/components/settings/CreatorCard'
 import {
   MapPin,
   Ticket,
@@ -271,6 +272,10 @@ function SettingsContent() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Creator Club. Rendert sich selbst weg, solange der Stand der
+          Bewerbung nicht feststeht, und für Brand-Konten — siehe CreatorCard. */}
+      <CreatorCard />
 
       {/* Stripe Connect for Organizers */}
       <StripeConnectCard />

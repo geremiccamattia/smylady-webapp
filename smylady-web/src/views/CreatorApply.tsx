@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { apiClient } from '@/services/api'
+import { creatorService, resolveCreatorStanding } from '@/services/creator'
 import CreatorApplicationForm from '@/components/creator/CreatorApplicationForm'
 
 /*
@@ -19,13 +19,6 @@ import CreatorApplicationForm from '@/components/creator/CreatorApplicationForm'
  * Bewerbung in der Registrierung übersprungen hat, und wer nach dem Stand
  * seiner Bewerbung sehen will.
  */
-
-type ApplicationStatus = 'pending' | 'approved' | 'rejected'
-
-interface MyApplicationResponse {
-  application: { status: ApplicationStatus; createdAt: string } | null
-  hasCreatorProfile: boolean
-}
 
 /** Die Ansicht, die sich aus der Serverantwort ergibt. */
 type View = 'loading' | 'form' | 'pending' | 'approved' | 'rejected' | 'member' | 'error'
@@ -64,17 +57,20 @@ export default function CreatorApply() {
           })
 
       try {
-        const [response] = await Promise.all([
-          apiClient.get<{ data?: MyApplicationResponse } & MyApplicationResponse>(
-            '/influencer/my-application',
-          ),
-          refresh,
-        ])
+        const [payload] = await Promise.all([creatorService.getMyApplication(), refresh])
         if (!active) return
 
-        // Das Backend antwortet je nach Endpunkt mit oder ohne data-Hülle.
-        const payload = response.data?.data ?? response.data
-        setView(resolveView(payload))
+        /*
+         * Die Zuordnung Stand → Ansicht liegt im Service (resolveCreatorStanding),
+         * damit die Einstellungen denselben Stand zeigen wie diese Seite.
+         * Nur 'none' heisst hier anders: Ohne Bewerbung kommt das Formular.
+         */
+        if (!payload) {
+          setView('error')
+        } else {
+          const standing = resolveCreatorStanding(payload)
+          setView(standing === 'none' ? 'form' : standing)
+        }
       } catch {
         if (!active) return
         /*
@@ -204,32 +200,6 @@ export default function CreatorApply() {
       </Card>
     </div>
   )
-}
-
-/**
- * Reihenfolge der Fälle ist bedeutsam.
- *
- * Das Creator-Profil schlägt alles: Wer bereits Mitglied ist, soll keine
- * Bewerbung sehen, auch wenn daneben noch ein alter Antrag im Status
- * 'approved' liegt.
- */
-function resolveView(payload?: MyApplicationResponse): View {
-  if (!payload) return 'error'
-  if (payload.hasCreatorProfile) return 'member'
-  if (!payload.application) return 'form'
-
-  switch (payload.application.status) {
-    case 'pending':
-      return 'pending'
-    case 'rejected':
-      return 'rejected'
-    case 'approved':
-      return 'approved'
-    default:
-      // Unbekannter Status: lieber den Stand offenlassen als ein zweites
-      // Bewerbungsformular anbieten.
-      return 'pending'
-  }
 }
 
 function StatusPanel({

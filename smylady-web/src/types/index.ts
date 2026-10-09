@@ -39,6 +39,12 @@ export interface User {
    * und die WebApp ruft es ohne Token auf.
    */
   referralCode?: string
+  /**
+   * Konto einer Marke (Brand-Profil mit Status 'active'). GET /users/me
+   * liefert das Feld noch nicht — bis zur Backend-Erweiterung bleibt es
+   * undefined, und Aufrufer müssen das wie false behandeln.
+   */
+  isBrand?: boolean
 }
 
 // Auth Types
