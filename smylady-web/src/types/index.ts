@@ -40,9 +40,9 @@ export interface User {
    */
   referralCode?: string
   /**
-   * Konto einer Marke (Brand-Profil mit Status 'active'). GET /users/me
-   * liefert das Feld noch nicht — bis zur Backend-Erweiterung bleibt es
-   * undefined, und Aufrufer müssen das wie false behandeln.
+   * Konto einer Marke (Brand-Profil mit Status 'active'). Kommt aus
+   * GET /users/me, nur für das eigene Konto. Ein älteres Nutzerobjekt aus
+   * dem localStorage kann das Feld nicht haben — dann gilt es als false.
    */
   isBrand?: boolean
 }

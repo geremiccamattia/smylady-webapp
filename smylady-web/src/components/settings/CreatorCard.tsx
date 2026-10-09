@@ -20,8 +20,9 @@ import { useCreatorStanding } from '@/hooks/useCreatorStanding'
  *
  * Rendert null, solange der Stand nicht feststeht, und für Brand-Konten:
  * Eine Marke soll sich nicht nebenbei als Creator bewerben (Rollenmischung).
- * `isBrand` kommt erst mit einer Backend-Erweiterung von GET /users/me mit —
- * bis dahin ist das Feld undefined und der Eintrag für alle sichtbar.
+ * `isBrand` kommt aus GET /users/me (Backend ab feature/me-date-of-birth).
+ * Ein Nutzerobjekt aus dem localStorage kann das Feld noch nicht haben —
+ * dann gilt es als false und der Eintrag ist sichtbar.
  */
 export function CreatorCard() {
   const { t } = useTranslation()
