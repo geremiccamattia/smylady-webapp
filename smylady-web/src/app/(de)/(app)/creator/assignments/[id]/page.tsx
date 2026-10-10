@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import CreatorAssignmentDetail from '@/views/creator/CreatorAssignmentDetail'
 /*
- * Creator-Bereich: nur für angemeldete Creator. Ein Gast erhält 401, und der
- * Response-Interceptor in services/api.ts leitet ihn auf /login um — /creator
+ * Creator-Bereich: nur für angemeldete Creator. Ein Gast wird vom Gate
+ * (BrandGate bzw. CreatorGate in components/) auf /login?next=… geleitet — /creator
  * (ohne Bindestrich) steht bewusst nicht in publicPaths; /creator-club schon.
  */
 

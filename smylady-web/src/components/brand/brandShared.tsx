@@ -1,11 +1,14 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { Building2, Clock, Lock, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { useBrandProfile, type BrandStanding } from '@/hooks/useBrandProfile'
 import type { BrandOrderStatus, BrandProfileStatus, DeliverableType } from '@/services/brand'
@@ -152,8 +155,11 @@ export function LoadingBars() {
  * - in Prüfung: Wartehinweis, die Aufträge sind bis zur Freischaltung gesperrt
  * - pausiert/abgelehnt/gesperrt: Hinweis, sich an uns zu wenden
  *
- * Ein Gast landet gar nicht erst hier: GET /brands/me antwortet mit 401, und
- * der Interceptor in services/api.ts leitet auf /login um.
+ * Ein Gast geht auf /login, mit der aktuellen Seite als Rücksprung (?next=):
+ * So landet eine Brand mit abgelaufener Sitzung nach dem Login wieder auf
+ * dem Auftrag aus der Angebotsmail. Der 401-Interceptor greift hier nicht,
+ * weil useBrandProfile ohne Nutzer gar keinen Request absetzt — vorher sah
+ * ein Gast deshalb "Noch kein Brand-Profil" statt der Anmeldung.
  *
  * `allow` erweitert die erlaubten Zustände — die Profilseite etwa soll auch
  * eine Brand in Prüfung bearbeiten können.
@@ -168,6 +174,25 @@ export function BrandGate({
   const { t } = useTranslation()
   const localePath = useLocalePath()
   const { standing, isError, refetch } = useBrandProfile()
+  const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const guest = !authLoading && !user
+  const loginTarget = localePath(`/login?next=${encodeURIComponent(pathname)}`)
+  useEffect(() => {
+    if (guest) router.replace(loginTarget)
+  }, [guest, loginTarget, router])
+
+  if (guest) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <LoadingBars />
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isError) {
     return (

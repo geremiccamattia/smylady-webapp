@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { safeExternalUrl } from '@/lib/safeUrl'
-import { resolvePostLoginPath } from '@/lib/postLogin'
+import { resolvePostLoginPath, safeNextPath } from '@/lib/postLogin'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { primaryFieldKey } from '@/lib/eventFields'
 import {
   Eye,
@@ -191,13 +192,28 @@ export default function Login() {
   const fingerprint = useFingerprint()
   const queryClient = useQueryClient()
 
-  // Redirect to explore if already authenticated
-  const from = '/explore'
+  const localePath = useLocalePath()
+
+  /*
+   * Eine Weiterleitung für alle Fälle: schon angemeldet beim Aufruf, Login
+   * per Formular, Login per Google. Vorher schickte der Effekt sofort auf
+   * /explore, sobald der Token stand, und erst danach kam die Brand-/
+   * Creator-Weiterleitung — Explore blitzte auf. Das Ziel wird jetzt einmal
+   * bestimmt (Rücksprung aus ?next=, sonst lib/postLogin.ts) und mit
+   * Sprachpräfix angesprungen. Der Ref verhindert, dass Effekt und Handler
+   * beide navigieren.
+   */
+  const redirected = useRef(false)
+  const goAfterLogin = useCallback(async () => {
+    if (redirected.current) return
+    redirected.current = true
+    const next = safeNextPath(new URLSearchParams(window.location.search).get('next'))
+    router.replace(localePath(await resolvePostLoginPath(next)))
+  }, [router, localePath])
+
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.replace(from)
-    }
-  }, [isAuthenticated, authLoading, router, from])
+    if (!authLoading && isAuthenticated) void goAfterLogin()
+  }, [isAuthenticated, authLoading, goAfterLogin])
 
   // Events state - will be auto-detected from geolocation
   const [selectedCity, setSelectedCity] = useState('Wien')
@@ -418,8 +434,9 @@ export default function Login() {
         description: t('auth.welcomeBack'),
       })
       // Brands landen in ihrem Dashboard, Creator in ihrem Bereich, alle
-      // anderen wie bisher auf /explore (siehe lib/postLogin.ts).
-      router.replace(await resolvePostLoginPath())
+      // anderen wie bisher auf /explore (siehe lib/postLogin.ts). Meist hat
+      // der Effekt oben schon navigiert, dann ist das hier ein No-op.
+      await goAfterLogin()
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -646,7 +663,7 @@ export default function Login() {
                           }
                         }
 
-                        router.replace(await resolvePostLoginPath())
+                        await goAfterLogin()
                       }}
                       className="w-full"
                     />

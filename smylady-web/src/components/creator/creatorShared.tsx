@@ -1,11 +1,14 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { Clock, Lock, Sparkles, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { useCreatorProfile, type CreatorProfileStanding } from '@/hooks/useCreatorProfile'
 import { LoadingBars, StatusPanel } from '@/components/brand/brandShared'
@@ -74,6 +77,10 @@ export function CreatorStatusBadge({ status }: { status: CreatorProfileStatus })
  * Zeigt die Kinder nur für ein aktives Creator-Profil (oder die in `allow`
  * genannten Zustände). Ohne Profil geht es zur Bewerbung; die kennt alle
  * Zwischenstände (eingereicht, angenommen, abgelehnt).
+ *
+ * Ein Gast geht auf /login mit Rücksprung (?next=), siehe BrandGate: Ohne
+ * Nutzer setzt useCreatorProfile keinen Request ab, also auch keinen 401 —
+ * vorher sah ein Gast "Noch kein Creator-Profil" statt der Anmeldung.
  */
 export function CreatorGate({
   children,
@@ -85,6 +92,25 @@ export function CreatorGate({
   const { t } = useTranslation()
   const localePath = useLocalePath()
   const { standing, isError, refetch } = useCreatorProfile()
+  const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const guest = !authLoading && !user
+  const loginTarget = localePath(`/login?next=${encodeURIComponent(pathname)}`)
+  useEffect(() => {
+    if (guest) router.replace(loginTarget)
+  }, [guest, loginTarget, router])
+
+  if (guest) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <LoadingBars />
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isError) {
     return (
