@@ -485,6 +485,7 @@
     "visibilityPublicPending": "Das Event wird öffentlich, sobald wir es freigegeben haben.",
     "visibilitySelected": "Das Event ist nur für die eingeladenen Creator sichtbar.",
     "visibilityFailed": "Die Sichtbarkeit konnte nicht geändert werden.",
+    "visibilityLoadFailed": "Die Sichtbarkeit lässt sich gerade nicht laden.",
     "openEvent": "Event öffnen",
     "proposedTitle": "Vorgeschlagene Creator",
     "creatorUnnamed": "Creator",

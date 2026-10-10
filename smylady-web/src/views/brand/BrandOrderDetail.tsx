@@ -82,10 +82,12 @@ function OrderDetail() {
   })
   const order = orderQuery.data
 
-  // Die Sichtbarkeit hängt am Event, nicht am Auftrag.
+  // Die Sichtbarkeit hängt am Event, nicht am Auftrag. Nur ein 404 wird zu
+  // null; jeder andere Fehler landet in isError, damit die Karte einen
+  // Fehlerzustand zeigt statt „Nur Creator" als aktiv vorzutäuschen.
   const eventQuery = useQuery({
     queryKey: ['brand', 'order-event', order?.eventId],
-    queryFn: () => eventsService.getEventById(order?.eventId as string, false),
+    queryFn: () => eventsService.getEventByIdOrNull(order?.eventId as string, false),
     enabled: Boolean(order?.eventId),
     retry: false,
   })
@@ -169,7 +171,14 @@ function OrderDetail() {
   }
 
   const event = eventQuery.data
-  const currentVisibility = event?.visibility === 'public' ? 'public' : 'selected'
+  // null, solange der Stand nicht bekannt ist (lädt oder Fehler): Dann ist
+  // keiner der beiden Schalter aktiv, statt per Rückfall „Nur Creator".
+  const eventUnknown = eventQuery.isLoading || eventQuery.isError
+  const currentVisibility: 'public' | 'selected' | null = eventUnknown
+    ? null
+    : event?.visibility === 'public'
+      ? 'public'
+      : 'selected'
   const eventApproved = event?.status === 'Approved'
   const busy = submit.isPending || accept.isPending || visibility.isPending
 
@@ -257,12 +266,24 @@ function OrderDetail() {
                   'Standardmäßig sehen nur die eingeladenen Creator das Event. Du kannst es auch öffentlich machen, dann erscheint es nach unserer Freigabe in der Eventsuche.',
               })}
             </p>
+            {eventQuery.isError && (
+              <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                <span>
+                  {t('brandDashboard.visibilityLoadFailed', {
+                    defaultValue: 'Die Sichtbarkeit lässt sich gerade nicht laden.',
+                  })}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => eventQuery.refetch()} disabled={eventQuery.isFetching}>
+                  {t('common.retry', { defaultValue: 'Erneut versuchen' })}
+                </Button>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={currentVisibility === 'selected' ? 'default' : 'outline'}
                 size="sm"
                 className="gap-2"
-                disabled={busy || eventQuery.isLoading}
+                disabled={busy || eventUnknown}
                 onClick={() => currentVisibility !== 'selected' && visibility.mutate('selected')}
               >
                 <Lock className="h-4 w-4" />
@@ -272,7 +293,7 @@ function OrderDetail() {
                 variant={currentVisibility === 'public' ? 'default' : 'outline'}
                 size="sm"
                 className="gap-2"
-                disabled={busy || eventQuery.isLoading}
+                disabled={busy || eventUnknown}
                 onClick={() => currentVisibility !== 'public' && visibility.mutate('public')}
               >
                 <Globe className="h-4 w-4" />

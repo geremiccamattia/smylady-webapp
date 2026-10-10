@@ -473,6 +473,7 @@
     "visibilityPublicPending": "The event becomes public as soon as we have approved it.",
     "visibilitySelected": "The event is only visible to the invited creators.",
     "visibilityFailed": "The visibility could not be changed.",
+    "visibilityLoadFailed": "The visibility cannot be loaded right now.",
     "openEvent": "Open event",
     "proposedTitle": "Proposed creators",
     "creatorUnnamed": "Creator",
