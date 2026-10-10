@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { creatorAreaService, readCreatorError, type CreatorAssignment } from '@/services/creator'
+import { creatorAreaService, isCreatorConflict, readCreatorError, type CreatorAssignment } from '@/services/creator'
 import { formatDateTime, formatPrice } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
 import { CreatorGate, ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
@@ -71,12 +71,20 @@ function AssignmentDetail() {
           : t('creatorDashboard.declinedDesc', { defaultValue: 'Schade, vielleicht beim nächsten Mal.' }),
       })
     },
-    onError: (error: unknown) =>
+    onError: (error: unknown) => {
+      // 409: Es liegt schon eine (andere) Antwort vor, etwa vom Admin per
+      // Mail nachgetragen. Die Karte zeigte dann weiter "Offen" mit aktiven
+      // Buttons; der echte Stand muss her, damit Badge und Text stimmen.
+      if (isCreatorConflict(error)) {
+        queryClient.invalidateQueries({ queryKey: ['creator', 'assignment', id] })
+        queryClient.invalidateQueries({ queryKey: CREATOR_ASSIGNMENTS_QUERY_KEY })
+      }
       toast({
         variant: 'destructive',
         title: t('common.error', { defaultValue: 'Fehler' }),
         description: readCreatorError(error, t('creatorDashboard.respondFailed', { defaultValue: 'Die Antwort konnte nicht gespeichert werden.' })),
-      }),
+      })
+    },
   })
 
   if (query.isLoading) {

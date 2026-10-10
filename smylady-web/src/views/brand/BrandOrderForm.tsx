@@ -251,21 +251,39 @@ function OrderForm() {
   }
 
   const save = useMutation({
+    // Speichern und Einreichen sind zwei Requests. Scheitert erst der zweite,
+    // existiert der Entwurf schon: Dann geht es trotzdem auf die Auftragsseite
+    // (mit Fehlerhinweis), statt im Formular zu bleiben, wo der nächste Klick
+    // einen zweiten Entwurf anlegen würde.
     mutationFn: async ({ payload, submit }: { payload: BrandOrderPayload; submit: boolean }) => {
       const saved = editId
         ? await brandService.updateOrder(editId, payload)
         : await brandService.createOrder(payload)
-      return submit ? brandService.submitOrder(saved.id) : saved
+      if (!submit) return { order: saved, submitError: null as unknown }
+      try {
+        return { order: await brandService.submitOrder(saved.id), submitError: null as unknown }
+      } catch (error) {
+        return { order: saved, submitError: error }
+      }
     },
-    onSuccess: (order, variables) => {
+    onSuccess: ({ order, submitError }, variables) => {
       queryClient.invalidateQueries({ queryKey: BRAND_ORDERS_QUERY_KEY })
       queryClient.setQueryData(['brand', 'order', order.id], order)
-      toast({
-        title: t('common.success', { defaultValue: 'Erfolg' }),
-        description: variables.submit
-          ? t('brandDashboard.orderSubmitted', { defaultValue: 'Dein Auftrag ist eingereicht. Wir melden uns mit einem Angebot.' })
-          : t('brandDashboard.draftSaved', { defaultValue: 'Entwurf gespeichert.' }),
-      })
+      if (submitError) {
+        fail(
+          submitError,
+          t('brandDashboard.submitFailedDraftSaved', {
+            defaultValue: 'Der Entwurf ist gespeichert, aber das Einreichen hat nicht geklappt. Du kannst es auf der Auftragsseite erneut versuchen.',
+          }),
+        )
+      } else {
+        toast({
+          title: t('common.success', { defaultValue: 'Erfolg' }),
+          description: variables.submit
+            ? t('brandDashboard.orderSubmitted', { defaultValue: 'Dein Auftrag ist eingereicht. Wir melden uns mit einem Angebot.' })
+            : t('brandDashboard.draftSaved', { defaultValue: 'Entwurf gespeichert.' }),
+        })
+      }
       router.push(localePath(`/brand/orders/${order.id}`))
     },
     onError: (error: unknown) =>

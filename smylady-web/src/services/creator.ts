@@ -235,6 +235,11 @@ export function isCreatorNotFound(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404
 }
 
+/** 409: Der Auftrag ist schon beantwortet (oder der Stand hat sich geändert). */
+export function isCreatorConflict(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 409
+}
+
 export function readCreatorError(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { message?: string; msg?: string } | undefined
