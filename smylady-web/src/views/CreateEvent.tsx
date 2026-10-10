@@ -39,6 +39,14 @@ import { categoryLabel, MUSIC_TYPE_VALUES, OFFERING_VALUES } from '@/lib/eventFi
 import { EVENT_FORM_CATEGORIES } from '@/lib/constants'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
+import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
+import {
+  buildSchedule,
+  isDailyHoursEdited,
+  listDays,
+  validateSchedule,
+  type DailyHoursState,
+} from '@/lib/eventSchedule'
 
 function CreateEventContent() {
   const router = useRouter()
@@ -164,6 +172,7 @@ function CreateEventContent() {
   const [isMultiDay, setIsMultiDay] = useState(false)
   const [eventEndDate, setEventEndDate] = useState('')
   const [eventEndTimeValue, setEventEndTimeValue] = useState('')
+  const [dailyHours, setDailyHours] = useState<DailyHoursState>({})
   const [translating, setTranslating] = useState(false)
   const [translatedPreview, setTranslatedPreview] = useState<{
     lang: string; name: string; description: string; restrictions: string
@@ -355,6 +364,20 @@ function CreateEventContent() {
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
   }
 
+  /*
+   * Öffnungszeiten je Tag: nur bei einem echten Zeitraum über mehrere
+   * Kalendertage, nie bei Serien — die lehnt das Backend mit schedule ab.
+   */
+  const scheduleDays = isMultiDay && eventEndDate && !seriesConfig
+    ? listDays(formData.eventDate, eventEndDate)
+    : []
+  const showDailyHours = scheduleDays.length > 1
+  const dailyHoursDefaults = {
+    startTime: formData.eventStartTime,
+    endTime: formData.eventEndTime || eventEndTimeValue,
+  }
+  const schedule = showDailyHours ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults) : []
+
   const validateStep1 = () => {
     if (!formData.eventDate) {
       toast({ variant: 'destructive', title: t('common.error'), description: t('createEvent.selectDate') })
@@ -517,6 +540,14 @@ function CreateEventContent() {
       return
     }
 
+    if (showDailyHours && isDailyHoursEdited(scheduleDays, dailyHours)) {
+      const scheduleError = validateSchedule(schedule)
+      if (scheduleError) {
+        toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
+        return
+      }
+    }
+
     setIsLoading(true)
 
     try {
@@ -556,9 +587,15 @@ function CreateEventContent() {
       // Add all form fields
       eventFormData.append('name', formData.name)
       eventFormData.append('description', formData.description)
-      eventFormData.append('eventDate', eventDate.toISOString())
-      eventFormData.append('eventStartTime', eventStartTime.toISOString())
-      eventFormData.append('eventEndTime', eventEndTime.toISOString())
+      if (schedule.length > 0) {
+        // Mit schedule leitet das Backend Datum, Beginn und Ende selbst ab.
+        // Mitgesendete Zeiten widersprächen ihm, sobald der erste Tag geschlossen ist.
+        eventFormData.append('schedule', JSON.stringify(schedule))
+      } else {
+        eventFormData.append('eventDate', eventDate.toISOString())
+        eventFormData.append('eventStartTime', eventStartTime.toISOString())
+        eventFormData.append('eventEndTime', eventEndTime.toISOString())
+      }
       eventFormData.append('locationType', locationType)
       if (locationType === 'online') {
         eventFormData.append('locationName', 'Online')
@@ -852,6 +889,22 @@ function CreateEventContent() {
                       />
                     </div>
                   </div>
+                )}
+
+                {showDailyHours && (
+                  <DailyHoursEditor
+                    days={scheduleDays}
+                    value={dailyHours}
+                    onChange={setDailyHours}
+                    defaults={dailyHoursDefaults}
+                  />
+                )}
+                {isMultiDay && seriesConfig && listDays(formData.eventDate, eventEndDate).length > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('dailyHours.seriesHint', {
+                      defaultValue: 'Bei wiederkehrenden Events sind Öffnungszeiten je Tag nicht möglich.',
+                    })}
+                  </p>
                 )}
               </CardContent>
             </Card>
