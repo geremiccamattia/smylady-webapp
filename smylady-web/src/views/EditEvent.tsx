@@ -32,6 +32,16 @@ import {
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { MultiSelectChips } from '@/components/events/MultiSelectChips'
 import { MUSIC_TYPE_VALUES, OFFERING_VALUES, toStringArray } from '@/lib/eventFields'
+import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
+import {
+  buildSchedule,
+  dailyHoursFromSchedule,
+  isDailyHoursEdited,
+  listDays,
+  localDateKey,
+  validateSchedule,
+  type DailyHoursState,
+} from '@/lib/eventSchedule'
 
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>()
@@ -116,6 +126,7 @@ export default function EditEvent() {
   const [isMultiDay, setIsMultiDay] = useState(false)
   const [eventEndDate, setEventEndDate] = useState('')
   const [eventEndTimeValue, setEventEndTimeValue] = useState('')
+  const [dailyHours, setDailyHours] = useState<DailyHoursState>({})
   const [payAtDoor, setPayAtDoor] = useState(false)
   const [addressDetail, setAddressDetail] = useState('')
   const [locationQuery, setLocationQuery] = useState('')
@@ -216,8 +227,11 @@ export default function EditEvent() {
   // Populate form when event loads
   useEffect(() => {
     if (event) {
-      const eventDate = event.eventDate ? new Date(event.eventDate).toISOString().split('T')[0] : ''
-      
+      // Kalendertag in der Gerätezeitzone, passend zu getHours() unten. Vorher
+      // toISOString(), also der UTC-Tag — ein Event kurz nach Mitternacht
+      // Wiener Zeit stand damit auf dem Vortag.
+      const eventDate = event.eventDate ? localDateKey(event.eventDate) : ''
+
       setFormData({
         name: event.name || '',
         description: event.description || '',
@@ -258,17 +272,29 @@ export default function EditEvent() {
       setRafflePartner(event.rafflePartner || '')
       setRafflePartnerMarketing(event.rafflePartnerMarketing === true)
 
-      if (event.eventEndTime && isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime)) {
+      /*
+       * Ein Event mit Öffnungszeiten ist immer mehrtägig, auch wenn es keine
+       * 24 Stunden dauert (zwei Tage mit je zwei Stunden) — sonst wäre die
+       * Tagesliste ausgeblendet und der schedule beim Bearbeiten unerreichbar.
+       */
+      const hasSchedule = (event.schedule?.length ?? 0) > 0
+      if (
+        event.eventEndTime &&
+        (hasSchedule || isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime))
+      ) {
         setIsMultiDay(true)
         const endDate = new Date(event.eventEndTime)
-        setEventEndDate(endDate.toISOString().split('T')[0])
+        const endDateKey = localDateKey(endDate)
+        setEventEndDate(endDateKey)
         setEventEndTimeValue(
           `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
         )
+        setDailyHours(dailyHoursFromSchedule(event.schedule, listDays(eventDate, endDateKey)))
       } else {
         setIsMultiDay(false)
         setEventEndDate('')
         setEventEndTimeValue('')
+        setDailyHours({})
       }
       if ((event as any).locationType === 'physical' || !(event as any).locationType) {
         setLocationQuery(event.locationName || '')
@@ -600,37 +626,45 @@ export default function EditEvent() {
     )
   }
 
-  const buildEventFormData = () => {
-    const eventFormData = new FormData()
+  /*
+   * Öffnungszeiten je Tag — wie in CreateEvent nur bei einem Zeitraum über
+   * mehrere Kalendertage und nie bei Serien.
+   */
+  const isSeriesEvent = !!seriesConfig || !!event?.eventSeriesId
+  const scheduleDays = isMultiDay && eventEndDate && !isSeriesEvent
+    ? listDays(formData.eventDate, eventEndDate)
+    : []
+  const showDailyHours = scheduleDays.length > 1
+  const dailyHoursDefaults = {
+    startTime: formData.eventStartTime,
+    endTime: formData.eventEndTime || eventEndTimeValue,
+  }
+  const schedule = showDailyHours ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults) : []
+  const hadSchedule = (event?.schedule?.length ?? 0) > 0
 
-    const { offerings, musicType, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, locationName, location, ...restFormData } = formData
-    Object.entries(restFormData).forEach(([key, value]) => {
-      eventFormData.append(key, value)
-    })
+  /*
+   * Serien und Öffnungszeiten schließen sich aus: convertToSeries lehnt ein
+   * Event mit schedule mit 400 ab. Maßgeblich ist dabei der GESPEICHERTE
+   * schedule — der Serienpfad unten sendet nur convertToSeries, keine
+   * Formularänderungen. Ein „Zurücksetzen" im Formular allein reicht also nur,
+   * solange der schedule noch nicht gespeichert war.
+   */
+  const seriesBlockedBySchedule = hadSchedule || schedule.length > 0
+  const seriesBlockedMessage = hadSchedule
+    ? t('dailyHours.seriesBlockedSaved', {
+        defaultValue:
+          'Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“ und speichere das Event.',
+      })
+    : t('dailyHours.seriesBlocked', {
+        defaultValue:
+          'Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“.',
+      })
 
-    eventFormData.append('locationType', locationType)
-    if (locationType === 'online') {
-      eventFormData.append('locationName', 'Online')
-    } else if (locationType === 'tba') {
-      if (selectedTbaCity) {
-        eventFormData.append('locationName', `${selectedTbaCity.name} — Standort folgt`)
-        eventFormData.append('location', JSON.stringify({
-          type: 'Point',
-          coordinates: [selectedTbaCity.lng, selectedTbaCity.lat],
-        }))
-      } else {
-        eventFormData.append('locationName', 'Standort folgt')
-      }
-    } else {
-      const fullLocationName = addressDetail.trim()
-        ? `${locationName} Top ${addressDetail.trim()}`
-        : locationName
-      eventFormData.append('locationName', fullLocationName)
-    }
-    if (onlineUrl) {
-      eventFormData.append('onlineUrl', onlineUrl)
-    }
-
+  /** eventDate, eventStartTime und eventEndTime — unverändert der bisherige Weg. */
+  const appendEventTimes = (
+    eventFormData: FormData,
+    { eventDate, eventStartTime, eventEndTime }: { eventDate: string; eventStartTime: string; eventEndTime: string },
+  ) => {
     if (eventDate) {
       eventFormData.append('eventDate', new Date(eventDate).toISOString())
     }
@@ -662,6 +696,53 @@ export default function EditEvent() {
       const fallbackEnd = new Date(eventDate)
       fallbackEnd.setHours(hours + 4, minutes, 0, 0)
       eventFormData.append('eventEndTime', fallbackEnd.toISOString())
+    }
+  }
+
+  const buildEventFormData = () => {
+    const eventFormData = new FormData()
+
+    const { offerings, musicType, restrictions, eventDate, eventStartTime, eventEndTime, price, totalTickets, minimumAge, locationName, location, ...restFormData } = formData
+    Object.entries(restFormData).forEach(([key, value]) => {
+      eventFormData.append(key, value)
+    })
+
+    eventFormData.append('locationType', locationType)
+    if (locationType === 'online') {
+      eventFormData.append('locationName', 'Online')
+    } else if (locationType === 'tba') {
+      if (selectedTbaCity) {
+        eventFormData.append('locationName', `${selectedTbaCity.name} — Standort folgt`)
+        eventFormData.append('location', JSON.stringify({
+          type: 'Point',
+          coordinates: [selectedTbaCity.lng, selectedTbaCity.lat],
+        }))
+      } else {
+        eventFormData.append('locationName', 'Standort folgt')
+      }
+    } else {
+      const fullLocationName = addressDetail.trim()
+        ? `${locationName} Top ${addressDetail.trim()}`
+        : locationName
+      eventFormData.append('locationName', fullLocationName)
+    }
+    if (onlineUrl) {
+      eventFormData.append('onlineUrl', onlineUrl)
+    }
+
+    /*
+     * Mit schedule: nur ihn senden, das Backend leitet die drei Zeitfelder ab.
+     * Ohne schedule, aber mit einem gespeicherten: `[]` entfernt ihn. Das
+     * Backend lässt die Zeiten dann stehen — deshalb gehen sie in diesem Fall
+     * mit, sonst stünde das Event ohne definierte Zeiten da.
+     */
+    if (schedule.length > 0) {
+      eventFormData.append('schedule', JSON.stringify(schedule))
+    } else {
+      if (hadSchedule) {
+        eventFormData.append('schedule', JSON.stringify([]))
+      }
+      appendEventTimes(eventFormData, { eventDate, eventStartTime, eventEndTime })
     }
 
     // Mehrfachwerte einzeln anhängen — multipart/form-data kennt keine native
@@ -818,6 +899,21 @@ export default function EditEvent() {
 
     if (useTiers && ticketTiers.filter(t => t.name && t.price !== '').length === 0) {
       toast({ variant: 'destructive', title: 'Fehler', description: 'Bitte mindestens einen Tickettyp mit Name und Preis anlegen.' })
+      return
+    }
+
+    if (showDailyHours && isDailyHoursEdited(scheduleDays, dailyHours)) {
+      const scheduleError = validateSchedule(schedule)
+      if (scheduleError) {
+        toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
+        return
+      }
+    }
+
+    // Die Serieneinrichtung ist dann gesperrt — hier nur zur Sicherheit, falls
+    // die Serie gewählt wurde, bevor das Event mit seinem schedule geladen war.
+    if (seriesConfig && seriesBlockedBySchedule) {
+      toast({ variant: 'destructive', title: t('common.error'), description: seriesBlockedMessage })
       return
     }
 
@@ -1116,6 +1212,22 @@ export default function EditEvent() {
                   />
                 </div>
               </div>
+            )}
+
+            {showDailyHours && (
+              <DailyHoursEditor
+                days={scheduleDays}
+                value={dailyHours}
+                onChange={setDailyHours}
+                defaults={dailyHoursDefaults}
+              />
+            )}
+            {isMultiDay && isSeriesEvent && listDays(formData.eventDate, eventEndDate).length > 1 && (
+              <p className="text-xs text-muted-foreground">
+                {t('dailyHours.seriesHint', {
+                  defaultValue: 'Bei wiederkehrenden Events sind Öffnungszeiten je Tag nicht möglich.',
+                })}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -1831,11 +1943,20 @@ export default function EditEvent() {
                       Entfernen
                     </Button>
                   )}
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowRecurringModal(true)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRecurringModal(true)}
+                    disabled={seriesBlockedBySchedule}
+                  >
                     {seriesConfig ? 'Ändern' : 'Einrichten'}
                   </Button>
                 </div>
               </div>
+              {seriesBlockedBySchedule && (
+                <p className="mt-3 text-xs text-muted-foreground">{seriesBlockedMessage}</p>
+              )}
             </CardContent>
           </Card>
         )}

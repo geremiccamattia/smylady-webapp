@@ -316,6 +316,30 @@
     "invalidContactEmail": "Bitte gib eine gültige E-Mail-Adresse für die Ansprechperson an.",
     "profileFailed": "Markenprofil konnte nicht angelegt werden"
   },
+  "dailyHours": {
+    "title": "Öffnungszeiten je Tag",
+    "hint": "Optional. Leer lassen, wenn an jedem Tag dieselben Zeiten gelten.",
+    "from": "Von",
+    "until": "Bis",
+    "closed": "Geschlossen",
+    "closedDisplay": "geschlossen",
+    "nextDay": "endet am Folgetag",
+    "addWindow": "Zeitfenster hinzufügen",
+    "removeWindow": "Zeitfenster entfernen",
+    "reset": "Zurücksetzen",
+    "derivedRange": "Dein Event läuft laut Öffnungszeiten von {{start}} bis {{end}}.",
+    "seriesHint": "Bei wiederkehrenden Events sind Öffnungszeiten je Tag nicht möglich.",
+    "seriesBlocked": "Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“.",
+    "seriesBlockedSaved": "Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“ und speichere das Event.",
+    "errorMissingTime": "Bitte gib bei jedem geöffneten Tag Beginn und Ende an.",
+    "errorOverlap": "Zwei Zeitfenster überschneiden sich. Bitte prüfe die Öffnungszeiten.",
+    "errorTooMany": "Es sind höchstens {{max}} Zeitfenster möglich.",
+    "errorAllClosed": "Mindestens ein Tag muss geöffnet sein.",
+    "openingHours": "Öffnungszeiten",
+    "today": "Heute",
+    "todayHours": "Heute {{start}} – {{end}}",
+    "nextOpening": "Ab {{day}} {{time}}"
+  },
   "ticket": {
     "eventLink": "Event-Link",
     "joinNow": "Jetzt teilnehmen"
@@ -1220,6 +1244,7 @@
     "footer": "Stand: August 2026 | Veranstalter: Share Your Party"
   },
   "footer": {
+    "halloweenVienna": "Halloween in Wien",
     "blog": "Blog",
     "copyright": "© {{year}} Share Your Party. Alle Rechte vorbehalten.",
     "events": "Events",

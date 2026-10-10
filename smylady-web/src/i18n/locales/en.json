@@ -304,6 +304,30 @@
     "invalidContactEmail": "Please enter a valid email address for the contact person.",
     "profileFailed": "Brand profile could not be created"
   },
+  "dailyHours": {
+    "title": "Opening hours per day",
+    "hint": "Optional. Leave empty if the same hours apply every day.",
+    "from": "From",
+    "until": "Until",
+    "closed": "Closed",
+    "closedDisplay": "closed",
+    "nextDay": "ends the next day",
+    "addWindow": "Add time slot",
+    "removeWindow": "Remove time slot",
+    "reset": "Reset",
+    "derivedRange": "Based on the opening hours, your event runs from {{start}} to {{end}}.",
+    "seriesHint": "Opening hours per day are not available for recurring events.",
+    "seriesBlocked": "Recurring events do not support opening hours per day. If you want a series, remove the opening hours using “Reset”.",
+    "seriesBlockedSaved": "Recurring events do not support opening hours per day. If you want a series, remove the opening hours using “Reset” and save the event.",
+    "errorMissingTime": "Please enter a start and end time for every open day.",
+    "errorOverlap": "Two time slots overlap. Please check the opening hours.",
+    "errorTooMany": "A maximum of {{max}} time slots is allowed.",
+    "errorAllClosed": "At least one day must be open.",
+    "openingHours": "Opening hours",
+    "today": "Today",
+    "todayHours": "Today {{start}} – {{end}}",
+    "nextOpening": "From {{day}} {{time}}"
+  },
   "ticket": {
     "eventLink": "Event Link",
     "joinNow": "Join now"
@@ -1365,6 +1389,7 @@
     "footer": "As of: August 2026 | Organizer: Share Your Party"
   },
   "footer": {
+    "halloweenVienna": "Halloween in Vienna",
     "blog": "Blog",
     "copyright": "© {{year}} Share Your Party. All rights reserved.",
     "events": "Events",

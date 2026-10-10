@@ -73,6 +73,21 @@ export interface AuthResponse {
 }
 
 // Event Types
+/**
+ * Ein Öffnungsfenster eines mehrtägigen Events, in Wiener Wanduhrzeit.
+ *
+ * `date` und `endDate` als YYYY-MM-DD, die Zeiten als HH:mm — bewusst ohne
+ * Zeitzone, das Backend rechnet sie als Europe/Vienna. Ein Fenster über
+ * Mitternacht braucht ein ausdrückliches `endDate`; ein Ende vor dem Beginn
+ * ohne `endDate` lehnt das Backend mit 400 ab.
+ */
+export interface EventScheduleEntry {
+  date: string
+  startTime: string
+  endTime: string
+  endDate?: string
+}
+
 export interface Event {
   id: string
   _id?: string
@@ -92,6 +107,11 @@ export interface Event {
   eventDate: string
   eventStartTime: string
   eventEndTime: string
+  /**
+   * Öffnungszeiten je Tag. Optional: Fehlt das Feld oder ist es leer, gelten
+   * allein eventStartTime/eventEndTime. Tage ohne Eintrag sind geschlossen.
+   */
+  schedule?: EventScheduleEntry[]
   locationName: string
   location: {
     type: string

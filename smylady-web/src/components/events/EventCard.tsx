@@ -19,6 +19,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { useTranslation } from 'react-i18next'
 import { useAuthModal } from '@/contexts/AuthModalContext'
+import { useNow } from '@/hooks/useNow'
+import { formatWeekdayShort, getScheduleStatus } from '@/lib/eventSchedule'
 
 /**
  * Kategorien, bei denen die Musikrichtung NICHT als Tag erscheint.
@@ -73,6 +75,30 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
     event.category === 'Popup'
       ? formatEventDateRange(event.eventDate, event.eventEndTime, { locale: lang })
       : null
+
+  /*
+   * Öffnungszeiten statt Startzeit — nur bei Events mit schedule, und nur wenn
+   * heute geöffnet ist oder der nächste Öffnungstag in den kommenden sechs
+   * Tagen liegt. Sonst null, und die Kachel zeigt die Startzeit wie bisher.
+   * `now` ist beim Server-Rendering null, die Kachel startet also ebenfalls
+   * mit der bisherigen Anzeige.
+   */
+  const now = useNow()
+  const scheduleStatus = now ? getScheduleStatus(event.schedule, now) : null
+  const scheduleLabel =
+    scheduleStatus?.kind === 'today'
+      ? t('dailyHours.todayHours', {
+          defaultValue: 'Heute {{start}} – {{end}}',
+          start: scheduleStatus.startTime,
+          end: scheduleStatus.endTime,
+        })
+      : scheduleStatus?.kind === 'next'
+        ? t('dailyHours.nextOpening', {
+            defaultValue: 'Ab {{day}} {{time}}',
+            day: formatWeekdayShort(scheduleStatus.date, lang === 'en' ? 'en-GB' : 'de-DE'),
+            time: scheduleStatus.startTime,
+          })
+        : null
 
   const eventId = event.id || event._id
   // Handle different image structures: locationImages array with url property, or direct images array
@@ -287,10 +313,10 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
                   : '-')}
             </span>
           </div>
-          {event.eventStartTime && (
+          {(scheduleLabel || event.eventStartTime) && (
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              <span>{formatEventTime(event.eventStartTime)}</span>
+              <span>{scheduleLabel ?? formatEventTime(event.eventStartTime)}</span>
             </div>
           )}
         </div>

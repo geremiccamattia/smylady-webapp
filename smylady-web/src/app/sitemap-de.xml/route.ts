@@ -8,6 +8,9 @@ const staticPages = [
   { url: '/events/wien',  priority: '0.8', changefreq: 'daily'   },
   // Kategorieseite: Pop-ups wechseln wöchentlich, daher 'daily' wie /events/wien.
   { url: '/events/pop-up-wien', priority: '0.8', changefreq: 'daily' },
+  // Saisonale Kategorieseite. Die übrigen Kategorieseiten (business-events-wien,
+  // workshops-wien, clubbing-wien, konzerte-wien) fehlen hier bislang.
+  { url: '/events/halloween-wien', priority: '0.8', changefreq: 'daily' },
   // Nur die neuen URLs — /influencer-* wird per 308 weitergeleitet und gehoert
   // deshalb nicht in die Sitemap.
   { url: '/creator-events', priority: '0.7', changefreq: 'monthly' },
