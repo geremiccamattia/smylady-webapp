@@ -524,6 +524,7 @@
     "doneTitle": "Thanks, your brand profile has been created.",
     "doneDescription": "We are reviewing your details and will activate your account shortly.",
     "doneButton": "Discover events",
+    "profileExists": "Your brand profile already exists.",
     "sessionExpired": "Your session has expired. Please sign in again – your entries are kept.",
     "rateLimited": "Too many attempts, please wait a moment.",
     "invalidContactEmail": "Please enter a valid email address for the contact person.",

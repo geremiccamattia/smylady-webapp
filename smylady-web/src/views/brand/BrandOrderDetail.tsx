@@ -43,6 +43,9 @@ import { formatDate, formatDateTime, formatPrice, getInitials, resolveImageUrl }
 import { BrandGate, LoadingBars, OrderStatusBadge, useBrandLabels } from '@/components/brand/brandShared'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 
+/** Ab diesen Status ist die Creator-Auswahl fix und darf der Brand gezeigt werden. */
+const PROPOSED_VISIBLE_FROM: BrandOrder['status'][] = ['offer_sent', 'confirmed', 'completed']
+
 /**
  * Ein Auftrag aus Sicht der Brand.
  *
@@ -258,8 +261,10 @@ function OrderDetail() {
         </Card>
       )}
 
-      {/* Event nach Annahme */}
-      {order.eventId && (
+      {/* Event nach Annahme. Bei einem stornierten Auftrag bleibt die Karte
+          weg: Die Sichtbarkeit eines abgesagten Events soll die Brand nicht
+          mehr umschalten können. */}
+      {order.eventId && order.status !== 'cancelled' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -326,8 +331,10 @@ function OrderDetail() {
         </Card>
       )}
 
-      {/* Vorgeschlagene Creator */}
-      {order.proposedCreators.length > 0 && (
+      {/* Vorgeschlagene Creator — erst mit dem Angebot. Vorher stellt der
+          Admin die Auswahl noch zusammen; der Statushinweis sagt "Angebot
+          folgt", da wäre eine halbfertige Liste widersprüchlich. */}
+      {PROPOSED_VISIBLE_FROM.includes(order.status) && order.proposedCreators.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

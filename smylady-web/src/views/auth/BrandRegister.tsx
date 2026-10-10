@@ -286,11 +286,18 @@ export default function BrandRegister() {
       /*
        * 409 ist kein Fehler, sondern der Normalfall beim zweiten Anlauf: Das
        * Profil besteht bereits, etwa weil jemand die Seite neu geladen und sich
-       * erneut angemeldet hat. Das Ziel ist erreicht — also weiter zum
-       * Abschluss, statt einen Fehler zu zeigen, den niemand beheben kann.
+       * erneut angemeldet hat. Dann direkt in den Brand-Bereich: Der zeigt den
+       * echten Stand (in Prüfung, freigeschaltet, ...), während der
+       * Abschlussbildschirm hier "wird geprüft" behauptet hätte, auch wenn
+       * das Profil längst aktiv ist.
        */
       if (status === 409) {
-        setStep('done')
+        toast({
+          title: t('brandRegister.profileExists', {
+            defaultValue: 'Dein Markenprofil besteht bereits.',
+          }),
+        })
+        router.replace(localePath('/brand'))
         return
       }
 
