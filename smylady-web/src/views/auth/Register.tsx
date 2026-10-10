@@ -16,6 +16,8 @@ import { apiClient } from '@/services/api'
 import { authService } from '@/services/auth'
 import { useFingerprint } from '@/hooks/useFingerprint'
 import CreatorApplicationForm from '@/components/creator/CreatorApplicationForm'
+import { resolvePostLoginPath } from '@/lib/postLogin'
+import { useLocalePath } from '@/hooks/useLocalePath'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -35,6 +37,7 @@ export default function Register() {
   const { toast } = useToast()
   const { t } = useTranslation()
   const fingerprint = useFingerprint()
+  const localePath = useLocalePath()
 
   useEffect(() => {
     const storedCode = localStorage.getItem('referral_code')
@@ -385,8 +388,13 @@ export default function Register() {
                    * der E-Mail-Registrierung lässt sich hier nicht einhängen —
                    * der Google-Flow endet mit einer Weiterleitung —, deshalb
                    * geht es zur eigenständigen Seite.
+                   *
+                   * Ohne Haken gilt dieselbe Weiterleitung wie beim Login:
+                   * Ein bestehendes Brand- oder Creator-Konto, das hier
+                   * "Mit Google" klickt, landet in seinem Bereich, nicht
+                   * auf /explore.
                    */
-                  router.push(wantsCreator ? '/creator/apply' : '/explore')
+                  router.push(localePath(wantsCreator ? '/creator/apply' : await resolvePostLoginPath()))
                 }}
                 className="w-full"
               />
