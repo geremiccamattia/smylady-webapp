@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import { resolvePostLoginPath } from '@/lib/postLogin'
 import { primaryFieldKey } from '@/lib/eventFields'
 import {
   Eye,
@@ -416,7 +417,9 @@ export default function Login() {
         title: t('auth.loginSuccess'),
         description: t('auth.welcomeBack'),
       })
-      router.replace(from)
+      // Brands landen in ihrem Dashboard, Creator in ihrem Bereich, alle
+      // anderen wie bisher auf /explore (siehe lib/postLogin.ts).
+      router.replace(await resolvePostLoginPath())
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -643,7 +646,7 @@ export default function Login() {
                           }
                         }
 
-                        router.replace(from)
+                        router.replace(await resolvePostLoginPath())
                       }}
                       className="w-full"
                     />
