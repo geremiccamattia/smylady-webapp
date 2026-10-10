@@ -8,8 +8,9 @@ import { useTranslation } from 'react-i18next'
 import {
   Search, Bell, MessageCircle, Menu, Plus, Newspaper, Users,
   Ticket, CalendarDays, FileText, Heart, UserCircle, Settings,
-  Ban, ShieldCheck, Star, Wallet,
+  Ban, ShieldCheck, Star, Wallet, Building2, Sparkles,
 } from 'lucide-react'
+import { useCreatorStanding } from '@/hooks/useCreatorStanding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -27,6 +28,12 @@ export default function Header() {
   const localePath = useLocalePath()
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+
+  // Creator-Bereich nur für Mitglieder mit Creator-Profil. GET /users/me kennt
+  // kein Creator-Kennzeichen; der Stand kommt aus /influencer/my-application
+  // (einmal pro Sitzung, react-query-Cache, vgl. CreatorCard in den Einstellungen).
+  const { standing: creatorStanding } = useCreatorStanding()
+  const isCreator = creatorStanding === 'member'
 
   // Fetch unread notification count
   const { data: unreadCount = 0 } = useQuery({
@@ -155,6 +162,23 @@ export default function Header() {
                   {t('nav.createEvent')}
                 </Button>
               </Link>
+              {/* Brand-Dashboard — nur für Marken (isBrand aus GET /users/me, siehe types/index.ts). */}
+              {user?.isBrand && (
+                <Link href={localePath("/brand")}>
+                  <Button suppressHydrationWarning variant="ghost" size="sm" className="gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {t('brandDashboard.navLabel', { defaultValue: 'Brand' })}
+                  </Button>
+                </Link>
+              )}
+              {isCreator && (
+                <Link href={localePath("/creator")}>
+                  <Button suppressHydrationWarning variant="ghost" size="sm" className="gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    {t('creatorDashboard.navLabel', { defaultValue: 'Creator' })}
+                  </Button>
+                </Link>
+              )}
               <Link href={localePath("/feed")}>
                 <Button variant="ghost" size="icon">
                   <Newspaper className="h-5 w-5" />
@@ -303,6 +327,44 @@ export default function Header() {
                     <span className="text-sm font-medium">{item.label}</span>
                   </Link>
                 ))}
+
+                {/* Brand-Bereich — nur für Marken */}
+                {user?.isBrand && (
+                  <div className="border-t mt-2 pt-3">
+                    <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('brandDashboard.navSection', { defaultValue: 'Für Marken' })}
+                    </p>
+                    <Link
+                      href={localePath('/brand')}
+                      onClick={closeSidebar}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                    >
+                      <Building2 className="h-6 w-6 shrink-0 text-primary" />
+                      <span className="text-sm font-medium">
+                        {t('brandDashboard.title', { defaultValue: 'Brand-Dashboard' })}
+                      </span>
+                    </Link>
+                  </div>
+                )}
+
+                {/* Creator-Bereich — nur für Mitglieder mit Creator-Profil */}
+                {isCreator && (
+                  <div className="border-t mt-2 pt-3">
+                    <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('creatorDashboard.navSection', { defaultValue: 'Creator Club' })}
+                    </p>
+                    <Link
+                      href={localePath('/creator')}
+                      onClick={closeSidebar}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                    >
+                      <Sparkles className="h-6 w-6 shrink-0 text-primary" />
+                      <span className="text-sm font-medium">
+                        {t('creatorDashboard.title', { defaultValue: 'Creator-Bereich' })}
+                      </span>
+                    </Link>
+                  </div>
+                )}
 
                 {/* Werbung */}
                 <div className="border-t mt-2 pt-3">

@@ -39,6 +39,12 @@ export interface User {
    * und die WebApp ruft es ohne Token auf.
    */
   referralCode?: string
+  /**
+   * Konto einer Marke (Brand-Profil mit Status 'active'). Kommt aus
+   * GET /users/me, nur für das eigene Konto. Ein älteres Nutzerobjekt aus
+   * dem localStorage kann das Feld nicht haben — dann gilt es als false.
+   */
+  isBrand?: boolean
 }
 
 // Auth Types
