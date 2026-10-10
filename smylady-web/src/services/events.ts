@@ -69,6 +69,25 @@ export const eventsService = {
     }
   },
 
+  /**
+   * Wie getEventById, aber nur ein 404 wird zu null. Jeder andere Fehler
+   * (Netz, 5xx, 401, 403) geht an den Aufrufer.
+   *
+   * Für Stellen, die „kein Event" von „gerade nicht erreichbar" unterscheiden
+   * müssen — etwa den Sichtbarkeits-Schalter der Brand: Ein geschluckter
+   * Fehler sähe dort wie ein echter Zustand aus („Nur Creator" aktiv), und
+   * der Klick darauf bliebe wirkungslos.
+   */
+  async getEventByIdOrNull(id: string, populateCreator: boolean = true): Promise<Event | null> {
+    try {
+      const response = await apiClient.get(`/events/${id}?populateCreator=${populateCreator}`)
+      return response.data.data || null
+    } catch (error: any) {
+      if (error?.response?.status === 404) return null
+      throw error
+    }
+  },
+
   // Get my events (as organizer) - with error handling
   async getMyEvents(): Promise<Event[]> {
     try {
