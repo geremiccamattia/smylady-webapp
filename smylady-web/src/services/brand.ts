@@ -86,15 +86,19 @@ export interface BrandOrderPayload {
     description?: string
   }
   deliverables: BrandOrderDeliverable[]
+  // Die drei optionalen Angaben kennen drei Zustände: Wert, weggelassen
+  // (unverändert) und null (leeren). Beim Bearbeiten eines Entwurfs muss das
+  // Formular null schicken, sonst fällt undefined im JSON weg und das Backend
+  // behält den alten Wert.
   targetAudience?: {
     ageFrom?: number
     ageTo?: number
     gender?: AudienceGender
     region?: string
     interests?: string[]
-  }
-  usageRights?: { brandMayReuse?: boolean; notes?: string }
-  publishDeadline?: string
+  } | null
+  usageRights?: { brandMayReuse?: boolean; notes?: string } | null
+  publishDeadline?: string | null
   approvalRequired?: boolean
 }
 
