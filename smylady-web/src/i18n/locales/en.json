@@ -259,6 +259,8 @@
     "reset": "Reset",
     "derivedRange": "Based on the opening hours, your event runs from {{start}} to {{end}}.",
     "seriesHint": "Opening hours per day are not available for recurring events.",
+    "seriesBlocked": "Recurring events do not support opening hours per day. If you want a series, remove the opening hours using “Reset”.",
+    "seriesBlockedSaved": "Recurring events do not support opening hours per day. If you want a series, remove the opening hours using “Reset” and save the event.",
     "errorMissingTime": "Please enter a start and end time for every open day.",
     "errorOverlap": "Two time slots overlap. Please check the opening hours.",
     "errorTooMany": "A maximum of {{max}} time slots is allowed.",
