@@ -23,7 +23,7 @@ import {
   type CreatorChannel,
   type CreatorPlatform,
 } from '@/services/creator'
-import { CreatorGate, CreatorStatusBadge } from '@/components/creator/creatorShared'
+import { CreatorGate, CreatorStatusBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 
 const SELECT_CLASS =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
@@ -64,6 +64,7 @@ function ProfileForm() {
   const router = useRouter()
   const localePath = useLocalePath()
   const queryClient = useQueryClient()
+  const labels = useCreatorLabels()
   const { profile } = useCreatorProfile()
 
   const [channels, setChannels] = useState<ChannelRow[]>([emptyChannel()])
@@ -186,14 +187,19 @@ function ProfileForm() {
                   <select className={SELECT_CLASS} value={row.platform} onChange={(e) => updateChannel(index, { platform: e.target.value as CreatorPlatform })}>
                     {CREATOR_PLATFORMS.map((platform) => (
                       <option key={platform} value={platform}>
-                        {platform}
+                        {labels.platform(platform)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <Label>{t('creatorDashboard.fieldUsername', { defaultValue: 'Benutzername' })}</Label>
-                  <Input value={row.username} onChange={(e) => updateChannel(index, { username: e.target.value })} placeholder="@deinprofil" required />
+                  <Input
+                    value={row.username}
+                    onChange={(e) => updateChannel(index, { username: e.target.value })}
+                    placeholder={t('creatorDashboard.fieldUsernamePlaceholder', { defaultValue: '@deinprofil' })}
+                    required
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>{t('creatorDashboard.fieldChannelUrl', { defaultValue: 'Link' })}</Label>
@@ -205,7 +211,7 @@ function ProfileForm() {
                     <option value="">{t('creatorDashboard.followersUnknown', { defaultValue: 'Keine Angabe' })}</option>
                     {CREATOR_FOLLOWER_RANGES.map((range) => (
                       <option key={range} value={range}>
-                        {range}
+                        {labels.followerRange(range)}
                       </option>
                     ))}
                   </select>
@@ -257,7 +263,7 @@ function ProfileForm() {
                       active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
                     }`}
                   >
-                    {category}
+                    {labels.category(category)}
                   </button>
                 )
               })}
@@ -275,7 +281,12 @@ function ProfileForm() {
           <CardContent className="space-y-4">
             <div className="space-y-2 md:w-1/2">
               <Label htmlFor="city">{t('creatorDashboard.fieldCity', { defaultValue: 'Stadt' })}</Label>
-              <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Wien" />
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder={t('creatorDashboard.fieldCityPlaceholder', { defaultValue: 'Wien' })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bio">{t('creatorDashboard.fieldBio', { defaultValue: 'Bio' })}</Label>

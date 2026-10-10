@@ -12,12 +12,42 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { useCreatorProfile, type CreatorProfileStanding } from '@/hooks/useCreatorProfile'
 import { LoadingBars, StatusPanel } from '@/components/brand/brandShared'
+import { CATEGORY_OPTIONS, FOLLOWER_OPTIONS, OTHER_PLATFORMS } from '@/components/creator/CreatorApplicationForm'
 import type { AssignmentResponse, CreatorProfileStatus } from '@/services/creator'
 
 /** Gemeinsame Bausteine der Creator-Seiten: Zugangsprüfung, Badges, Beschriftungen. */
 
+/**
+ * Schlüssel zu einem gespeicherten Enum-Wert, aus denselben Listen wie das
+ * Bewerbungsformular. Die Werte selbst sind deutsch ("Unter 1.500", "Musik")
+ * und stehen so in der Datenbank; übersetzt wird nur die Anzeige.
+ */
+const labelKeyOf = (options: { value: string; labelKey: string }[], value: string): string | undefined =>
+  options.find((option) => option.value === value)?.labelKey
+
 export function useCreatorLabels() {
   const { t } = useTranslation()
+
+  const followerRange = (value: string): string => {
+    const key = labelKeyOf(FOLLOWER_OPTIONS, value)
+    return key ? t(key, { defaultValue: value }) : value
+  }
+
+  const category = (value: string): string => {
+    const key = labelKeyOf(CATEGORY_OPTIONS, value)
+    return key ? t(key, { defaultValue: value }) : value
+  }
+
+  // Markennamen (Instagram, TikTok, …) bleiben, wie sie sind. Übersetzt wird
+  // nur der Sammelposten: Das Profil speichert "Sonstige", die Bewerbung
+  // "Sonstiges" — beides landet auf demselben Schlüssel.
+  const platform = (value: string): string => {
+    if (value === 'Sonstige' || value === 'Sonstiges') {
+      return t('influencer.platformOther', { defaultValue: 'Sonstiges' })
+    }
+    const key = labelKeyOf(OTHER_PLATFORMS, value)
+    return key ? t(key, { defaultValue: value }) : value
+  }
 
   const profileStatus = (status: CreatorProfileStatus): string =>
     ({
@@ -46,7 +76,7 @@ export function useCreatorLabels() {
       other: t('brandDashboard.deliverableOther', { defaultValue: 'Sonstiges' }),
     })[type] ?? type
 
-  return { profileStatus, response, deliverable }
+  return { profileStatus, response, deliverable, followerRange, category, platform }
 }
 
 export function ResponseBadge({ value }: { value: AssignmentResponse }) {
