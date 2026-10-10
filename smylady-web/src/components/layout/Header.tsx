@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Search, Bell, MessageCircle, Menu, Plus, Newspaper, Users,
   Ticket, CalendarDays, FileText, Heart, UserCircle, Settings,
-  Ban, ShieldCheck, Star, Wallet,
+  Ban, ShieldCheck, Star, Wallet, Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -155,6 +155,15 @@ export default function Header() {
                   {t('nav.createEvent')}
                 </Button>
               </Link>
+              {/* Brand-Dashboard — nur für Marken (isBrand aus GET /users/me, siehe types/index.ts). */}
+              {user?.isBrand && (
+                <Link href={localePath("/brand")}>
+                  <Button suppressHydrationWarning variant="ghost" size="sm" className="gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {t('brandDashboard.navLabel', { defaultValue: 'Brand' })}
+                  </Button>
+                </Link>
+              )}
               <Link href={localePath("/feed")}>
                 <Button variant="ghost" size="icon">
                   <Newspaper className="h-5 w-5" />
@@ -303,6 +312,25 @@ export default function Header() {
                     <span className="text-sm font-medium">{item.label}</span>
                   </Link>
                 ))}
+
+                {/* Brand-Bereich — nur für Marken */}
+                {user?.isBrand && (
+                  <div className="border-t mt-2 pt-3">
+                    <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('brandDashboard.navSection', { defaultValue: 'Für Marken' })}
+                    </p>
+                    <Link
+                      href={localePath('/brand')}
+                      onClick={closeSidebar}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                    >
+                      <Building2 className="h-6 w-6 shrink-0 text-primary" />
+                      <span className="text-sm font-medium">
+                        {t('brandDashboard.title', { defaultValue: 'Brand-Dashboard' })}
+                      </span>
+                    </Link>
+                  </div>
+                )}
 
                 {/* Werbung */}
                 <div className="border-t mt-2 pt-3">
