@@ -61,6 +61,12 @@ export function ResponseBadge({ value }: { value: AssignmentResponse }) {
   }
 }
 
+/** Das Event der Anfrage liegt hinter uns; eine Antwort ändert nichts mehr. */
+export function PastEventBadge() {
+  const { t } = useTranslation()
+  return <Badge variant="secondary">{t('creatorDashboard.eventPast', { defaultValue: 'Vergangen' })}</Badge>
+}
+
 export function CreatorStatusBadge({ status }: { status: CreatorProfileStatus }) {
   const { profileStatus } = useCreatorLabels()
   switch (status) {
