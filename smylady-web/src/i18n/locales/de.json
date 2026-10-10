@@ -457,7 +457,7 @@
     "validateBudget": "Bitte gib ein Budget in Euro an.",
     "validateEventName": "Bitte gib den Namen des Events an.",
     "validateEventDate": "Bitte wähle das Datum des Events.",
-    "validateEventEnd": "Das Ende liegt vor dem Beginn.",
+    "validateEventEnd": "Das Ende muss nach dem Beginn liegen. Bei gleichem Tag bitte Uhrzeiten angeben.",
     "validateDeliverables": "Bitte gib mindestens einen gewünschten Inhalt mit Anzahl an.",
     "validateAge": "Bitte prüfe die Altersangaben.",
     "orderSubmitted": "Dein Auftrag ist eingereicht. Wir melden uns mit einem Angebot.",

@@ -180,8 +180,13 @@ function OrderForm() {
     const startIso = joinIso(eventDate, eventTime)
     if (!startIso) return problem(t('brandDashboard.validateEventDate', { defaultValue: 'Bitte wähle das Datum des Events.' }))
     const endIso = joinIso(eventEndDate, eventEndTime)
-    if (endIso && endIso < startIso) {
-      return problem(t('brandDashboard.validateEventEnd', { defaultValue: 'Das Ende liegt vor dem Beginn.' }))
+    // Gleich ist genauso ungültig wie davor: Das Backend lehnt es ab, und ein
+    // Event ohne Dauer liesse sich beim Annehmen des Angebots nicht anlegen.
+    // Typischer Fall: Beginn und Ende am selben Tag, beide ohne Uhrzeit.
+    if (endIso && endIso <= startIso) {
+      return problem(
+        t('brandDashboard.validateEventEnd', { defaultValue: 'Das Ende muss nach dem Beginn liegen.' }),
+      )
     }
 
     const rows = deliverables.map((row) => ({

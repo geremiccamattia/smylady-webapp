@@ -445,7 +445,7 @@
     "validateBudget": "Please enter a budget in euros.",
     "validateEventName": "Please enter the event name.",
     "validateEventDate": "Please choose the event date.",
-    "validateEventEnd": "The end is before the start.",
+    "validateEventEnd": "The end must be after the start. For a same-day event, please add times.",
     "validateDeliverables": "Please add at least one requested item with a quantity.",
     "validateAge": "Please check the age range.",
     "orderSubmitted": "Your order has been submitted. We will get back to you with an offer.",
