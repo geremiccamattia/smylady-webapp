@@ -172,7 +172,12 @@ function OrderForm() {
       description: readBrandError(error, fallback),
     })
 
-  const buildPayload = (): BrandOrderPayload | null => {
+  /**
+   * Prüft die Eingaben und baut den Request. `submit` schaltet die Regeln
+   * zu, die nur fürs Einreichen gelten: Ein Entwurf darf unfertig sein, ein
+   * eingereichter Auftrag geht an uns zur Prüfung und muss stimmen.
+   */
+  const buildPayload = (submit: boolean): BrandOrderPayload | null => {
     const problem = (message: string) => {
       toast({ variant: 'destructive', title: t('common.error', { defaultValue: 'Fehler' }), description: message })
       return null
@@ -198,6 +203,16 @@ function OrderForm() {
         t('brandDashboard.validateEventEnd', { defaultValue: 'Das Ende muss nach dem Beginn liegen.' }),
       )
     }
+    // Ein Event in der Vergangenheit lässt sich nicht mehr bewerben. Bewusst
+    // nur beim Einreichen ein Fehler: Ein Entwurf darf mit einem alten Datum
+    // gespeichert werden, etwa wenn das Datum noch nicht feststeht und erst
+    // ein Platzhalter drinsteht. Eingereicht geht er an uns zur Prüfung, und
+    // da muss das Datum stimmen.
+    if (submit && new Date(startIso).getTime() < Date.now()) {
+      return problem(
+        t('brandDashboard.validateEventPast', { defaultValue: 'Das Event liegt in der Vergangenheit. Bitte prüfe das Datum.' }),
+      )
+    }
 
     const rows = deliverables.map((row) => ({
       type: row.type,
@@ -217,6 +232,9 @@ function OrderForm() {
     const to = ageTo.trim() === '' ? undefined : Math.floor(Number(ageTo))
     if ((from !== undefined && (!Number.isFinite(from) || from < 0)) || (to !== undefined && (!Number.isFinite(to) || to < 0))) {
       return problem(t('brandDashboard.validateAge', { defaultValue: 'Bitte prüfe die Altersangaben.' }))
+    }
+    if (from !== undefined && to !== undefined && from > to) {
+      return problem(t('brandDashboard.validateAgeRange', { defaultValue: '„Alter von“ darf nicht größer sein als „Alter bis“.' }))
     }
     const interestList = interests
       .split(',')
@@ -244,7 +262,10 @@ function OrderForm() {
       targetAudience: hasAudience
         ? { ageFrom: from, ageTo: to, gender, region: region.trim() || undefined, interests: interestList }
         : cleared,
-      usageRights: brandMayReuse || usageNotes.trim() ? { brandMayReuse, notes: usageNotes.trim() || undefined } : cleared,
+      // Nutzungshinweise gehören zur Weiterverwendung. Ist der Schalter aus,
+      // geht nichts davon mit — vorher wurden Hinweise auch dann gesendet und
+      // waren beim Bearbeiten unsichtbar, weil das Feld eingeklappt war.
+      usageRights: brandMayReuse ? { brandMayReuse: true, notes: usageNotes.trim() || undefined } : cleared,
       publishDeadline: joinIso(publishDeadline, '00:00') ?? cleared,
       approvalRequired,
     }
@@ -291,7 +312,7 @@ function OrderForm() {
   })
 
   const handle = (submit: boolean) => {
-    const payload = buildPayload()
+    const payload = buildPayload(submit)
     if (!payload) return
     save.mutate({ payload, submit })
   }
@@ -300,7 +321,7 @@ function OrderForm() {
   // Validierungsfehler sollen vor dem Dialog sichtbar sein, nicht danach.
   const [confirmSubmit, setConfirmSubmit] = useState(false)
   const askToSubmit = () => {
-    if (buildPayload()) setConfirmSubmit(true)
+    if (buildPayload(true)) setConfirmSubmit(true)
   }
 
   if (editId && existing.isLoading) {
@@ -417,7 +438,10 @@ function OrderForm() {
                 id="budget"
                 type="number"
                 min={0}
-                step="1"
+                // Cent-Beträge wie 1500.50 sind erlaubt. Mit step="1" liess
+                // der Browser den Entwurf speichern, blockierte aber das
+                // Einreichen still über die Formularprüfung.
+                step="0.01"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 required
@@ -627,7 +651,17 @@ function OrderForm() {
                   })}
                 </p>
               </div>
-              <Switch id="brandMayReuse" checked={brandMayReuse} onCheckedChange={setBrandMayReuse} />
+              <Switch
+                id="brandMayReuse"
+                checked={brandMayReuse}
+                onCheckedChange={(value) => {
+                  setBrandMayReuse(value)
+                  // Beim Ausschalten auch die Hinweise leeren, sonst stünden
+                  // sie unsichtbar im Zustand und kämen beim nächsten
+                  // Einschalten unerwartet wieder.
+                  if (!value) setUsageNotes('')
+                }}
+              />
             </div>
             {brandMayReuse && (
               <div className="space-y-2">
