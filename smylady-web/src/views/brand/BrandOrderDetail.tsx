@@ -41,6 +41,7 @@ import { brandService, readBrandError, type BrandOrder } from '@/services/brand'
 import { eventsService } from '@/services/events'
 import { formatDate, formatDateTime, formatPrice, getInitials, resolveImageUrl } from '@/lib/utils'
 import { BrandGate, LoadingBars, OrderStatusBadge, useBrandLabels } from '@/components/brand/brandShared'
+import { useCreatorLabels } from '@/components/creator/creatorShared'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 
 /** Ab diesen Status ist die Creator-Auswahl fix und darf der Brand gezeigt werden. */
@@ -73,6 +74,9 @@ function OrderDetail() {
   const localePath = useLocalePath()
   const queryClient = useQueryClient()
   const labels = useBrandLabels()
+  // Die Creator-Karten zeigen Enum-Werte des Creator-Profils (Plattform,
+  // Follower-Bereich, Kategorie); die Beschriftung kommt aus dem Creator-Bereich.
+  const creatorLabels = useCreatorLabels()
   const { id } = useParams<{ id: string }>()
   const [confirmAccept, setConfirmAccept] = useState(false)
   const [confirmSubmit, setConfirmSubmit] = useState(false)
@@ -365,14 +369,14 @@ function OrderDetail() {
                             <Badge key={`${channel.platform}-${index}`} variant="secondary" className="font-normal">
                               {channel.url ? (
                                 <a href={channel.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                  {channel.platform}: @{channel.username}
+                                  {creatorLabels.platform(channel.platform)}: @{channel.username}
                                 </a>
                               ) : (
                                 <>
-                                  {channel.platform}: @{channel.username}
+                                  {creatorLabels.platform(channel.platform)}: @{channel.username}
                                 </>
                               )}
-                              {channel.followerRange ? ` · ${channel.followerRange}` : ''}
+                              {channel.followerRange ? ` · ${creatorLabels.followerRange(channel.followerRange)}` : ''}
                             </Badge>
                           ))}
                         </div>
@@ -381,7 +385,7 @@ function OrderDetail() {
                         <div className="flex flex-wrap gap-1">
                           {creator.categories.map((category) => (
                             <Badge key={category} variant="outline" className="font-normal">
-                              {category}
+                              {creatorLabels.category(category)}
                             </Badge>
                           ))}
                         </div>
@@ -469,7 +473,7 @@ function OrderDetail() {
             {order.deliverables.map((entry, index) => (
               <li key={`${entry.type}-${index}`}>
                 {entry.quantity}× {labels.deliverable(entry.type)}
-                {entry.platform ? ` (${entry.platform})` : ''}
+                {entry.platform ? ` (${labels.platform(entry.platform)})` : ''}
                 {entry.notes ? <span className="text-muted-foreground"> – {entry.notes}</span> : null}
               </li>
             ))}

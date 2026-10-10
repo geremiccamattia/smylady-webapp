@@ -15,7 +15,7 @@ import { CREATOR_PROFILE_QUERY_KEY, useCreatorProfile } from '@/hooks/useCreator
 import { creatorAreaService, readCreatorError, type CreatorAssignment } from '@/services/creator'
 import { formatDate, formatPrice, isEventOver } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
-import { CreatorGate, CreatorStatusBadge, PastEventBadge, ResponseBadge } from '@/components/creator/creatorShared'
+import { CreatorGate, CreatorStatusBadge, PastEventBadge, ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 
 export const CREATOR_ASSIGNMENTS_QUERY_KEY = ['creator', 'assignments'] as const
 
@@ -42,6 +42,7 @@ function DashboardContent() {
   const { toast } = useToast()
   const localePath = useLocalePath()
   const queryClient = useQueryClient()
+  const labels = useCreatorLabels()
   const { user } = useAuth()
   const { profile, standing } = useCreatorProfile()
 
@@ -105,14 +106,14 @@ function DashboardContent() {
               <div className="flex flex-wrap gap-1">
                 {profile.channels.map((channel, index) => (
                   <Badge key={`${channel.platform}-${index}`} variant="secondary" className="font-normal">
-                    {channel.platform}: @{channel.username}
+                    {labels.platform(channel.platform)}: @{channel.username}
                   </Badge>
                 ))}
               </div>
               <div className="flex flex-wrap gap-1">
                 {profile.categories.map((category) => (
                   <Badge key={category} variant="outline" className="font-normal">
-                    {category}
+                    {labels.category(category)}
                   </Badge>
                 ))}
               </div>

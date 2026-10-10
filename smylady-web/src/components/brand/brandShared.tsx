@@ -64,7 +64,12 @@ export function useBrandLabels() {
       diverse: t('brandDashboard.genderDiverse', { defaultValue: 'Divers' }),
     })[value] ?? value
 
-  return { orderStatus, profileStatus, deliverable, gender }
+  // Plattformen sind Markennamen und bleiben, wie sie sind. Nur der
+  // Sammelposten "Sonstige" (so gespeichert) wird übersetzt.
+  const platform = (value: string): string =>
+    value === 'Sonstige' ? t('brandDashboard.platformOther', { defaultValue: 'Sonstige' }) : value
+
+  return { orderStatus, profileStatus, deliverable, gender, platform }
 }
 
 // ───────────────────────────────────────────────────────────────

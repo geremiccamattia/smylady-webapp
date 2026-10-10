@@ -1,9 +1,25 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import i18next from 'i18next'
 import { CONFIG } from '@/lib/constants'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+/**
+ * Intl-Locale zur aktuellen Sprache der App: Englisch → 'en-GB', sonst
+ * 'de-DE' wie bisher.
+ *
+ * Gelesen wird der i18next-Singleton, den src/i18n/index.ts konfiguriert —
+ * bewusst nicht über '@/i18n' importiert, denn utils.ts läuft auch
+ * serverseitig (Metadaten der Event-Seiten), und dort soll die Client-
+ * Initialisierung nicht mitlaufen. Ohne initialisierte Instanz gibt es
+ * keine Sprache, dann bleibt es bei Deutsch.
+ */
+function currentLocale(): 'de-DE' | 'en-GB' {
+  const language = i18next.isInitialized ? i18next.language : undefined
+  return language?.startsWith('en') ? 'en-GB' : 'de-DE'
 }
 
 /**
@@ -66,12 +82,12 @@ export function safeFormatDate(dateString?: string | null, options?: Intl.DateTi
   if (!dateString) return null
   const d = new Date(dateString)
   if (isNaN(d.getTime())) return null
-  return d.toLocaleDateString('de-DE', options || { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return d.toLocaleDateString(currentLocale(), options || { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export function formatDate(date: string | Date): string {
   const d = new Date(date)
-  return d.toLocaleDateString('de-DE', {
+  return d.toLocaleDateString(currentLocale(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -80,7 +96,7 @@ export function formatDate(date: string | Date): string {
 
 export function formatTime(date: string | Date): string {
   const d = new Date(date)
-  return d.toLocaleTimeString('de-DE', {
+  return d.toLocaleTimeString(currentLocale(), {
     hour: '2-digit',
     minute: '2-digit',
   })
@@ -231,12 +247,13 @@ export function isEventOver(
 export function formatPrice(price: number | string | undefined | null, currency: string = 'EUR'): string {
   // Convert string prices to number (backend may send price as string)
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price
-  // Handle undefined, null, or NaN as "Kostenlos"
+  // Kein Preis (undefined, null, NaN) heisst "Kostenlos" — in der Sprache der
+  // App, mit demselben Schlüssel wie die Event-Karten.
   if (numericPrice === undefined || numericPrice === null || isNaN(numericPrice)) {
-    return 'Kostenlos'
+    return i18next.isInitialized ? i18next.t('events.free', { defaultValue: 'Kostenlos' }) : 'Kostenlos'
   }
   // Format all valid numbers including 0 as currency
-  return new Intl.NumberFormat('de-DE', {
+  return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency,
   }).format(numericPrice)

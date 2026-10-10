@@ -61,17 +61,21 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
         await login(authResponse)
         // Invalidate all cached queries so they refetch with auth token
         await queryClient.invalidateQueries()
+        // Dieselben Texte wie beim Login mit Passwort (views/auth/Login.tsx).
         toast({
-          title: 'Erfolgreich angemeldet!',
-          description: 'Willkommen bei Share Your Party!',
+          title: t('auth.loginSuccess', { defaultValue: 'Erfolgreich angemeldet' }),
+          description: t('auth.welcomeBack', { defaultValue: 'Willkommen zurück! Bereit zu erkunden?' }),
         })
         onSuccess?.()
       } catch (error: unknown) {
         console.error('Google login error:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Google-Anmeldung fehlgeschlagen'
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : t('auth.googleLoginFailed', { defaultValue: 'Google-Anmeldung fehlgeschlagen' })
         toast({
           variant: 'destructive',
-          title: 'Anmeldung fehlgeschlagen',
+          title: t('auth.loginFailed', { defaultValue: 'Anmeldung fehlgeschlagen' }),
           description: errorMessage,
         })
       } finally {
@@ -80,7 +84,7 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
     },
     // queryClient ergänzt: Die Instanz aus useQueryClient ist über die Lebenszeit
     // des Providers stabil, der Callback wird dadurch nicht häufiger neu erzeugt.
-    [login, toast, onSuccess, queryClient]
+    [login, toast, onSuccess, queryClient, t]
   )
 
   useEffect(() => {
@@ -163,7 +167,7 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
     return (
       <Button variant="outline" type="button" disabled className={className}>
         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-        Anmeldung läuft...
+        {t('auth.loggingIn', { defaultValue: 'Anmeldung läuft...' })}
       </Button>
     )
   }

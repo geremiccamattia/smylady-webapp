@@ -551,7 +551,7 @@ function OrderForm() {
                     <option value="">{t('brandDashboard.platformAny', { defaultValue: 'Egal' })}</option>
                     {DELIVERABLE_PLATFORMS.map((platform) => (
                       <option key={platform} value={platform}>
-                        {platform}
+                        {labels.platform(platform)}
                       </option>
                     ))}
                   </select>
@@ -618,7 +618,12 @@ function OrderForm() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="region">{t('brandDashboard.fieldRegion', { defaultValue: 'Region' })}</Label>
-                <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Wien" />
+                <Input
+                  id="region"
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  placeholder={t('brandDashboard.fieldRegionPlaceholder', { defaultValue: 'Wien' })}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="interests">{t('brandDashboard.fieldInterests', { defaultValue: 'Interessen' })}</Label>

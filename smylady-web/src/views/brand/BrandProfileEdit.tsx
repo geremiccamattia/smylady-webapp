@@ -296,12 +296,17 @@ function ProfileForm() {
                   id="instagram"
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
-                  placeholder="@deinunternehmen"
+                  placeholder={t('brandDashboard.socialHandlePlaceholder', { defaultValue: '@deinunternehmen' })}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tiktok">TikTok</Label>
-                <Input id="tiktok" value={tiktok} onChange={(e) => setTiktok(e.target.value)} placeholder="@deinunternehmen" />
+                <Input
+                  id="tiktok"
+                  value={tiktok}
+                  onChange={(e) => setTiktok(e.target.value)}
+                  placeholder={t('brandDashboard.socialHandlePlaceholder', { defaultValue: '@deinunternehmen' })}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="otherLink">{t('brandRegister.socialOther', { defaultValue: 'Sonstiges' })}</Label>
