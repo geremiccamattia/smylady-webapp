@@ -271,6 +271,8 @@
     "reset": "Zurücksetzen",
     "derivedRange": "Dein Event läuft laut Öffnungszeiten von {{start}} bis {{end}}.",
     "seriesHint": "Bei wiederkehrenden Events sind Öffnungszeiten je Tag nicht möglich.",
+    "seriesBlocked": "Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“.",
+    "seriesBlockedSaved": "Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“ und speichere das Event.",
     "errorMissingTime": "Bitte gib bei jedem geöffneten Tag Beginn und Ende an.",
     "errorOverlap": "Zwei Zeitfenster überschneiden sich. Bitte prüfe die Öffnungszeiten.",
     "errorTooMany": "Es sind höchstens {{max}} Zeitfenster möglich.",

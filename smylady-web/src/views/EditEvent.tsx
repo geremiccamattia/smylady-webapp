@@ -642,6 +642,24 @@ export default function EditEvent() {
   const schedule = showDailyHours ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults) : []
   const hadSchedule = (event?.schedule?.length ?? 0) > 0
 
+  /*
+   * Serien und Öffnungszeiten schließen sich aus: convertToSeries lehnt ein
+   * Event mit schedule mit 400 ab. Maßgeblich ist dabei der GESPEICHERTE
+   * schedule — der Serienpfad unten sendet nur convertToSeries, keine
+   * Formularänderungen. Ein „Zurücksetzen" im Formular allein reicht also nur,
+   * solange der schedule noch nicht gespeichert war.
+   */
+  const seriesBlockedBySchedule = hadSchedule || schedule.length > 0
+  const seriesBlockedMessage = hadSchedule
+    ? t('dailyHours.seriesBlockedSaved', {
+        defaultValue:
+          'Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“ und speichere das Event.',
+      })
+    : t('dailyHours.seriesBlocked', {
+        defaultValue:
+          'Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“.',
+      })
+
   /** eventDate, eventStartTime und eventEndTime — unverändert der bisherige Weg. */
   const appendEventTimes = (
     eventFormData: FormData,
@@ -890,6 +908,13 @@ export default function EditEvent() {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
         return
       }
+    }
+
+    // Die Serieneinrichtung ist dann gesperrt — hier nur zur Sicherheit, falls
+    // die Serie gewählt wurde, bevor das Event mit seinem schedule geladen war.
+    if (seriesConfig && seriesBlockedBySchedule) {
+      toast({ variant: 'destructive', title: t('common.error'), description: seriesBlockedMessage })
+      return
     }
 
     setIsLoading(true)
@@ -1918,11 +1943,20 @@ export default function EditEvent() {
                       Entfernen
                     </Button>
                   )}
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowRecurringModal(true)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRecurringModal(true)}
+                    disabled={seriesBlockedBySchedule}
+                  >
                     {seriesConfig ? 'Ändern' : 'Einrichten'}
                   </Button>
                 </div>
               </div>
+              {seriesBlockedBySchedule && (
+                <p className="mt-3 text-xs text-muted-foreground">{seriesBlockedMessage}</p>
+              )}
             </CardContent>
           </Card>
         )}
