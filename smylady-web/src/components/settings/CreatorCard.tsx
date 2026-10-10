@@ -50,7 +50,8 @@ export function CreatorCard() {
       </CardHeader>
       <CardContent>
         <Button variant="ghost" className="w-full justify-between" asChild>
-          <Link href={localePath('/creator/apply')}>
+          {/* Mitglieder landen im Creator-Bereich, alle anderen auf der Bewerbungsseite. */}
+          <Link href={localePath(standing === 'member' ? '/creator' : '/creator/apply')}>
             {label}
             <ChevronRight className="h-4 w-4" />
           </Link>
