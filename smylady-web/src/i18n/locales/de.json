@@ -536,6 +536,7 @@
     "doneTitle": "Danke, dein Markenprofil wurde angelegt.",
     "doneDescription": "Wir prüfen deine Angaben und schalten dich zeitnah frei.",
     "doneButton": "Events entdecken",
+    "profileExists": "Dein Markenprofil besteht bereits.",
     "sessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an – deine Eingaben bleiben erhalten.",
     "rateLimited": "Zu viele Versuche, bitte kurz warten.",
     "invalidContactEmail": "Bitte gib eine gültige E-Mail-Adresse für die Ansprechperson an.",

@@ -8,8 +8,12 @@ import { apiClient } from './api'
  *
  * Alle Routen ausser GET/PATCH /brands/me verlangen ein AKTIVES Brand-Profil
  * (BrandGuard im Backend). Eine frisch registrierte Brand steht auf 'pending'
- * und bekommt bis zur Freischaltung im Admin-Panel überall 403 — siehe
- * isBrandForbidden(). Das Profil selbst lässt sich in jedem Status lesen.
+ * und bekommt bis zur Freischaltung im Admin-Panel überall 403. Das Profil
+ * selbst lässt sich in jedem Status lesen; die Seiten entscheiden deshalb
+ * über den Profilstatus (useBrandProfile), nicht über den 403.
+ *
+ * Wichtig: 403 darf NICHT wie 401 behandelt werden. Der Response-Interceptor
+ * in api.ts meldet nur bei 401 ab — ein 403 fällt dort unberührt durch.
  */
 
 // ───────────────────────────────────────────────────────────────
@@ -336,16 +340,6 @@ export const brandService = {
       approvalPending: Boolean(data.approvalPending),
     }
   },
-}
-
-/**
- * 403 vom BrandGuard: Es gibt ein Profil, aber es ist nicht aktiv.
- *
- * Wichtig: 403 darf NICHT wie 401 behandelt werden. Der Response-Interceptor
- * in api.ts meldet nur bei 401 ab — ein 403 fällt dort unberührt durch.
- */
-export function isBrandForbidden(error: unknown): boolean {
-  return axios.isAxiosError(error) && error.response?.status === 403
 }
 
 /** 404 von GET /brands/me: Dieses Konto hat kein Brand-Profil. */

@@ -108,16 +108,46 @@ function DashboardContent() {
         </CardContent>
       </Card>
 
-      {/* Hinweis auf offene Angebote */}
-      {needsAttention.length > 0 && (
+      {/* Hinweis auf offene Angebote. Bei genau einem Auftrag ist die ganze
+          Karte der Link dorthin, bei mehreren folgt die Liste der Aufträge. */}
+      {needsAttention.length === 1 && (
+        <Link href={localePath(`/brand/orders/${needsAttention[0].id}`)} className="block">
+          <Card className="border-purple-200 bg-purple-50/50 hover:bg-purple-50 transition-colors">
+            <CardContent className="p-4 text-sm flex items-center gap-3">
+              <span className="flex-1">
+                {t('brandDashboard.offerHint', {
+                  count: 1,
+                  defaultValue: 'Für einen Auftrag liegt ein Angebot vor. Sieh es dir an und bestätige es.',
+                })}{' '}
+                <span className="font-medium">{needsAttention[0].title}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+      {needsAttention.length > 1 && (
         <Card className="border-purple-200 bg-purple-50/50">
-          <CardContent className="p-4 text-sm">
-            {t('brandDashboard.offerHint', {
-              count: needsAttention.length,
-              defaultValue_one: 'Für einen Auftrag liegt ein Angebot vor. Sieh es dir an und bestätige es.',
-              defaultValue_other: 'Für {{count}} Aufträge liegen Angebote vor. Sieh sie dir an und bestätige sie.',
-              defaultValue: 'Für {{count}} Aufträge liegen Angebote vor.',
-            })}
+          <CardContent className="p-4 text-sm space-y-2">
+            <p>
+              {t('brandDashboard.offerHint', {
+                count: needsAttention.length,
+                defaultValue: 'Für {{count}} Aufträge liegen Angebote vor. Sieh sie dir an und bestätige sie.',
+              })}
+            </p>
+            <ul className="space-y-1">
+              {needsAttention.map((order) => (
+                <li key={order.id}>
+                  <Link
+                    href={localePath(`/brand/orders/${order.id}`)}
+                    className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                  >
+                    {order.title}
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}
