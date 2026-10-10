@@ -213,6 +213,11 @@ function OrderForm() {
       .map((entry) => entry.trim())
       .filter(Boolean)
     const hasAudience = from !== undefined || to !== undefined || gender !== 'all' || region.trim() || interestList.length > 0
+    // Beim Bearbeiten heisst "leer" wirklich leer: null statt undefined, damit
+    // das Backend die alte Zielgruppe, die Nutzungsrechte oder die Deadline
+    // entfernt. undefined fiele im JSON weg und liesse den alten Wert stehen.
+    // Beim Anlegen gibt es nichts zu entfernen, da bleibt das Feld weg.
+    const cleared = editId ? null : undefined
 
     return {
       title: title.trim(),
@@ -228,9 +233,9 @@ function OrderForm() {
       deliverables: rows,
       targetAudience: hasAudience
         ? { ageFrom: from, ageTo: to, gender, region: region.trim() || undefined, interests: interestList }
-        : undefined,
-      usageRights: brandMayReuse || usageNotes.trim() ? { brandMayReuse, notes: usageNotes.trim() || undefined } : undefined,
-      publishDeadline: joinIso(publishDeadline, '00:00'),
+        : cleared,
+      usageRights: brandMayReuse || usageNotes.trim() ? { brandMayReuse, notes: usageNotes.trim() || undefined } : cleared,
+      publishDeadline: joinIso(publishDeadline, '00:00') ?? cleared,
       approvalRequired,
     }
   }
