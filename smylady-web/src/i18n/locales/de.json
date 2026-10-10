@@ -460,6 +460,8 @@
     "validateEventEnd": "Das Ende muss nach dem Beginn liegen. Bei gleichem Tag bitte Uhrzeiten angeben.",
     "validateDeliverables": "Bitte gib mindestens einen gewünschten Inhalt mit Anzahl an.",
     "validateAge": "Bitte prüfe die Altersangaben.",
+    "validateAgeRange": "„Alter von“ darf nicht größer sein als „Alter bis“.",
+    "validateEventPast": "Das Event liegt in der Vergangenheit. Bitte prüfe das Datum.",
     "orderSubmitted": "Dein Auftrag ist eingereicht. Wir melden uns mit einem Angebot.",
     "draftSaved": "Entwurf gespeichert.",
     "orderSaveFailed": "Der Auftrag konnte nicht gespeichert werden.",

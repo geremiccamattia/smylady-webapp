@@ -196,8 +196,16 @@ function OrderDetail() {
           </div>
           {order.status === 'draft' && (
             <div className="flex gap-2">
-              <Link href={localePath(`/brand/orders/${order.id}/edit`)}>
-                <Button variant="outline" className="gap-2" disabled={busy}>
+              {/* `disabled` am Button allein hält den Link nicht auf: Der
+                  Klick landet trotzdem im Anker. Deshalb sperrt der Link
+                  selbst, solange eine Aktion läuft. */}
+              <Link
+                href={localePath(`/brand/orders/${order.id}/edit`)}
+                aria-disabled={busy}
+                tabIndex={busy ? -1 : undefined}
+                className={busy ? 'pointer-events-none' : undefined}
+              >
+                <Button variant="outline" className="gap-2" disabled={busy} tabIndex={-1}>
                   <Pencil className="h-4 w-4" />
                   {t('common.edit', { defaultValue: 'Bearbeiten' })}
                 </Button>
