@@ -463,6 +463,7 @@
     "orderSubmitted": "Dein Auftrag ist eingereicht. Wir melden uns mit einem Angebot.",
     "draftSaved": "Entwurf gespeichert.",
     "orderSaveFailed": "Der Auftrag konnte nicht gespeichert werden.",
+    "submitFailedDraftSaved": "Der Entwurf ist gespeichert, aber das Einreichen hat nicht geklappt. Du kannst es auf der Auftragsseite erneut versuchen.",
     "orderLoadFailed": "Der Auftrag lässt sich nicht laden.",
     "orderLocked": "Dieser Auftrag ist bereits eingereicht und lässt sich nicht mehr ändern.",
     "viewOrder": "Auftrag ansehen",
