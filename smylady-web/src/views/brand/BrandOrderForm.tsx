@@ -6,6 +6,16 @@ import { useParams, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CalendarDays, Clapperboard, FileText, Plus, Target, Trash2, Users } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -268,6 +278,13 @@ function OrderForm() {
     save.mutate({ payload, submit })
   }
 
+  // Einreichen sperrt den Auftrag, deshalb erst prüfen, dann rückfragen:
+  // Validierungsfehler sollen vor dem Dialog sichtbar sein, nicht danach.
+  const [confirmSubmit, setConfirmSubmit] = useState(false)
+  const askToSubmit = () => {
+    if (buildPayload()) setConfirmSubmit(true)
+  }
+
   if (editId && existing.isLoading) {
     return (
       <Card>
@@ -336,10 +353,10 @@ function OrderForm() {
       </div>
 
       <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          handle(true)
-        }}
+        // Enter in einem Textfeld löst nichts aus. Vorher reichte es den
+        // Auftrag ein, und der war danach gesperrt. Speichern und Einreichen
+        // laufen nur über die beiden Buttons.
+        onSubmit={(event) => event.preventDefault()}
         className="space-y-6"
       >
         {/* Kampagne */}
@@ -622,7 +639,7 @@ function OrderForm() {
           <Button type="button" variant="outline" className="flex-1" disabled={save.isPending} onClick={() => handle(false)}>
             {t('brandDashboard.saveDraft', { defaultValue: 'Als Entwurf speichern' })}
           </Button>
-          <Button type="submit" variant="gradient" className="flex-1" loading={save.isPending}>
+          <Button type="button" variant="gradient" className="flex-1" loading={save.isPending} onClick={askToSubmit}>
             {t('brandDashboard.submitOrder', { defaultValue: 'Einreichen' })}
           </Button>
         </div>
@@ -632,6 +649,26 @@ function OrderForm() {
           })}
         </p>
       </form>
+
+      {/* Gleiche Rückfrage wie auf der Detailseite (BrandOrderDetail). */}
+      <AlertDialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('brandDashboard.submitConfirmTitle', { defaultValue: 'Auftrag einreichen?' })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('brandDashboard.submitConfirmDesc', {
+                defaultValue: 'Danach kannst du den Auftrag nicht mehr selbst ändern. Wir prüfen ihn und schicken dir ein Angebot.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', { defaultValue: 'Abbrechen' })}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handle(true)}>
+              {t('brandDashboard.submitOrder', { defaultValue: 'Einreichen' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
