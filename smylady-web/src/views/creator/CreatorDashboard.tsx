@@ -13,9 +13,9 @@ import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { CREATOR_PROFILE_QUERY_KEY, useCreatorProfile } from '@/hooks/useCreatorProfile'
 import { creatorAreaService, readCreatorError, type CreatorAssignment } from '@/services/creator'
-import { formatDate, formatPrice } from '@/lib/utils'
+import { formatDate, formatPrice, isEventOver } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
-import { CreatorGate, CreatorStatusBadge, ResponseBadge } from '@/components/creator/creatorShared'
+import { CreatorGate, CreatorStatusBadge, PastEventBadge, ResponseBadge } from '@/components/creator/creatorShared'
 
 export const CREATOR_ASSIGNMENTS_QUERY_KEY = ['creator', 'assignments'] as const
 
@@ -74,7 +74,9 @@ function DashboardContent() {
   if (!profile) return null
 
   const assignments = assignmentsQuery.data ?? []
-  const open = assignments.filter((entry) => entry.response === 'pending')
+  // Offen heisst: noch unbeantwortet UND das Event liegt noch vor uns. Eine
+  // Anfrage zu einem vergangenen Event wartet auf nichts mehr.
+  const open = assignments.filter((entry) => entry.response === 'pending' && !isEventOver(null, entry.eventDate))
 
   return (
     <>
@@ -206,6 +208,7 @@ function DashboardContent() {
                           {entry.eventName || t('creatorDashboard.assignmentUnnamed', { defaultValue: 'Auftrag' })}
                         </span>
                         <ResponseBadge value={entry.response} />
+                        {isEventOver(null, entry.eventDate) && <PastEventBadge />}
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                         <CalendarDays className="h-3.5 w-3.5" />
@@ -214,6 +217,11 @@ function DashboardContent() {
                           {entry.eventLocation ? ` · ${entry.eventLocation}` : ''}
                         </span>
                       </div>
+                      {entry.publishDeadline && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {t('creatorDashboard.publishDeadline', { defaultValue: 'Veröffentlichung bis' })}: {formatDate(entry.publishDeadline)}
+                        </div>
+                      )}
                     </div>
                     {entry.compensation !== null && (
                       <div className="text-right text-sm shrink-0">

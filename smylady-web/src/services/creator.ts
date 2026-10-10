@@ -122,12 +122,18 @@ export type AssignmentResponse = 'pending' | 'accepted' | 'declined'
 
 export interface CreatorAssignment {
   id: string
-  /** 'draft' heisst: Briefing-Unterlagen folgen noch; 'sent' ist komplett. */
+  /**
+   * Das Backend liefert dem Creator nur noch verschickte Aufträge ('sent');
+   * Entwürfe bleiben beim Admin, bis Vergütung und Briefing stehen. 'draft'
+   * steht hier nur noch als Rückfall des Mappings, falls das Feld fehlt.
+   */
   status: 'draft' | 'sent' | string
   eventId: string
   eventName: string
   eventDate: string
   eventLocation: string
+  /** Frist für die Veröffentlichung der Inhalte, aus dem Brand-Auftrag; null, wenn keine gesetzt ist. */
+  publishDeadline: string | null
   briefingText: string
   deliverables: { type: string; quantity: number; platform?: string; notes?: string }[]
   compensation: number | null
@@ -178,6 +184,7 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
     eventName: text(event.name),
     eventDate: text(event.eventDate),
     eventLocation: text(event.locationName),
+    publishDeadline: text(raw?.publishDeadline) || null,
     briefingText: text(raw?.briefingText),
     deliverables: deliverables.map((entry) => ({
       type: text(entry?.type) || 'other',

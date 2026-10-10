@@ -388,8 +388,9 @@ export default function CreatorApplicationForm({
    * Unter 18: gar kein Formular.
    *
    * Statt das Altersfeld anzubieten, das sich einfach hochsetzen ließe, endet
-   * der Weg hier. Der optionale Ausstieg bleibt, damit niemand in der
-   * Registrierung festhängt.
+   * der Weg hier. In der Registrierung führt der optionale Ausstieg (onSkip)
+   * weiter; auf /creator/apply gibt es den nicht, dort führt ein Link zurück
+   * in die Eventsuche, damit die Seite keine Sackgasse ist.
    */
   if (isUnderage) {
     return (
@@ -403,7 +404,7 @@ export default function CreatorApplicationForm({
               'Schau gern wieder vorbei, sobald du 18 bist. Share Your Party kannst du natürlich weiter nutzen.',
           })}
         </p>
-        {onSkip && (
+        {onSkip ? (
           <button
             type="button"
             onClick={onSkip}
@@ -411,6 +412,13 @@ export default function CreatorApplicationForm({
           >
             {skipLabel || t('common.continue', { defaultValue: 'Weiter' })}
           </button>
+        ) : (
+          <Link
+            href={localePath('/explore')}
+            className="text-xs font-semibold uppercase tracking-wide text-primary hover:underline"
+          >
+            {t('brandRegister.doneButton', { defaultValue: 'Events entdecken' })}
+          </Link>
         )}
       </div>
     )

@@ -115,9 +115,11 @@ export default function CreatorApply() {
                 defaultValue: 'Schön, dass du dabei bist. Deine Vorteile findest du in der App.',
               })}
               action={
-                <Link href={localePath('/explore')}>
+                // Mitglieder haben einen eigenen Bereich mit Anfragen und
+                // Profil — dorthin, nicht in die allgemeine Eventsuche.
+                <Link href={localePath('/creator')}>
                   <Button variant="gradient">
-                    {t('brandRegister.doneButton', { defaultValue: 'Events entdecken' })}
+                    {t('influencer.settingsMember', { defaultValue: 'Zum Creator-Bereich' })}
                   </Button>
                 </Link>
               }

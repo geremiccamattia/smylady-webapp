@@ -21,9 +21,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { creatorAreaService, isCreatorConflict, readCreatorError, type CreatorAssignment } from '@/services/creator'
-import { formatDateTime, formatPrice } from '@/lib/utils'
+import { formatDate, formatDateTime, formatPrice, isEventOver } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
-import { CreatorGate, ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
+import { CreatorGate, PastEventBadge, ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 import { CREATOR_ASSIGNMENTS_QUERY_KEY } from './CreatorDashboard'
 
 /**
@@ -113,6 +113,12 @@ function AssignmentDetail() {
     )
   }
 
+  // Vergangenes Event: Die Anfrage bleibt sichtbar, aber eine Antwort ändert
+  // nichts mehr. Buttons bleiben stehen, damit klar ist, was hier möglich
+  // gewesen wäre — nur gesperrt und mit Hinweis.
+  const eventPast = isEventOver(null, assignment.eventDate)
+  const pending = assignment.response === 'pending'
+
   return (
     <>
       <div>
@@ -125,11 +131,12 @@ function AssignmentDetail() {
             {assignment.eventName || t('creatorDashboard.assignmentUnnamed', { defaultValue: 'Auftrag' })}
           </h1>
           <ResponseBadge value={assignment.response} />
+          {eventPast && <PastEventBadge />}
         </div>
       </div>
 
       {/* Antwort */}
-      <Card className={assignment.response === 'pending' ? 'border-yellow-200 bg-yellow-50/40' : undefined}>
+      <Card className={pending && !eventPast ? 'border-yellow-200 bg-yellow-50/40' : undefined}>
         <CardContent className="p-6 space-y-4">
           {assignment.compensation !== null && (
             <div className="flex items-baseline gap-2">
@@ -139,19 +146,34 @@ function AssignmentDetail() {
               </span>
             </div>
           )}
-          {assignment.response === 'pending' ? (
+          {pending ? (
             <>
               <p className="text-sm">
-                {t('creatorDashboard.respondHint', {
-                  defaultValue: 'Sieh dir Event und Briefing an und gib uns Bescheid. Deine Antwort ist verbindlich.',
-                })}
+                {eventPast
+                  ? t('creatorDashboard.eventPastHint', {
+                      defaultValue: 'Dieses Event liegt in der Vergangenheit. Eine Zu- oder Absage ist nicht mehr möglich.',
+                    })
+                  : t('creatorDashboard.respondHint', {
+                      defaultValue: 'Sieh dir Event und Briefing an und gib uns Bescheid. Deine Antwort ist verbindlich.',
+                    })}
               </p>
               <div className="flex gap-3">
-                <Button variant="gradient" className="gap-2 flex-1" loading={respond.isPending} onClick={() => setConfirm('accept')}>
+                <Button
+                  variant="gradient"
+                  className="gap-2 flex-1"
+                  loading={respond.isPending}
+                  disabled={eventPast}
+                  onClick={() => setConfirm('accept')}
+                >
                   <Check className="h-4 w-4" />
                   {t('creatorDashboard.accept', { defaultValue: 'Zusagen' })}
                 </Button>
-                <Button variant="outline" className="gap-2 flex-1" disabled={respond.isPending} onClick={() => setConfirm('decline')}>
+                <Button
+                  variant="outline"
+                  className="gap-2 flex-1"
+                  disabled={respond.isPending || eventPast}
+                  onClick={() => setConfirm('decline')}
+                >
                   <X className="h-4 w-4" />
                   {t('creatorDashboard.decline', { defaultValue: 'Absagen' })}
                 </Button>
@@ -179,6 +201,14 @@ function AssignmentDetail() {
         <CardContent className="text-sm space-y-2">
           <div>{assignment.eventDate ? formatDateTime(assignment.eventDate) : '—'}</div>
           {assignment.eventLocation && <div className="text-muted-foreground">{assignment.eventLocation}</div>}
+          {assignment.publishDeadline && (
+            <div>
+              <span className="text-muted-foreground">
+                {t('creatorDashboard.publishDeadline', { defaultValue: 'Veröffentlichung bis' })}:
+              </span>{' '}
+              {formatDate(assignment.publishDeadline)}
+            </div>
+          )}
           {assignment.eventId && (
             <Link href={localePath(`/event/${assignment.eventId}`)} className="inline-flex items-center gap-1 text-primary hover:underline">
               {t('brandDashboard.openEvent', { defaultValue: 'Event öffnen' })}
@@ -225,13 +255,18 @@ function AssignmentDetail() {
           ) : (
             <p className="text-muted-foreground">{t('creatorDashboard.briefingEmpty', { defaultValue: 'Noch kein Briefing-Text.' })}</p>
           )}
-          {assignment.status !== 'sent' && (
-            <p className="text-xs text-muted-foreground">
-              {t('creatorDashboard.briefingPending', {
-                defaultValue: 'Die ausführlichen Briefing-Unterlagen bekommst du per E-Mail, sobald sie fertig sind.',
-              })}
-            </p>
-          )}
+          {/* Die Unterlagen (PDF) gibt es hier nicht zum Herunterladen, sie
+              kommen per E-Mail: bei 'sent' sind sie schon raus, sonst folgen
+              sie noch. */}
+          <p className="text-xs text-muted-foreground">
+            {assignment.status === 'sent'
+              ? t('creatorDashboard.briefingSent', {
+                  defaultValue: 'Die ausführlichen Briefing-Unterlagen haben wir dir per E-Mail geschickt.',
+                })
+              : t('creatorDashboard.briefingPending', {
+                  defaultValue: 'Die ausführlichen Briefing-Unterlagen bekommst du per E-Mail, sobald sie fertig sind.',
+                })}
+          </p>
         </CardContent>
       </Card>
 
