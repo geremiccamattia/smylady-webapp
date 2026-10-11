@@ -39,6 +39,8 @@ import {
   isDailyHoursEdited,
   listDays,
   localDateKey,
+  normalizeSchedule,
+  scheduleBounds,
   validateSchedule,
   type DailyHoursState,
 } from '@/lib/eventSchedule'
@@ -227,10 +229,19 @@ export default function EditEvent() {
   // Populate form when event loads
   useEffect(() => {
     if (event) {
-      // Kalendertag in der Gerätezeitzone, passend zu getHours() unten. Vorher
-      // toISOString(), also der UTC-Tag — ein Event kurz nach Mitternacht
-      // Wiener Zeit stand damit auf dem Vortag.
-      const eventDate = event.eventDate ? localDateKey(event.eventDate) : ''
+      /*
+       * Mit Öffnungszeiten kommen Zeitraum und Uhrzeiten aus dem schedule, in
+       * Wiener Zeit. Aus eventDate/eventEndTime im Kalender des Geräts gebildet,
+       * verschob sich die Tagesliste auf einem Gerät außerhalb Wiens gegen die
+       * Wiener Tage des schedule — ein Tag fiel heraus und ging beim Speichern
+       * verloren.
+       */
+      const scheduleRange = scheduleBounds(normalizeSchedule(event.schedule))
+
+      // Ohne schedule: Kalendertag in der Gerätezeitzone, passend zu getHours()
+      // unten. Vorher toISOString(), also der UTC-Tag — ein Event kurz nach
+      // Mitternacht Wiener Zeit stand damit auf dem Vortag.
+      const eventDate = scheduleRange?.startDate ?? (event.eventDate ? localDateKey(event.eventDate) : '')
 
       setFormData({
         name: event.name || '',
@@ -241,9 +252,9 @@ export default function EditEvent() {
         price: event.price?.toString() || '0',
         totalTickets: event.totalTickets?.toString() || '',
         eventDate,
-        eventStartTime: event.eventStartTime
+        eventStartTime: scheduleRange?.startTime ?? (event.eventStartTime
           ? `${String(new Date(event.eventStartTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventStartTime).getMinutes()).padStart(2, '0')}`
-          : '',
+          : ''),
         eventEndTime: event.eventEndTime
           ? `${String(new Date(event.eventEndTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventEndTime).getMinutes()).padStart(2, '0')}`
           : '',
@@ -276,20 +287,23 @@ export default function EditEvent() {
        * Ein Event mit Öffnungszeiten ist immer mehrtägig, auch wenn es keine
        * 24 Stunden dauert (zwei Tage mit je zwei Stunden) — sonst wäre die
        * Tagesliste ausgeblendet und der schedule beim Bearbeiten unerreichbar.
+       * Tagesliste und schedule stammen dabei aus denselben Wiener Tagen.
        */
-      const hasSchedule = (event.schedule?.length ?? 0) > 0
-      if (
-        event.eventEndTime &&
-        (hasSchedule || isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime))
-      ) {
+      if (scheduleRange) {
+        setIsMultiDay(true)
+        setEventEndDate(scheduleRange.endDate)
+        setEventEndTimeValue(scheduleRange.endTime)
+        setDailyHours(
+          dailyHoursFromSchedule(event.schedule, listDays(scheduleRange.startDate, scheduleRange.endDate)),
+        )
+      } else if (event.eventEndTime && isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime)) {
         setIsMultiDay(true)
         const endDate = new Date(event.eventEndTime)
-        const endDateKey = localDateKey(endDate)
-        setEventEndDate(endDateKey)
+        setEventEndDate(localDateKey(endDate))
         setEventEndTimeValue(
           `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
         )
-        setDailyHours(dailyHoursFromSchedule(event.schedule, listDays(eventDate, endDateKey)))
+        setDailyHours({})
       } else {
         setIsMultiDay(false)
         setEventEndDate('')

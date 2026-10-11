@@ -69,18 +69,36 @@ export interface AuthResponse {
 
 // Event Types
 /**
- * Ein Öffnungsfenster eines mehrtägigen Events, in Wiener Wanduhrzeit.
+ * Ein Öffnungsfenster eines mehrtägigen Events, in Wiener Wanduhrzeit —
+ * die Form, mit der die Oberfläche arbeitet und die beim Anlegen und
+ * Bearbeiten GESENDET wird.
  *
  * `date` und `endDate` als YYYY-MM-DD, die Zeiten als HH:mm — bewusst ohne
  * Zeitzone, das Backend rechnet sie als Europe/Vienna. Ein Fenster über
  * Mitternacht braucht ein ausdrückliches `endDate`; ein Ende vor dem Beginn
  * ohne `endDate` lehnt das Backend mit 400 ab.
+ *
+ * Das Backend speichert und LIEFERT eine andere Form, siehe
+ * {@link ApiEventScheduleEntry}. Umgewandelt wird in normalizeSchedule
+ * (lib/eventSchedule.ts).
  */
 export interface EventScheduleEntry {
   date: string
   startTime: string
   endTime: string
   endDate?: string
+}
+
+/**
+ * Ein Öffnungsfenster, wie das Backend es zurückgibt: Beginn und Ende als
+ * UTC-Zeitpunkte. `date` ist der Kalendertag, den das Backend dazu speichert;
+ * die Oberfläche berechnet ihn trotzdem aus `startAt` neu.
+ */
+export interface ApiEventScheduleEntry {
+  date: string
+  startAt: string
+  endAt: string
+  _id?: string
 }
 
 export interface Event {
@@ -103,10 +121,12 @@ export interface Event {
   eventStartTime: string
   eventEndTime: string
   /**
-   * Öffnungszeiten je Tag. Optional: Fehlt das Feld oder ist es leer, gelten
-   * allein eventStartTime/eventEndTime. Tage ohne Eintrag sind geschlossen.
+   * Öffnungszeiten je Tag, in der Antwortform des Backends. Optional: Fehlt
+   * das Feld oder ist es leer, gelten allein eventStartTime/eventEndTime.
+   * Tage ohne Eintrag sind geschlossen. Nie direkt lesen, sondern über
+   * normalizeSchedule — dort entsteht die Wanduhrzeit.
    */
-  schedule?: EventScheduleEntry[]
+  schedule?: ApiEventScheduleEntry[]
   locationName: string
   location: {
     type: string
