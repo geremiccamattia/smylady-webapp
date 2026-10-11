@@ -1,9 +1,8 @@
 'use client'
 
 import { useTranslation } from 'react-i18next'
-import type { EventScheduleEntry } from '@/types'
 import { cn } from '@/lib/utils'
-import { formatScheduleDay, groupScheduleByDay, viennaNow } from '@/lib/eventSchedule'
+import { formatScheduleDay, groupScheduleByDay, viennaNow, type ScheduleInput } from '@/lib/eventSchedule'
 import { useNow } from '@/hooks/useNow'
 
 /**
@@ -14,7 +13,7 @@ import { useNow } from '@/hooks/useNow'
  * aber erst nach dem Mount (useNow), sonst unterschiede sich das HTML von
  * Server und Browser.
  */
-export function OpeningHours({ schedule }: { schedule: EventScheduleEntry[] }) {
+export function OpeningHours({ schedule }: { schedule: ScheduleInput }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE'
   const now = useNow()
