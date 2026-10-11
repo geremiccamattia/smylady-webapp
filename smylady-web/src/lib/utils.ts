@@ -94,6 +94,14 @@ export function formatDate(date: string | Date): string {
   })
 }
 
+/** Monat und Jahr in der Sprache der App, z. B. "Oktober 2026". */
+export function formatMonth(date: string | Date): string {
+  return new Date(date).toLocaleDateString(currentLocale(), {
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export function formatTime(date: string | Date): string {
   const d = new Date(date)
   return d.toLocaleTimeString(currentLocale(), {
