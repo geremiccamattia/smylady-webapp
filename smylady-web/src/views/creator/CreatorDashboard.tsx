@@ -15,6 +15,7 @@ import { CREATOR_PROFILE_QUERY_KEY, useCreatorProfile } from '@/hooks/useCreator
 import { creatorAreaService, readCreatorError, type CreatorAssignment } from '@/services/creator'
 import { formatDate, formatPrice, isEventOver } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
+import { CreatorEarningsCard } from '@/components/creator/CreatorEarningsCard'
 import { CreatorGate, CreatorStatusBadge, PastEventBadge, ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 
 export const CREATOR_ASSIGNMENTS_QUERY_KEY = ['creator', 'assignments'] as const
@@ -84,7 +85,7 @@ function DashboardContent() {
       <div>
         <h1 className="text-3xl font-bold">{t('creatorDashboard.title', { defaultValue: 'Creator-Bereich' })}</h1>
         <p className="text-muted-foreground">
-          {t('creatorDashboard.subtitle', { defaultValue: 'Deine Anfragen von Brands und dein Profil.' })}
+          {t('creatorDashboard.subtitle', { defaultValue: 'Deine Anfragen von Brands, deine Einnahmen und dein Profil.' })}
         </p>
       </div>
 
@@ -168,6 +169,9 @@ function DashboardContent() {
         </Card>
       )}
 
+      {/* Einnahmen — erst, wenn die Aufträge geladen sind; Laden und Fehler zeigt die Liste darunter. */}
+      {assignmentsQuery.isSuccess && <CreatorEarningsCard assignments={assignments} />}
+
       {/* Anfragen */}
       <Card>
         <CardHeader>
@@ -226,7 +230,14 @@ function DashboardContent() {
                     </div>
                     {entry.compensation !== null && (
                       <div className="text-right text-sm shrink-0">
-                        <div className="font-medium">{formatPrice(entry.compensation)}</div>
+                        {/* Abgelehnt: Betrag bleibt sichtbar, zählt aber nicht zu den Einnahmen. */}
+                        <div
+                          className={
+                            entry.response === 'declined' ? 'font-medium line-through text-muted-foreground' : 'font-medium'
+                          }
+                        >
+                          {formatPrice(entry.compensation)}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {t('creatorDashboard.compensation', { defaultValue: 'Vergütung' })}
                         </div>
