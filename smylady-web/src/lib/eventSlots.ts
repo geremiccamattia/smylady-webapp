@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next'
 import type { EventSlot } from '@/types'
-import { formatScheduleDay, viennaWallClock } from '@/lib/eventSchedule'
+import { formatScheduleDay, viennaWallClock, VIENNA_TIME_ZONE } from '@/lib/eventSchedule'
 
 /*
  * Freiwillige Zeitfenster beim Ticketkauf.
@@ -19,6 +19,30 @@ const MINUTE_MS = 60 * 1000
 /** Uhrzeit eines Zeitpunkts in Wien („18:00"), leer bei ungültigem Wert. */
 export function slotTime(value: string | null | undefined): string {
   return viennaWallClock(value ?? undefined)?.time ?? ''
+}
+
+/**
+ * Knopfbeschriftungen für die Slots eines Öffnungstags, in derselben
+ * Reihenfolge wie `slots`.
+ *
+ * Normalerweise nur die Wiener Startzeit („18:00"). Zeigen zwei oder mehr
+ * Slots dieselbe Startzeit — in der wiederholten Stunde der Umstellung auf
+ * Winterzeit, am 25.10.2026 zweimal „02:00" —, bekommen genau diese die
+ * Zonenkurzform aus Intl angehängt („02:00 MESZ", „02:00 MEZ"), in der
+ * Sprache der Seite. Alle anderen bleiben unverändert.
+ */
+export function slotButtonLabels(slots: EventSlot[], locale: string): string[] {
+  const times = slots.map(slot => slotTime(slot.start))
+  const count = new Map<string, number>()
+  for (const time of times) count.set(time, (count.get(time) ?? 0) + 1)
+
+  const zoneFormat = new Intl.DateTimeFormat(locale, { timeZone: VIENNA_TIME_ZONE, timeZoneName: 'short' })
+  return slots.map((slot, i) => {
+    const time = times[i]
+    if ((count.get(time) ?? 0) < 2) return time
+    const zone = zoneFormat.formatToParts(new Date(slot.start)).find(part => part.type === 'timeZoneName')?.value
+    return zone ? `${time} ${zone}` : time
+  })
 }
 
 /**

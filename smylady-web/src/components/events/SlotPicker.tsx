@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { EventSlot } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatScheduleDay } from '@/lib/eventSchedule'
-import { formatSlot, groupSlotsByDay, slotTime } from '@/lib/eventSlots'
+import { formatSlot, groupSlotsByDay, slotButtonLabels } from '@/lib/eventSlots'
 
 interface SlotPickerProps {
   slots: EventSlot[]
@@ -45,34 +45,38 @@ export function SlotPicker({ slots, durationMinutes, value, onChange }: SlotPick
       </div>
 
       <div className="max-h-64 overflow-y-auto space-y-3 pr-1">
-        {groups.map(group => (
-          <div key={group.date}>
-            <p className="text-xs font-medium text-muted-foreground mb-1.5">
-              {formatScheduleDay(group.date, locale)}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {group.slots.map(slot => {
-                const selected = sameInstant(value, slot.start)
-                return (
-                  <button
-                    key={slot.start}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => onChange(selected ? null : slot.start)}
-                    className={cn(
-                      'rounded-md border px-2.5 py-1 text-sm tabular-nums transition-colors',
-                      selected
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-muted hover:border-primary/50',
-                    )}
-                  >
-                    {slotTime(slot.start)}
-                  </button>
-                )
-              })}
+        {groups.map(group => {
+          // Pro Öffnungstag: doppelte Startzeiten (Zeitumstellung) mit Zonenkurzform.
+          const labels = slotButtonLabels(group.slots, locale)
+          return (
+            <div key={group.date}>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                {formatScheduleDay(group.date, locale)}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {group.slots.map((slot, index) => {
+                  const selected = sameInstant(value, slot.start)
+                  return (
+                    <button
+                      key={slot.start}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onChange(selected ? null : slot.start)}
+                      className={cn(
+                        'rounded-md border px-2.5 py-1 text-sm tabular-nums transition-colors',
+                        selected
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-muted hover:border-primary/50',
+                      )}
+                    >
+                      {labels[index]}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {selectedLabel && (
