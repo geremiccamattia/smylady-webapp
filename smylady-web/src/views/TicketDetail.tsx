@@ -40,9 +40,14 @@ import QRCode from 'react-qr-code'
 import { MemoryGallery } from '@/components/memories'
 import ReportModal from '@/components/ReportModal'
 import { useTranslation } from 'react-i18next'
+import { eventsService } from '@/services/events'
+import { SlotPicker } from '@/components/events/SlotPicker'
+import { normalizeSchedule } from '@/lib/eventSchedule'
+import { formatSlot } from '@/lib/eventSlots'
+import { useNow } from '@/hooks/useNow'
 
 export default function TicketDetail() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { ticketId } = useParams<{ ticketId: string }>()
   const router = useRouter()
   const { toast } = useToast()
@@ -84,6 +89,52 @@ export default function TicketDetail() {
         variant: 'destructive',
         title: t('common.error'),
         description: error.response?.data?.message || t('tickets.cancelError'),
+      })
+    },
+  })
+
+  /*
+   * Freiwilliges Zeitfenster. Ändern und nachträglich wählen geht nur, solange
+   * das Backend es zulässt: aktives, nicht gescanntes Ticket, Event mit Slots
+   * und noch nicht begonnen. `now` kommt erst nach dem Mount — bis dahin gilt
+   * „nicht änderbar", der gespeicherte Slot wird trotzdem angezeigt.
+   */
+  const now = useNow()
+  const [editingSlot, setEditingSlot] = useState(false)
+  const [draftSlot, setDraftSlot] = useState<string | null>(null)
+  const slotEvent = ticket && typeof ticket.event === 'object' ? ticket.event : null
+  const slotEventId = ticket?.eventId || (slotEvent ? slotEvent._id || slotEvent.id : '') || ''
+  const slotEventStart = slotEvent?.eventStartTime ? Date.parse(slotEvent.eventStartTime) : NaN
+  const canChangeSlot =
+    !!now &&
+    ticket?.status === 'active' &&
+    !ticket?.isScanned &&
+    !!slotEvent?.slotDurationMinutes &&
+    normalizeSchedule(slotEvent?.schedule).length > 0 &&
+    (!Number.isFinite(slotEventStart) || slotEventStart > now.getTime())
+
+  const { data: slotData } = useQuery({
+    queryKey: ['eventSlots', slotEventId],
+    queryFn: () => eventsService.getEventSlots(slotEventId),
+    enabled: !!slotEventId && canChangeSlot,
+  })
+
+  const slotMutation = useMutation({
+    mutationFn: (slotStart: string | null) => ticketsService.updateTicketSlot(ticketId!, slotStart),
+    onSuccess: () => {
+      toast({ title: t('timeslots.saved', { defaultValue: 'Zeitfenster gespeichert' }) })
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
+      setEditingSlot(false)
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description:
+          error.response?.data?.message ||
+          t('timeslots.saveError', { defaultValue: 'Das Zeitfenster konnte nicht gespeichert werden.' }),
       })
     },
   })
@@ -433,6 +484,68 @@ export default function TicketDetail() {
                   <MarkdownContent content={event.description} className="text-sm text-muted-foreground min-w-0" />
                 </div>
               )}
+            </div>
+          )}
+
+          {/*
+           * Zeitfenster: gewählten Slot zeigen (mit „Ändern", solange erlaubt),
+           * oder — ohne Wahl — die Wahl nachträglich anbieten. Der gespeicherte
+           * Slot bleibt auch dann sichtbar, wenn er nicht mehr änderbar ist.
+           */}
+          {!isCancelled && ticket.slotStart && !editingSlot && (
+            <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-3 min-w-0">
+                <Clock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    {t('timeslots.yourSlot', { defaultValue: 'Du kommst ungefähr' })}
+                  </p>
+                  <p className="font-medium">
+                    {formatSlot(ticket.slotStart, event?.slotDurationMinutes, i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE')}
+                  </p>
+                </div>
+              </div>
+              {canChangeSlot && (slotData?.slots.length ?? 0) > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDraftSlot(ticket.slotStart ?? null)
+                    setEditingSlot(true)
+                  }}
+                >
+                  {t('timeslots.change', { defaultValue: 'Ändern' })}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!isCancelled && canChangeSlot && (editingSlot || !ticket.slotStart) && slotData && slotData.slots.length > 0 && (
+            <div className="space-y-3">
+              <SlotPicker
+                slots={slotData.slots}
+                durationMinutes={slotData.slotDurationMinutes}
+                value={draftSlot}
+                onChange={setDraftSlot}
+              />
+              <div className="flex gap-2">
+                {editingSlot && (
+                  <Button variant="ghost" className="flex-1" onClick={() => setEditingSlot(false)}>
+                    {t('timeslots.cancel', { defaultValue: 'Abbrechen' })}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  loading={slotMutation.isPending}
+                  // Ohne bisherige Wahl gibt es erst mit einem gewählten Slot etwas
+                  // zu speichern. Beim Ändern ist auch „keine Angabe" (null) gültig.
+                  disabled={slotMutation.isPending || (!editingSlot && !draftSlot)}
+                  onClick={() => slotMutation.mutate(draftSlot)}
+                >
+                  {t('timeslots.save', { defaultValue: 'Speichern' })}
+                </Button>
+              </div>
             </div>
           )}
 

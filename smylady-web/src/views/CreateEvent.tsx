@@ -40,6 +40,7 @@ import { EVENT_FORM_CATEGORIES } from '@/lib/constants'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
+import { SlotDurationField } from '@/components/events/SlotDurationField'
 import {
   buildSchedule,
   isDailyHoursEdited,
@@ -173,6 +174,8 @@ function CreateEventContent() {
   const [eventEndDate, setEventEndDate] = useState('')
   const [eventEndTimeValue, setEventEndTimeValue] = useState('')
   const [dailyHours, setDailyHours] = useState<DailyHoursState>({})
+  // Freiwillige Zeitfenster beim Ticketkauf; '' = keine. Nur mit schedule wirksam.
+  const [slotDuration, setSlotDuration] = useState('')
   const [translating, setTranslating] = useState(false)
   const [translatedPreview, setTranslatedPreview] = useState<{
     lang: string; name: string; description: string; restrictions: string
@@ -591,6 +594,9 @@ function CreateEventContent() {
         // Mit schedule leitet das Backend Datum, Beginn und Ende selbst ab.
         // Mitgesendete Zeiten widersprächen ihm, sobald der erste Tag geschlossen ist.
         eventFormData.append('schedule', JSON.stringify(schedule))
+        if (slotDuration) {
+          eventFormData.append('slotDurationMinutes', slotDuration)
+        }
       } else {
         eventFormData.append('eventDate', eventDate.toISOString())
         eventFormData.append('eventStartTime', eventStartTime.toISOString())
@@ -898,6 +904,11 @@ function CreateEventContent() {
                     onChange={setDailyHours}
                     defaults={dailyHoursDefaults}
                   />
+                )}
+                {/* Slots rechnet das Backend aus den Öffnungszeiten je Tag — ohne
+                    sie gibt es nichts, wozu eine Slotdauer passen könnte. */}
+                {schedule.length > 0 && (
+                  <SlotDurationField value={slotDuration} onChange={setSlotDuration} />
                 )}
                 {isMultiDay && seriesConfig && listDays(formData.eventDate, eventEndDate).length > 1 && (
                   <p className="text-xs text-muted-foreground">

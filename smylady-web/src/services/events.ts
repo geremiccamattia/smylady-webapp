@@ -3,7 +3,7 @@
 import axios from 'axios'
 import { apiClient } from './api'
 import { CONFIG } from '@/lib/constants'
-import { Event, EventFilters } from '@/types'
+import { Event, EventFilters, EventSlotsResponse } from '@/types'
 
 // Separate axios instance for public endpoints (no auth interceptor / no 401 redirect)
 const publicClient = axios.create({
@@ -66,6 +66,20 @@ export const eventsService = {
       }
       console.error('Error getting event by ID:', error)
       return null
+    }
+  },
+
+  /**
+   * Wählbare Zeitfenster für den Ticketkauf. Nicht Teil der Eventantwort —
+   * das Backend rechnet sie aus schedule und slotDurationMinutes und lässt
+   * vergangene weg. Mit und ohne Login abrufbar (OptionalAuthGuard).
+   */
+  async getEventSlots(id: string): Promise<EventSlotsResponse> {
+    const response = await apiClient.get(`/events/${id}/slots`)
+    const data = response.data?.data
+    return {
+      slotDurationMinutes: data?.slotDurationMinutes ?? null,
+      slots: Array.isArray(data?.slots) ? data.slots : [],
     }
   },
 

@@ -282,6 +282,23 @@
     "todayHours": "Heute {{start}} – {{end}}",
     "nextOpening": "Ab {{day}} {{time}}"
   },
+  "timeslots": {
+    "question": "Wann kommst du ungefähr?",
+    "voluntary": "Freiwillig - hilft dem Veranstalter bei der Planung.",
+    "selected": "Du kommst ungefähr {{slot}}",
+    "clear": "Keine Angabe",
+    "yourSlot": "Du kommst ungefähr",
+    "change": "Ändern",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saved": "Zeitfenster gespeichert",
+    "saveError": "Das Zeitfenster konnte nicht gespeichert werden.",
+    "guestSlot": "Kommt ungefähr:",
+    "durationLabel": "Zeitfenster",
+    "durationNone": "Keine Zeitfenster",
+    "durationMinutes": "{{count}} Minuten",
+    "durationHint": "Käufer können beim Ticketkauf freiwillig angeben, wann sie ungefähr kommen. Du siehst die Angaben in der Gästeliste."
+  },
   "ticket": {
     "eventLink": "Event-Link",
     "joinNow": "Jetzt teilnehmen"
