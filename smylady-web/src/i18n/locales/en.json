@@ -577,6 +577,23 @@
     "todayHours": "Today {{start}} – {{end}}",
     "nextOpening": "From {{day}} {{time}}"
   },
+  "timeslots": {
+    "question": "When are you roughly coming?",
+    "voluntary": "Up to you – helps the organiser plan.",
+    "selected": "You're coming around {{slot}}",
+    "clear": "No preference",
+    "yourSlot": "You're coming around",
+    "change": "Change",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Time slot saved",
+    "saveError": "The time slot could not be saved.",
+    "guestSlot": "Coming around:",
+    "durationLabel": "Time slots",
+    "durationNone": "No time slots",
+    "durationMinutes": "{{count}} minutes",
+    "durationHint": "Buyers can optionally tell you when they plan to arrive when buying a ticket. You'll see this in the guest list."
+  },
   "ticket": {
     "eventLink": "Event Link",
     "joinNow": "Join now"

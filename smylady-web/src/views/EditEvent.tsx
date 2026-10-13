@@ -33,6 +33,7 @@ import { VisibilitySelector, type EventVisibility } from '@/components/events/Vi
 import { MultiSelectChips } from '@/components/events/MultiSelectChips'
 import { MUSIC_TYPE_VALUES, OFFERING_VALUES, toStringArray } from '@/lib/eventFields'
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
+import { SlotDurationField } from '@/components/events/SlotDurationField'
 import {
   buildSchedule,
   dailyHoursFromSchedule,
@@ -129,6 +130,8 @@ export default function EditEvent() {
   const [eventEndDate, setEventEndDate] = useState('')
   const [eventEndTimeValue, setEventEndTimeValue] = useState('')
   const [dailyHours, setDailyHours] = useState<DailyHoursState>({})
+  // Freiwillige Zeitfenster beim Ticketkauf; '' = keine. Nur mit schedule wirksam.
+  const [slotDuration, setSlotDuration] = useState('')
   const [payAtDoor, setPayAtDoor] = useState(false)
   const [addressDetail, setAddressDetail] = useState('')
   const [locationQuery, setLocationQuery] = useState('')
@@ -282,6 +285,7 @@ export default function EditEvent() {
       setRaffleNotifyWinnerByEmail(event.raffleNotifyWinnerByEmail === true)
       setRafflePartner(event.rafflePartner || '')
       setRafflePartnerMarketing(event.rafflePartnerMarketing === true)
+      setSlotDuration(event.slotDurationMinutes ? String(event.slotDurationMinutes) : '')
 
       /*
        * Ein Event mit Öffnungszeiten ist immer mehrtägig, auch wenn es keine
@@ -757,6 +761,18 @@ export default function EditEvent() {
         eventFormData.append('schedule', JSON.stringify([]))
       }
       appendEventTimes(eventFormData, { eventDate, eventStartTime, eventEndTime })
+    }
+
+    /*
+     * Zeitfenster: mit schedule die gewählte Dauer; "" entfernt sie (das
+     * Backend speichert dann null). Ohne schedule gibt es keine Slots — eine
+     * gespeicherte Dauer wird dann ebenfalls entfernt, damit sie nicht beim
+     * nächsten schedule unbemerkt wieder auflebt. Bereits gewählte Slots an
+     * Tickets lässt das Backend dabei stehen.
+     */
+    const effectiveSlotDuration = schedule.length > 0 ? slotDuration : ''
+    if (effectiveSlotDuration || event?.slotDurationMinutes) {
+      eventFormData.append('slotDurationMinutes', effectiveSlotDuration)
     }
 
     // Mehrfachwerte einzeln anhängen — multipart/form-data kennt keine native
@@ -1235,6 +1251,11 @@ export default function EditEvent() {
                 onChange={setDailyHours}
                 defaults={dailyHoursDefaults}
               />
+            )}
+            {/* Slots rechnet das Backend aus den Öffnungszeiten je Tag — ohne
+                sie gibt es nichts, wozu eine Slotdauer passen könnte. */}
+            {schedule.length > 0 && (
+              <SlotDurationField value={slotDuration} onChange={setSlotDuration} />
             )}
             {isMultiDay && isSeriesEvent && listDays(formData.eventDate, eventEndDate).length > 1 && (
               <p className="text-xs text-muted-foreground">

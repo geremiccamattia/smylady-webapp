@@ -15,6 +15,8 @@ export interface GuestListItem {
   status: 'active' | 'cancelled' | 'used'
   purchasedAt: string
   usedAt?: string
+  /** Freiwillig gewähltes Zeitfenster (Beginn, UTC-Zeitpunkt); null ohne Wahl. */
+  slotStart?: string | null
   answers?: Array<{
     questionId: string
     label: string

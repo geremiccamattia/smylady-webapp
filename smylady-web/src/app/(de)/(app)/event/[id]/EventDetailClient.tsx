@@ -30,6 +30,7 @@ import { MemoryGallery, MemoryViewer } from '@/components/memories'
 import { getUserReaction, type Reaction } from '@/components/emojiReaction/EmojiReactionPicker'
 import BoostModal from '@/components/events/BoostModal'
 import { OpeningHours } from '@/components/events/OpeningHours'
+import { SlotPicker } from '@/components/events/SlotPicker'
 import { normalizeSchedule } from '@/lib/eventSchedule'
 import { ticketsService } from '@/services/tickets'
 import { chatService } from '@/services/chat'
@@ -462,6 +463,20 @@ export default function EventDetailClient({ id }: Props) {
     enabled: !!id && !!user && !!event,
   })
 
+  /*
+   * Freiwillige Zeitfenster. Die Slots stehen nicht in der Eventantwort und
+   * werden nur geholt, wenn das Event welche haben kann (Dauer gesetzt und
+   * Öffnungszeiten je Tag vorhanden) und noch kein Ticket gekauft ist — die
+   * Wahl danach läuft über die Ticketansicht.
+   */
+  const eventHasSlots = !!event?.slotDurationMinutes && normalizeSchedule(event?.schedule).length > 0
+  const { data: slotData } = useQuery({
+    queryKey: ['eventSlots', eventId],
+    queryFn: () => eventsService.getEventSlots(eventId!),
+    enabled: !!eventId && eventHasSlots && !purchasedTicket,
+  })
+  const [selectedSlotStart, setSelectedSlotStart] = useState<string | null>(null)
+
   // Einmal berechnet, zweifach genutzt: das Sticky-Banner selbst und das Bottom-Padding
   // des Seiteninhalts müssen zwingend dieselbe Bedingung teilen, sonst entsteht entweder
   // toter Leerraum oder das Banner verdeckt den Ticket-Button.
@@ -514,7 +529,7 @@ export default function EventDetailClient({ id }: Props) {
     if (isDoorPayment) {
       setIsPurchasing(true)
       buyFreeEvent(
-        { eventId: eventId!, tierId: selectedTierId || undefined, answers },
+        { eventId: eventId!, tierId: selectedTierId || undefined, answers, slotStart: selectedSlotStart },
         {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
@@ -547,7 +562,7 @@ export default function EventDetailClient({ id }: Props) {
     const isFree = !numericPrice || numericPrice <= 0
 
     if (isFree) {
-      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined, answers }, {
+      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, slotStart: selectedSlotStart }, {
         onSuccess: (ticket) => {
           toast({ title: t('common.success'), description: t('tickets.freeCreated') })
           router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&eventId=${eventId}&type=free`)
@@ -562,7 +577,7 @@ export default function EventDetailClient({ id }: Props) {
         onSettled: () => setIsPurchasing(false),
       })
     } else {
-      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, useBalance: useBalance && userBalance > 0 }, {
+      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, useBalance: useBalance && userBalance > 0, slotStart: selectedSlotStart }, {
         onSuccess: (data) => {
           if (data.ticket) {
             // Full balance coverage — Ticket wurde direkt erstellt, kein Stripe nötig
@@ -1752,6 +1767,16 @@ export default function EventDetailClient({ id }: Props) {
                   </Button>
                 ) : (
                   <>
+                    {slotData && slotData.slots.length > 0 && (
+                      <div className="mb-4">
+                        <SlotPicker
+                          slots={slotData.slots}
+                          durationMinutes={slotData.slotDurationMinutes}
+                          value={selectedSlotStart}
+                          onChange={setSelectedSlotStart}
+                        />
+                      </div>
+                    )}
                     {isDoorPayment && (
                       <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 mb-2">
                         <Info className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />

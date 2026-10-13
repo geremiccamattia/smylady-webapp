@@ -15,9 +15,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { manageGuestService } from '@/services/manageGuest'
 import { eventsService } from '@/services/events'
 import { resolveImageUrl } from '@/lib/utils'
+import { formatSlot } from '@/lib/eventSlots'
 
 export default function ManageGuest() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const slotLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE'
   const { id } = useParams<{ id: string }>()
 
   // Fetch guest list
@@ -186,6 +188,15 @@ export default function ManageGuest() {
                   {t('manageGuests.date', { defaultValue: 'Gekauft:' })}{' '}
                   {format(new Date(guest.purchasedAt), 'dd.MM.yyyy HH:mm', { locale: de })}
                 </p>
+                {/* Freiwillige Angabe des Gastes, in Wiener Zeit. Ohne Wahl keine Zeile. */}
+                {guest.slotStart && (
+                  <p className="text-sm text-muted-foreground">
+                    {t('timeslots.guestSlot', { defaultValue: 'Kommt ungefähr:' })}{' '}
+                    <span className="font-medium text-foreground">
+                      {formatSlot(guest.slotStart, event?.slotDurationMinutes, slotLocale, t)}
+                    </span>
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <span
