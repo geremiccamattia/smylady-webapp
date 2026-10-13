@@ -501,7 +501,7 @@ export default function TicketDetail() {
                     {t('timeslots.yourSlot', { defaultValue: 'Du kommst ungefähr' })}
                   </p>
                   <p className="font-medium">
-                    {formatSlot(ticket.slotStart, event?.slotDurationMinutes, i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE')}
+                    {formatSlot(ticket.slotStart, event?.slotDurationMinutes, i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE', t)}
                   </p>
                 </div>
               </div>

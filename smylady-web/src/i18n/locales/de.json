@@ -284,7 +284,7 @@
   },
   "timeslots": {
     "question": "Wann kommst du ungefähr?",
-    "voluntary": "Freiwillig - hilft dem Veranstalter bei der Planung.",
+    "voluntary": "Freiwillig – hilft dem Veranstalter bei der Planung.",
     "selected": "Du kommst ungefähr {{slot}}",
     "clear": "Keine Angabe",
     "yourSlot": "Du kommst ungefähr",

@@ -31,7 +31,7 @@ export function SlotPicker({ slots, durationMinutes, value, onChange }: SlotPick
   const groups = groupSlotsByDay(slots)
   if (groups.length === 0) return null
 
-  const selectedLabel = value ? formatSlot(value, durationMinutes, locale) : null
+  const selectedLabel = value ? formatSlot(value, durationMinutes, locale, t) : null
 
   return (
     <div className="space-y-3 rounded-lg border p-3" role="group" aria-labelledby="slot-picker-title">
@@ -40,7 +40,7 @@ export function SlotPicker({ slots, durationMinutes, value, onChange }: SlotPick
           {t('timeslots.question', { defaultValue: 'Wann kommst du ungefähr?' })}
         </p>
         <p className="text-xs text-muted-foreground">
-          {t('timeslots.voluntary', { defaultValue: 'Freiwillig - hilft dem Veranstalter bei der Planung.' })}
+          {t('timeslots.voluntary', { defaultValue: 'Freiwillig – hilft dem Veranstalter bei der Planung.' })}
         </p>
       </div>
 

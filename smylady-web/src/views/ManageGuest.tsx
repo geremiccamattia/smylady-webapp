@@ -193,7 +193,7 @@ export default function ManageGuest() {
                   <p className="text-sm text-muted-foreground">
                     {t('timeslots.guestSlot', { defaultValue: 'Kommt ungefähr:' })}{' '}
                     <span className="font-medium text-foreground">
-                      {formatSlot(guest.slotStart, event?.slotDurationMinutes, slotLocale)}
+                      {formatSlot(guest.slotStart, event?.slotDurationMinutes, slotLocale, t)}
                     </span>
                   </p>
                 )}

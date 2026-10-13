@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { EventSlot } from '@/types'
 import { formatScheduleDay, viennaWallClock } from '@/lib/eventSchedule'
 
@@ -48,11 +49,18 @@ export function groupSlotsByDay(slots: EventSlot[]): { date: string; slots: Even
  * „Fr, 16.10. 18:00–18:30" in Wiener Zeit. Ohne brauchbare Dauer (etwa weil
  * der Veranstalter die Zeitfenster inzwischen abgeschaltet hat) nur der
  * Beginn. null, wenn sich aus slotStart nichts machen lässt.
+ *
+ * Zeigen Beginn und Ende dieselbe Wanduhrzeit, hängt die Dauer in Klammern
+ * an: „So, 25.10. 02:00–02:00 (60 Minuten)". Das passiert in der wiederholten
+ * Stunde der Umstellung auf Winterzeit — das Backend rechnet Slots in echten
+ * Minuten, die Wanduhr springt zurück. Ohne Zusatz läse sich das wie ein Slot
+ * ohne Dauer. Der Slot selbst bleibt unverändert und buchbar.
  */
 export function formatSlot(
   slotStart: string | null | undefined,
   durationMinutes: number | null | undefined,
   locale: string,
+  t: TFunction,
 ): string | null {
   const start = viennaWallClock(slotStart ?? undefined)
   if (!start) return null
@@ -62,5 +70,9 @@ export function formatSlot(
   if (!Number.isInteger(minutes) || minutes <= 0) return `${day} ${start.time}`
 
   const end = viennaWallClock(new Date(Date.parse(slotStart as string) + minutes * MINUTE_MS))
-  return end ? `${day} ${start.time}–${end.time}` : `${day} ${start.time}`
+  if (!end) return `${day} ${start.time}`
+
+  const range = `${day} ${start.time}–${end.time}`
+  if (end.time !== start.time) return range
+  return `${range} (${t('timeslots.durationMinutes', { defaultValue: '{{count}} Minuten', count: minutes })})`
 }

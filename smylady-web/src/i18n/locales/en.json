@@ -272,7 +272,7 @@
   },
   "timeslots": {
     "question": "When are you roughly coming?",
-    "voluntary": "Up to you - helps the organiser plan.",
+    "voluntary": "Up to you – helps the organiser plan.",
     "selected": "You're coming around {{slot}}",
     "clear": "No preference",
     "yourSlot": "You're coming around",
