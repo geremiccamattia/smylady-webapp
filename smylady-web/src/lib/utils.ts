@@ -2,6 +2,9 @@ import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import i18next from 'i18next'
 import { CONFIG } from '@/lib/constants'
+// Datums- und Zeitausgaben dieser Datei rechnen in Wiener Zeit, nie in der des
+// Geräts — sonst stünde ein Event um 00:30 in New York am Vortag.
+import { VIENNA_TIME_ZONE } from '@/lib/eventSchedule'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -82,7 +85,10 @@ export function safeFormatDate(dateString?: string | null, options?: Intl.DateTi
   if (!dateString) return null
   const d = new Date(dateString)
   if (isNaN(d.getTime())) return null
-  return d.toLocaleDateString(currentLocale(), options || { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return d.toLocaleDateString(currentLocale(), {
+    ...(options || { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    timeZone: VIENNA_TIME_ZONE,
+  })
 }
 
 export function formatDate(date: string | Date): string {
@@ -91,6 +97,7 @@ export function formatDate(date: string | Date): string {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: VIENNA_TIME_ZONE,
   })
 }
 
@@ -107,6 +114,7 @@ export function formatTime(date: string | Date): string {
   return d.toLocaleTimeString(currentLocale(), {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: VIENNA_TIME_ZONE,
   })
 }
 
@@ -130,6 +138,7 @@ export function formatEventTime(time: string | null | undefined): string {
         return d.toLocaleTimeString('de-DE', {
           hour: '2-digit',
           minute: '2-digit',
+          timeZone: VIENNA_TIME_ZONE,
         })
       }
     } catch {
@@ -195,10 +204,10 @@ export function formatEventDateRange(
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
   if (end.getTime() < start.getTime()) return null
 
-  const sameCalendarDay =
-    start.getFullYear() === end.getFullYear() &&
-    start.getMonth() === end.getMonth() &&
-    start.getDate() === end.getDate()
+  // Kalendertag in Wien, nicht im Gerät: Sonst entschiede die Uhr des Besuchers,
+  // ob überhaupt ein Zeitraum entsteht. en-CA liefert YYYY-MM-DD.
+  const viennaDay = (date: Date) => date.toLocaleDateString('en-CA', { timeZone: VIENNA_TIME_ZONE })
+  const sameCalendarDay = viennaDay(start) === viennaDay(end)
   if (sameCalendarDay) return null
 
   const isEnglish = (options.locale || 'de').startsWith('en')
@@ -208,7 +217,7 @@ export function formatEventDateRange(
     ? { day: 'numeric', month: 'short' }
     : { day: 'numeric', month: 'numeric' }
 
-  const format = (date: Date) => date.toLocaleDateString(intlLocale, dateFormat)
+  const format = (date: Date) => date.toLocaleDateString(intlLocale, { ...dateFormat, timeZone: VIENNA_TIME_ZONE })
 
   const now = options.now || new Date()
   const hasStarted = start.getTime() <= now.getTime()
