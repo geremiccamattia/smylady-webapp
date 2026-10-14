@@ -17,7 +17,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { MemoryViewer, MemoryUpload } from '@/components/memories'
 import ReportModal from '@/components/ReportModal'
 import { getUserReaction, Reaction } from '@/components/emojiReaction/EmojiReactionPicker'
-import { getInitials, resolveImageUrl, resolveThumbnailUrl, formatRelativeTime } from '@/lib/utils'
+import { getInitials, resolveImageUrl, resolveThumbnailUrl, formatRelativeTime, isMultiDayEvent } from '@/lib/utils'
+import { formatEventTimeRange, formatViennaDate, normalizeSchedule } from '@/lib/eventSchedule'
+import { OpeningHours } from '@/components/events/OpeningHours'
 import {
   ArrowLeft,
   Image,
@@ -47,7 +49,9 @@ export default function EventMemories() {
   const { id: routeId } = useParams<{ id: string }>()
   const router = useRouter()
   const pathname = usePathname()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  // Locale der Seite wie im SlotPicker: de-DE bzw. en-GB, nicht der nackte Sprachcode.
+  const pageLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE'
   const { toast } = useToast()
   const { user, isAuthenticated } = useAuth()
   const { requireAuth } = useRequireAuth()
@@ -70,6 +74,16 @@ export default function EventMemories() {
     queryFn: () => eventsService.getEventById(routeId!),
     enabled: !!routeId,
   })
+
+  // Zeitraum ohne Öffnungszeiten, in Wiener Zeit — wie in der Ticketansicht.
+  const eventTimeRange = event
+    ? formatEventTimeRange(
+        event.eventStartTime,
+        event.eventEndTime,
+        pageLocale,
+        isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime),
+      )
+    : null
 
   /*
    * Die echte ObjectId, bewusst OHNE Rückfall auf routeId.
@@ -368,12 +382,25 @@ export default function EventMemories() {
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{new Date(event.eventDate).toLocaleDateString('de-DE')}</span>
+                  {/* Wiener Kalendertag in der Sprache der Seite, Form wie bisher. */}
+                  <span>{formatViennaDate(event.eventDate, pageLocale)}</span>
                 </div>
-                {event.eventStartTime && (
+                {/*
+                 * Uhrzeit wie in der Ticketansicht. Vorher stand hier eventStartTime
+                 * roh als ISO-Zeitpunkt. Mit Öffnungszeiten je Tag die Tagesfenster
+                 * (eigene volle Zeile, es ist eine Liste), sonst der Zeitraum.
+                 */}
+                {normalizeSchedule(event.schedule).length > 0 ? (
+                  <div className="flex items-start gap-1 w-full">
+                    <Clock className="w-4 h-4 mt-1.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <OpeningHours schedule={event.schedule} />
+                    </div>
+                  </div>
+                ) : eventTimeRange && (
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    <span>{event.eventStartTime}</span>
+                    <span>{eventTimeRange}</span>
                   </div>
                 )}
                 {event.locationName && (
