@@ -106,6 +106,7 @@ export function formatMonth(date: string | Date): string {
   return new Date(date).toLocaleDateString(currentLocale(), {
     month: 'long',
     year: 'numeric',
+    timeZone: VIENNA_TIME_ZONE,
   })
 }
 
@@ -135,7 +136,7 @@ export function formatEventTime(time: string | null | undefined): string {
     try {
       const d = new Date(time)
       if (!isNaN(d.getTime())) {
-        return d.toLocaleTimeString('de-DE', {
+        return d.toLocaleTimeString(currentLocale(), {
           hour: '2-digit',
           minute: '2-digit',
           timeZone: VIENNA_TIME_ZONE,
