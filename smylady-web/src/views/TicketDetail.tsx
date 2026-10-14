@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { ticketsService } from '@/services/tickets'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug, isEventOver } from '@/lib/utils'
+import { formatPrice, cn, resolveImageUrl, getInitials, generateEventSlug, isEventOver, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { SITE_URL } from '@/lib/seo'
 import { MarkdownContent } from '@/components/MarkdownContent'
@@ -42,7 +42,8 @@ import ReportModal from '@/components/ReportModal'
 import { useTranslation } from 'react-i18next'
 import { eventsService } from '@/services/events'
 import { SlotPicker } from '@/components/events/SlotPicker'
-import { normalizeSchedule } from '@/lib/eventSchedule'
+import { formatEventTimeRange, formatViennaDate, normalizeSchedule } from '@/lib/eventSchedule'
+import { OpeningHours } from '@/components/events/OpeningHours'
 import { formatSlot } from '@/lib/eventSlots'
 import { useNow } from '@/hooks/useNow'
 
@@ -262,6 +263,17 @@ export default function TicketDetail() {
   // Check if ticket can be cancelled (same logic as mobile app)
   const isPastEvent = isEventOver(event?.eventEndTime, event?.eventDate)
   const eventStartTime = event?.eventStartTime ? new Date(event.eventStartTime) : null
+  // Locale der Seite wie im SlotPicker: de-DE bzw. en-GB, nicht der nackte Sprachcode.
+  const pageLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE'
+  // Zeitraum ohne Öffnungszeiten, in Wiener Zeit — mehrtägig mit Datum auf beiden Seiten.
+  const eventTimeRange = event
+    ? formatEventTimeRange(
+        event.eventStartTime,
+        event.eventEndTime,
+        pageLocale,
+        isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime),
+      )
+    : null
   const canCancelTicket =
     isValid &&
     !isUsed &&
@@ -448,16 +460,32 @@ export default function TicketDetail() {
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 <span>
-                  {format(new Date(event.eventDate), 'EEEE, d. MMMM yyyy', { locale: de })}
+                  {/* Wiener Kalendertag in der Sprache der Seite — vorher date-fns mit
+                      Gerätezeitzone und fest Deutsch. */}
+                  {formatViennaDate(event.eventDate, pageLocale, {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
                 </span>
               </div>
-              {event.eventStartTime && (
+              {/*
+               * Uhrzeit in Wiener Zeit. Vorher standen hier eventStartTime und
+               * eventEndTime roh, also als ISO-Zeitpunkte („2026-10-16T16:00:00.000Z").
+               * Mit Öffnungszeiten je Tag: die Tagesfenster wie auf der Detailseite.
+               */}
+              {normalizeSchedule(event.schedule).length > 0 ? (
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
+                  <div className="min-w-0 flex-1">
+                    <OpeningHours schedule={event.schedule} />
+                  </div>
+                </div>
+              ) : eventTimeRange && (
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  <span>
-                    {event.eventStartTime}
-                    {event.eventEndTime && ` - ${event.eventEndTime}`} Uhr
-                  </span>
+                  <span>{eventTimeRange}</span>
                 </div>
               )}
               {event.locationName && (
@@ -501,7 +529,7 @@ export default function TicketDetail() {
                     {t('timeslots.yourSlot', { defaultValue: 'Du kommst ungefähr' })}
                   </p>
                   <p className="font-medium">
-                    {formatSlot(ticket.slotStart, event?.slotDurationMinutes, i18n.language?.startsWith('en') ? 'en-GB' : 'de-DE', t)}
+                    {formatSlot(ticket.slotStart, event?.slotDurationMinutes, pageLocale, t)}
                   </p>
                 </div>
               </div>

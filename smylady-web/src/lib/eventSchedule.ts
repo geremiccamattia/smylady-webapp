@@ -351,6 +351,52 @@ export function viennaNow(now: Date): { date: string; minutes: number } {
   return { date: wall?.date ?? '', minutes: wall?.minutes ?? 0 }
 }
 
+/**
+ * Datum eines Zeitpunkts als Kalendertag in Wien, nie in der Zeitzone des
+ * Geräts. Die Form bestimmt der Aufrufer über `options` (wie bei
+ * Intl.DateTimeFormat); hier wird nur die Zeitzone festgelegt. Leer bei
+ * ungültigem Wert.
+ *
+ * Ein Event um 00:30 Wiener Zeit (22:30Z am Vortag) steht so auf jedem Gerät
+ * am richtigen Tag — in New York sonst einen Tag früher.
+ */
+export function formatViennaDate(
+  value: string | Date | undefined | null,
+  locale: string,
+  options: Intl.DateTimeFormatOptions = {},
+): string {
+  if (value === undefined || value === null) return ''
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone: VIENNA_TIME_ZONE }).format(d)
+}
+
+/**
+ * Zeitraum eines Events ohne Öffnungszeiten je Tag, in Wiener Zeit — aus
+ * denselben Bausteinen wie die Öffnungszeiten und mit derselben Schreibweise:
+ *
+ *   mehrtägig: „Fr, 16.10. 18:00 – So, 18.10. 15:00"
+ *   eintägig:  „18:00 – 20:00"
+ *
+ * Ob mehrtägig, entscheidet der Aufrufer (isMultiDayEvent aus lib/utils), damit
+ * hier dieselbe Definition gilt wie im Rest der App. Ohne gültiges Ende nur die
+ * Startzeit, ohne gültigen Beginn null.
+ */
+export function formatEventTimeRange(
+  start: string | Date | undefined | null,
+  end: string | Date | undefined | null,
+  locale: string,
+  multiDay: boolean,
+): string | null {
+  const from = viennaWallClock(start ?? undefined)
+  if (!from) return null
+  const to = viennaWallClock(end ?? undefined)
+  if (!to) return multiDay ? `${formatScheduleDay(from.date, locale)} ${from.time}` : from.time
+  return multiDay
+    ? `${formatScheduleDay(from.date, locale)} ${from.time} – ${formatScheduleDay(to.date, locale)} ${to.time}`
+    : `${from.time} – ${to.time}`
+}
+
 export type ScheduleStatus =
   | { kind: 'today'; startTime: string; endTime: string }
   | { kind: 'next'; date: string; startTime: string }
