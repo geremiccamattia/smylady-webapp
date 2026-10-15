@@ -209,6 +209,16 @@ function DashboardContent() {
                           {order.eventDate ? ` · ${formatDate(order.eventDate)}` : ''}
                         </span>
                       </div>
+                      {/* Zu-/Absagen der Creator, sobald ein Creator-Auftrag existiert (ab 'confirmed'). */}
+                      {order.responses && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {t('brandDashboard.responsesShort', {
+                            accepted: order.responses.accepted,
+                            total: order.responses.accepted + order.responses.declined + order.responses.pending,
+                            defaultValue: '{{accepted}}/{{total}} Creator zugesagt',
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right text-sm shrink-0">
                       {order.offerPrice !== null ? (

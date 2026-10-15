@@ -69,7 +69,21 @@ export function useBrandLabels() {
   const platform = (value: string): string =>
     value === 'Sonstige' ? t('brandDashboard.platformOther', { defaultValue: 'Sonstige' }) : value
 
-  return { orderStatus, profileStatus, deliverable, gender, platform }
+  // Die Codes aus data.missing, wenn das Einreichen an einem unvollständigen
+  // Entwurf scheitert (400 von POST /brand-orders/:id/submit).
+  const missingField = (code: string): string =>
+    ({
+      goal: t('brandDashboard.fieldGoal', { defaultValue: 'Ziel der Kampagne' }),
+      budget: t('brandDashboard.budgetLabel', { defaultValue: 'Budget' }),
+      eventName: t('brandDashboard.fieldEventName', { defaultValue: 'Name des Events' }),
+      eventDate: t('brandDashboard.missingEventDate', { defaultValue: 'Datum des Events' }),
+      eventDateInPast: t('brandDashboard.missingEventDateInPast', {
+        defaultValue: 'Das Event liegt in der Vergangenheit',
+      }),
+      deliverables: t('brandDashboard.missingDeliverables', { defaultValue: 'mindestens ein gewünschter Inhalt' }),
+    })[code] ?? code
+
+  return { orderStatus, profileStatus, deliverable, gender, platform, missingField }
 }
 
 // ───────────────────────────────────────────────────────────────

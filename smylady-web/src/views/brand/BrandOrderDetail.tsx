@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
+  Ban,
   CalendarDays,
   Check,
   Clapperboard,
@@ -20,6 +21,7 @@ import {
   Send,
   Target,
   Users,
+  X,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -35,28 +37,37 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { brandService, readBrandError, type BrandOrder } from '@/services/brand'
+import { brandService, readBrandError, readMissingFields, type BrandOrder } from '@/services/brand'
 import { eventsService } from '@/services/events'
 import { formatDate, formatDateTime, formatPrice, getInitials, resolveImageUrl } from '@/lib/utils'
 import { BrandGate, LoadingBars, OrderStatusBadge, useBrandLabels } from '@/components/brand/brandShared'
-import { useCreatorLabels } from '@/components/creator/creatorShared'
+import { ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 
 /** Ab diesen Status ist die Creator-Auswahl fix und darf der Brand gezeigt werden. */
 const PROPOSED_VISIBLE_FROM: BrandOrder['status'][] = ['offer_sent', 'confirmed', 'completed']
 
+/** Bis hierhin beendet die Brand den Auftrag selbst; ab 'confirmed' nur noch über uns (409). */
+const CANCELLABLE: BrandOrder['status'][] = ['draft', 'submitted', 'in_review', 'offer_sent']
+
 /**
  * Ein Auftrag aus Sicht der Brand.
  *
  * Je nach Status gibt es eine Aktion:
- *   draft       — bearbeiten oder einreichen
- *   submitted / in_review — warten, wir prüfen
+ *   draft       — bearbeiten, einreichen oder verwerfen
+ *   submitted / in_review — warten, wir prüfen; oder zurückziehen
  *   offer_sent  — Angebot mit Preis ansehen, vorgeschlagene Creator prüfen,
- *                 annehmen (legt Event und Creator-Auftrag an)
- *   confirmed   — Event für Explore öffentlich machen oder nur für die Creator
+ *                 annehmen (legt Event und Creator-Auftrag an) oder ablehnen
+ *   confirmed   — Event für Explore öffentlich machen oder nur für die Creator;
+ *                 Zu- und Absagen der Creator mitlesen
  *   completed / cancelled — nur Ansicht
+ *
+ * Verwerfen, Zurückziehen und Ablehnen sind dieselbe Stornierung
+ * (POST /:id/cancel) mit freiwilligem Grund — endgültig, deshalb mit Rückfrage.
  */
 export default function BrandOrderDetail() {
   return (
@@ -80,6 +91,8 @@ function OrderDetail() {
   const { id } = useParams<{ id: string }>()
   const [confirmAccept, setConfirmAccept] = useState(false)
   const [confirmSubmit, setConfirmSubmit] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
 
   const orderQuery = useQuery<BrandOrder>({
     queryKey: ['brand', 'order', id],
@@ -116,7 +129,24 @@ function OrderDetail() {
         description: t('brandDashboard.orderSubmitted', { defaultValue: 'Dein Auftrag ist eingereicht. Wir melden uns mit einem Angebot.' }),
       })
     },
-    onError: (error: unknown) => fail(error, t('brandDashboard.submitFailed', { defaultValue: 'Der Auftrag konnte nicht eingereicht werden.' })),
+    onError: (error: unknown) => {
+      // Ein Entwurf darf unvollständig gespeichert sein; beim Einreichen
+      // nennt das Backend die fehlenden Felder (400 mit data.missing). Die
+      // beim Namen zu nennen hilft mehr als die generische Meldung.
+      const missing = readMissingFields(error)
+      if (missing.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: t('brandDashboard.submitIncompleteTitle', { defaultValue: 'Noch nicht vollständig' }),
+          description: t('brandDashboard.submitIncompleteDesc', {
+            fields: missing.map(labels.missingField).join(', '),
+            defaultValue: 'Zum Einreichen fehlt noch: {{fields}}',
+          }),
+        })
+        return
+      }
+      fail(error, t('brandDashboard.submitFailed', { defaultValue: 'Der Auftrag konnte nicht eingereicht werden.' }))
+    },
   })
 
   const accept = useMutation({
@@ -150,6 +180,23 @@ function OrderDetail() {
       })
     },
     onError: (error: unknown) => fail(error, t('brandDashboard.visibilityFailed', { defaultValue: 'Die Sichtbarkeit konnte nicht geändert werden.' })),
+  })
+
+  const cancel = useMutation({
+    // Grund und Ausgangsstatus kommen als Variablen mit: Der Dialog leert den
+    // Grund beim Schliessen, und nach dem Erfolg ist der Auftrag schon
+    // storniert — aus dem Zustand liesse sich beides dann nicht mehr lesen.
+    mutationFn: ({ reason }: { reason: string; fromOffer: boolean }) => brandService.cancelOrder(id, reason),
+    onSuccess: (updated, { fromOffer }) => {
+      applyUpdate(updated)
+      toast({
+        title: t('common.success', { defaultValue: 'Erfolg' }),
+        description: fromOffer
+          ? t('brandDashboard.offerDeclined', { defaultValue: 'Angebot abgelehnt. Wir melden uns bei dir.' })
+          : t('brandDashboard.orderCancelled', { defaultValue: 'Auftrag storniert.' }),
+      })
+    },
+    onError: (error: unknown) => fail(error, t('brandDashboard.cancelFailed', { defaultValue: 'Der Auftrag konnte nicht storniert werden.' })),
   })
 
   if (orderQuery.isLoading) {
@@ -187,7 +234,47 @@ function OrderDetail() {
       ? 'public'
       : 'selected'
   const eventApproved = event?.status === 'Approved'
-  const busy = submit.isPending || accept.isPending || visibility.isPending
+  const busy = submit.isPending || accept.isPending || visibility.isPending || cancel.isPending
+
+  // Stornieren heisst je nach Status etwas anderes; Wortwahl und Icon folgen dem.
+  const canCancel = CANCELLABLE.includes(order.status)
+  const cancelLabel =
+    order.status === 'draft'
+      ? t('brandDashboard.cancelDraft', { defaultValue: 'Entwurf verwerfen' })
+      : order.status === 'offer_sent'
+        ? t('brandDashboard.declineOffer', { defaultValue: 'Angebot ablehnen' })
+        : t('brandDashboard.withdrawOrder', { defaultValue: 'Auftrag zurückziehen' })
+  const cancelTitle =
+    order.status === 'draft'
+      ? t('brandDashboard.cancelDraftConfirmTitle', { defaultValue: 'Entwurf verwerfen?' })
+      : order.status === 'offer_sent'
+        ? t('brandDashboard.declineOfferConfirmTitle', { defaultValue: 'Angebot ablehnen?' })
+        : t('brandDashboard.withdrawConfirmTitle', { defaultValue: 'Auftrag zurückziehen?' })
+  const cancelDescription =
+    order.status === 'draft'
+      ? t('brandDashboard.cancelDraftConfirmDesc', {
+          defaultValue:
+            'Der Entwurf wird storniert und lässt sich danach weder bearbeiten noch einreichen. Das lässt sich nicht rückgängig machen.',
+        })
+      : order.status === 'offer_sent'
+        ? t('brandDashboard.declineOfferConfirmDesc', {
+            defaultValue:
+              'Der Auftrag wird storniert, die vorgeschlagenen Creator werden nicht gebucht. Das lässt sich nicht rückgängig machen – für ein neues Angebot leg bitte einen neuen Auftrag an.',
+          })
+        : t('brandDashboard.withdrawConfirmDesc', {
+            defaultValue:
+              'Wir stoppen die Bearbeitung und der Auftrag wird storniert. Das lässt sich nicht rückgängig machen – ein neuer Auftrag ist jederzeit möglich.',
+          })
+  // Derselbe Knopf im Kopf der Seite und, beim Angebot, noch einmal in der Angebotskarte.
+  const cancelButton = canCancel ? (
+    <Button variant="outline" className="gap-2" disabled={busy} loading={cancel.isPending} onClick={() => setConfirmCancel(true)}>
+      {order.status === 'offer_sent' ? <X className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+      {cancelLabel}
+    </Button>
+  ) : null
+  const responsesTotal = order.responses
+    ? order.responses.accepted + order.responses.declined + order.responses.pending
+    : 0
 
   return (
     <>
@@ -201,8 +288,8 @@ function OrderDetail() {
             <h1 className="text-3xl font-bold">{order.title}</h1>
             <OrderStatusBadge status={order.status} />
           </div>
-          {order.status === 'draft' && (
-            <div className="flex gap-2">
+          {order.status === 'draft' ? (
+            <div className="flex gap-2 flex-wrap">
               {/* `disabled` am Button allein hält den Link nicht auf: Der
                   Klick landet trotzdem im Anker. Deshalb sperrt der Link
                   selbst, solange eine Aktion läuft. */}
@@ -221,7 +308,12 @@ function OrderDetail() {
                 <Send className="h-4 w-4" />
                 {t('brandDashboard.submitOrder', { defaultValue: 'Einreichen' })}
               </Button>
+              {cancelButton}
             </div>
+          ) : (
+            // Eingereicht, in Prüfung, Angebot: Zurückziehen bzw. Ablehnen
+            // ist die einzige Aktion im Kopf. Ab 'confirmed' null.
+            cancelButton
           )}
         </div>
       </div>
@@ -250,10 +342,13 @@ function OrderDetail() {
             {order.offerNotes && <p className="text-sm whitespace-pre-wrap">{order.offerNotes}</p>}
             {order.status === 'offer_sent' && (
               <div className="pt-2">
-                <Button variant="gradient" className="gap-2" loading={accept.isPending} onClick={() => setConfirmAccept(true)}>
-                  <Check className="h-4 w-4" />
-                  {t('brandDashboard.acceptOffer', { defaultValue: 'Angebot annehmen' })}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="gradient" className="gap-2" loading={accept.isPending} onClick={() => setConfirmAccept(true)}>
+                    <Check className="h-4 w-4" />
+                    {t('brandDashboard.acceptOffer', { defaultValue: 'Angebot annehmen' })}
+                  </Button>
+                  {cancelButton}
+                </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   {t('brandDashboard.acceptHint', {
                     defaultValue: 'Mit der Annahme legen wir dein Event an und informieren die vorgeschlagenen Creator.',
@@ -345,6 +440,16 @@ function OrderDetail() {
               <Users className="h-5 w-5" />
               {t('brandDashboard.proposedTitle', { defaultValue: 'Vorgeschlagene Creator' })}
               <span className="text-muted-foreground font-normal">({order.proposedCreators.length})</span>
+              {order.responses && (
+                <span className="text-sm text-muted-foreground font-normal">
+                  ·{' '}
+                  {t('brandDashboard.responsesSummary', {
+                    accepted: order.responses.accepted,
+                    total: responsesTotal,
+                    defaultValue: '{{accepted}} von {{total}} zugesagt',
+                  })}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -361,6 +466,7 @@ function OrderDetail() {
                         <Link href={localePath(`/user/${creator.creatorUserId}`)} className="font-medium hover:underline">
                           {creator.name || t('brandDashboard.creatorUnnamed', { defaultValue: 'Creator' })}
                         </Link>
+                        {creator.response && <ResponseBadge value={creator.response} />}
                         {creator.city && <span className="text-sm text-muted-foreground">{creator.city}</span>}
                       </div>
                       {creator.channels.length > 0 && (
@@ -403,11 +509,15 @@ function OrderDetail() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
                     <EyeOff className="h-5 w-5 shrink-0" />
-                    {t('brandDashboard.creatorNotReleased', {
-                      defaultValue: 'Dieser Creator hat sein Profil noch nicht für Brands freigegeben. Details folgen mit dem Briefing.',
-                    })}
+                    <span className="flex-1 min-w-0">
+                      {t('brandDashboard.creatorNotReleased', {
+                        defaultValue: 'Dieser Creator hat sein Profil noch nicht für Brands freigegeben. Details folgen mit dem Briefing.',
+                      })}
+                    </span>
+                    {/* Die Antwort kommt auch ohne Freigabe — sie verrät nichts über die Person. */}
+                    {creator.response && <ResponseBadge value={creator.response} />}
                   </div>
                 )}
               </div>
@@ -451,7 +561,17 @@ function OrderDetail() {
               {order.eventDate ? formatDateTime(order.eventDate) : '—'}
               {order.eventEndDate ? ` – ${formatDateTime(order.eventEndDate)}` : ''}
             </Field>
-            {order.eventLocation && <Field label={t('brandDashboard.fieldEventLocation', { defaultValue: 'Ort' })}>{order.eventLocation}</Field>}
+            {order.eventLocation && (
+              <Field label={t('brandDashboard.fieldEventLocation', { defaultValue: 'Ort' })}>
+                {order.eventLocation}
+                {order.eventCoordinates && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Check className="h-3 w-3" />
+                    {t('brandDashboard.addressRecognized', { defaultValue: 'Adresse erkannt' })}
+                  </div>
+                )}
+              </Field>
+            )}
           </div>
           {order.eventDescription && (
             <Field label={t('brandDashboard.fieldEventDescription', { defaultValue: 'Beschreibung' })}>
@@ -551,6 +671,39 @@ function OrderDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Stornieren ist endgültig: Rückfrage mit freiwilligem Grund. Der Grund
+          geht als Variable mit, der Dialog leert ihn beim Schliessen. */}
+      <AlertDialog
+        open={confirmCancel}
+        onOpenChange={(open) => {
+          setConfirmCancel(open)
+          if (!open) setCancelReason('')
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{cancelTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{cancelDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="cancelReason">{t('brandDashboard.cancelReasonLabel', { defaultValue: 'Grund (optional)' })}</Label>
+            <Textarea
+              id="cancelReason"
+              rows={3}
+              maxLength={1000}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', { defaultValue: 'Abbrechen' })}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => cancel.mutate({ reason: cancelReason, fromOffer: order.status === 'offer_sent' })}>
+              {cancelLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
@@ -567,6 +720,18 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 /** Ein Satz dazu, was gerade passiert und was als Nächstes kommt. */
 function StatusHint({ order }: { order: BrandOrder }) {
   const { t } = useTranslation()
+  const { cancellation, responses } = order
+
+  // Storniert: von der Brand selbst oder von uns, mit Datum, wenn bekannt.
+  const cancelledAt = cancellation?.at ? formatDate(cancellation.at) : ''
+  const cancelledText =
+    cancellation?.by === 'brand'
+      ? cancelledAt
+        ? t('brandDashboard.hintCancelledByBrandAt', { date: cancelledAt, defaultValue: 'Du hast diesen Auftrag am {{date}} storniert.' })
+        : t('brandDashboard.hintCancelledByBrand', { defaultValue: 'Du hast diesen Auftrag storniert.' })
+      : cancelledAt
+        ? t('brandDashboard.hintCancelledAt', { date: cancelledAt, defaultValue: 'Dieser Auftrag wurde am {{date}} storniert.' })
+        : t('brandDashboard.hintCancelled', { defaultValue: 'Dieser Auftrag wurde storniert.' })
 
   const text = {
     draft: t('brandDashboard.hintDraft', {
@@ -585,17 +750,35 @@ function StatusHint({ order }: { order: BrandOrder }) {
       defaultValue: 'Angebot angenommen. Dein Event ist angelegt, die Creator wurden informiert und melden sich mit Zu- oder Absage.',
     }),
     completed: t('brandDashboard.hintCompleted', { defaultValue: 'Dieser Auftrag ist abgeschlossen.' }),
-    cancelled: t('brandDashboard.hintCancelled', { defaultValue: 'Dieser Auftrag wurde storniert.' }),
+    cancelled: cancelledText,
   }[order.status]
 
   if (!text) return null
+
+  // Bestätigt: der Stand der Zu- und Absagen, sobald das Backend ihn liefert.
+  const responsesText =
+    order.status === 'confirmed' && responses
+      ? t('brandDashboard.hintResponses', {
+          accepted: responses.accepted,
+          declined: responses.declined,
+          pending: responses.pending,
+          defaultValue: 'Stand: {{accepted}} Zusagen, {{declined}} Absagen, {{pending}} offen.',
+        })
+      : ''
+  const reason = order.status === 'cancelled' ? cancellation?.reason : ''
 
   const Icon = order.status === 'offer_sent' ? Eye : order.status === 'confirmed' ? Check : FileText
 
   return (
     <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-4 text-sm">
       <Icon className="h-5 w-5 shrink-0 text-primary mt-0.5" />
-      <p>{text}</p>
+      <div className="space-y-1">
+        <p>
+          {text}
+          {responsesText ? ` ${responsesText}` : ''}
+        </p>
+        {reason && <p className="text-muted-foreground whitespace-pre-wrap">„{reason}“</p>}
+      </div>
     </div>
   )
 }

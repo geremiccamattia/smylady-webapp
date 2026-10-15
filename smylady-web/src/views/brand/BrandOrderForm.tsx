@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CalendarDays, Clapperboard, FileText, Plus, Target, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, Clapperboard, FileText, Plus, Target, Trash2, Users } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +30,7 @@ import {
   DELIVERABLE_PLATFORMS,
   DELIVERABLE_TYPES,
   readBrandError,
+  readMissingFields,
   type AudienceGender,
   type BrandOrder,
   type BrandOrderPayload,
@@ -50,6 +51,14 @@ interface DeliverableRow {
 }
 
 const emptyDeliverable = (): DeliverableRow => ({ type: 'reel', quantity: '1', platform: 'Instagram', notes: '' })
+
+/** Ein Treffer der Adresssuche (Nominatim), so wie CreateEvent ihn nutzt. */
+interface LocationSuggestion {
+  place_id: number
+  display_name: string
+  lat: string
+  lon: string
+}
 
 /** "2026-11-15T18:00:00.000Z" -> { date: '2026-11-15', time: '19:00' } in lokaler Zeit. */
 function splitIso(iso: string): { date: string; time: string } {
@@ -109,6 +118,17 @@ function OrderForm() {
   const [eventEndDate, setEventEndDate] = useState('')
   const [eventEndTime, setEventEndTime] = useState('')
   const [eventLocation, setEventLocation] = useState('')
+  // Koordinaten gibt es nur zu einem gewählten Vorschlag der Adresssuche.
+  // Getippter Text ist Freitext ohne Koordinaten — das Event erschiene dann
+  // weder auf der Karte noch in der Umkreissuche.
+  const [eventCoordinates, setEventCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  // Die Suche hängt am zuletzt getippten Text, nicht am Feldwert: Ein
+  // gewählter Vorschlag oder ein geladener Entwurf soll keine neue Suche
+  // auslösen und die Liste nicht ungefragt wieder öffnen.
+  const [locationQuery, setLocationQuery] = useState('')
+  const [locationResults, setLocationResults] = useState<LocationSuggestion[]>([])
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const locationSearchRef = useRef<HTMLDivElement>(null)
   const [eventDescription, setEventDescription] = useState('')
   const [deliverables, setDeliverables] = useState<DeliverableRow[]>([emptyDeliverable()])
   const [ageFrom, setAgeFrom] = useState('')
@@ -143,6 +163,7 @@ function OrderForm() {
     setEventEndDate(end.date)
     setEventEndTime(end.time)
     setEventLocation(order.eventLocation)
+    setEventCoordinates(order.eventCoordinates)
     setEventDescription(order.eventDescription)
     setDeliverables(
       order.deliverables.length > 0
@@ -165,6 +186,55 @@ function OrderForm() {
     setApprovalRequired(order.approvalRequired)
   }, [existing.data])
 
+  // Adresssuche wie beim Anlegen eines Events (CreateEvent): 500 ms nach der
+  // letzten Eingabe, ab drei Zeichen, höchstens fünf Treffer aus AT/DE/CH.
+  useEffect(() => {
+    const query = locationQuery.trim()
+    if (query.length < 3) {
+      setLocationResults([])
+      setShowLocationDropdown(false)
+      return
+    }
+    let stale = false
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=at,de,ch`,
+        )
+        const data = await res.json()
+        if (stale) return
+        const results: LocationSuggestion[] = Array.isArray(data) ? data : []
+        setLocationResults(results)
+        setShowLocationDropdown(results.length > 0)
+      } catch {
+        // Ohne Vorschläge bleibt der Ort Freitext; kein Fehler für die Brand.
+      }
+    }, 500)
+    return () => {
+      stale = true
+      clearTimeout(timer)
+    }
+  }, [locationQuery])
+
+  // Ein Klick ausserhalb schliesst die Vorschlagsliste.
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (locationSearchRef.current && !locationSearchRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const pickLocation = (suggestion: LocationSuggestion) => {
+    const lat = parseFloat(suggestion.lat)
+    const lng = parseFloat(suggestion.lon)
+    setEventLocation(suggestion.display_name)
+    setEventCoordinates(Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null)
+    setShowLocationDropdown(false)
+  }
+
   const fail = (error: unknown, fallback: string) =>
     toast({
       variant: 'destructive',
@@ -173,9 +243,14 @@ function OrderForm() {
     })
 
   /**
-   * Prüft die Eingaben und baut den Request. `submit` schaltet die Regeln
-   * zu, die nur fürs Einreichen gelten: Ein Entwurf darf unfertig sein, ein
-   * eingereichter Auftrag geht an uns zur Prüfung und muss stimmen.
+   * Prüft die Eingaben und baut den Request.
+   *
+   * Ein Entwurf braucht nur den Titel. Alles andere darf fehlen, muss aber
+   * stimmen, wenn es da ist: ein eingetragenes Datum gültig, ein Ende nach
+   * dem Beginn, Altersangaben als Zahlen. `submit` schaltet die Pflichtfelder
+   * fürs Einreichen zu — dann geht der Auftrag an uns zur Prüfung und muss
+   * vollständig sein. Das Backend prüft dasselbe noch einmal und nennt
+   * fehlende Felder in data.missing (siehe readMissingFields).
    */
   const buildPayload = (submit: boolean): BrandOrderPayload | null => {
     const problem = (message: string) => {
@@ -184,21 +259,33 @@ function OrderForm() {
     }
 
     if (!title.trim()) return problem(t('brandDashboard.validateTitle', { defaultValue: 'Bitte gib einen Titel an.' }))
-    if (!goal.trim()) return problem(t('brandDashboard.validateGoal', { defaultValue: 'Bitte beschreibe das Ziel.' }))
+
+    const goalValue = goal.trim()
+    if (submit && !goalValue) return problem(t('brandDashboard.validateGoal', { defaultValue: 'Bitte beschreibe das Ziel.' }))
+
+    // Leer ist im Entwurf erlaubt; steht etwas drin, muss es eine Zahl ab 0 sein.
+    const hasBudget = budget.trim() !== ''
     const budgetValue = Number(budget.replace(',', '.'))
-    if (budget.trim() === '' || !Number.isFinite(budgetValue) || budgetValue < 0) {
+    if ((submit && !hasBudget) || (hasBudget && (!Number.isFinite(budgetValue) || budgetValue < 0))) {
       return problem(t('brandDashboard.validateBudget', { defaultValue: 'Bitte gib ein Budget in Euro an.' }))
     }
-    if (!eventName.trim()) {
+
+    const eventNameValue = eventName.trim()
+    if (submit && !eventNameValue) {
       return problem(t('brandDashboard.validateEventName', { defaultValue: 'Bitte gib den Namen des Events an.' }))
     }
+
     const startIso = joinIso(eventDate, eventTime)
-    if (!startIso) return problem(t('brandDashboard.validateEventDate', { defaultValue: 'Bitte wähle das Datum des Events.' }))
     const endIso = joinIso(eventEndDate, eventEndTime)
+    // Ein eingetragener Beginn muss gültig sein, und ein Ende braucht einen
+    // Beginn — das Backend prüft "Ende nach Beginn" nur mit beidem.
+    if ((submit && !startIso) || (eventDate && !startIso) || (endIso && !startIso)) {
+      return problem(t('brandDashboard.validateEventDate', { defaultValue: 'Bitte wähle das Datum des Events.' }))
+    }
     // Gleich ist genauso ungültig wie davor: Das Backend lehnt es ab, und ein
     // Event ohne Dauer liesse sich beim Annehmen des Angebots nicht anlegen.
     // Typischer Fall: Beginn und Ende am selben Tag, beide ohne Uhrzeit.
-    if (endIso && endIso <= startIso) {
+    if (startIso && endIso && endIso <= startIso) {
       return problem(
         t('brandDashboard.validateEventEnd', { defaultValue: 'Das Ende muss nach dem Beginn liegen.' }),
       )
@@ -208,7 +295,7 @@ function OrderForm() {
     // gespeichert werden, etwa wenn das Datum noch nicht feststeht und erst
     // ein Platzhalter drinsteht. Eingereicht geht er an uns zur Prüfung, und
     // da muss das Datum stimmen.
-    if (submit && new Date(startIso).getTime() < Date.now()) {
+    if (submit && startIso && new Date(startIso).getTime() < Date.now()) {
       return problem(
         t('brandDashboard.validateEventPast', { defaultValue: 'Das Event liegt in der Vergangenheit. Bitte prüfe das Datum.' }),
       )
@@ -220,7 +307,10 @@ function OrderForm() {
       platform: row.platform || undefined,
       notes: row.notes.trim() || undefined,
     }))
-    if (rows.length === 0 || rows.some((row) => !Number.isFinite(row.quantity) || row.quantity < 1)) {
+    // Zeilen ohne gültige Anzahl: beim Einreichen ein Fehler, im Entwurf
+    // fallen sie weg — das Backend nimmt keine Anzahl unter 1 an.
+    const validRows = rows.filter((row) => Number.isFinite(row.quantity) && row.quantity >= 1)
+    if (submit && (rows.length === 0 || validRows.length < rows.length)) {
       return problem(
         t('brandDashboard.validateDeliverables', {
           defaultValue: 'Bitte gib mindestens einen gewünschten Inhalt mit Anzahl an.',
@@ -233,7 +323,7 @@ function OrderForm() {
     if ((from !== undefined && (!Number.isFinite(from) || from < 0)) || (to !== undefined && (!Number.isFinite(to) || to < 0))) {
       return problem(t('brandDashboard.validateAge', { defaultValue: 'Bitte prüfe die Altersangaben.' }))
     }
-    if (from !== undefined && to !== undefined && from > to) {
+    if (submit && from !== undefined && to !== undefined && from > to) {
       return problem(t('brandDashboard.validateAgeRange', { defaultValue: '„Alter von“ darf nicht größer sein als „Alter bis“.' }))
     }
     const interestList = interests
@@ -249,16 +339,20 @@ function OrderForm() {
 
     return {
       title: title.trim(),
-      goal: goal.trim(),
-      budget: budgetValue,
+      goal: goalValue || cleared,
+      budget: hasBudget ? budgetValue : cleared,
+      // Immer als Objekt mit den gefüllten Feldern; Name und Datum fehlen,
+      // solange sie leer sind. Die Koordinaten folgen der null-Regel: Wurde
+      // der Ort zu Freitext, müssen alte Koordinaten beim Bearbeiten weg.
       eventDetails: {
-        name: eventName.trim(),
+        name: eventNameValue || undefined,
         date: startIso,
         endDate: endIso,
         locationName: eventLocation.trim() || undefined,
         description: eventDescription.trim() || undefined,
+        coordinates: eventCoordinates ?? cleared,
       },
-      deliverables: rows,
+      deliverables: submit ? rows : validRows,
       targetAudience: hasAudience
         ? { ageFrom: from, ageTo: to, gender, region: region.trim() || undefined, interests: interestList }
         : cleared,
@@ -290,7 +384,22 @@ function OrderForm() {
     onSuccess: ({ order, submitError }, variables) => {
       queryClient.invalidateQueries({ queryKey: BRAND_ORDERS_QUERY_KEY })
       queryClient.setQueryData(['brand', 'order', order.id], order)
-      if (submitError) {
+      const missing = submitError ? readMissingFields(submitError) : []
+      if (missing.length > 0) {
+        // Das Backend hat den Entwurf als unvollständig abgewiesen (400 mit
+        // data.missing). Die Felder beim Namen nennen statt der generischen
+        // Meldung — die Formularprüfung oben sollte das zwar vorher fangen,
+        // Backend und Formular können aber auseinanderlaufen (etwa ein Datum,
+        // das gerade eben verstrichen ist).
+        toast({
+          variant: 'destructive',
+          title: t('brandDashboard.submitIncompleteTitle', { defaultValue: 'Noch nicht vollständig' }),
+          description: t('brandDashboard.submitIncompleteDraftSaved', {
+            fields: missing.map(labels.missingField).join(', '),
+            defaultValue: 'Der Entwurf ist gespeichert. Zum Einreichen fehlt noch: {{fields}}',
+          }),
+        })
+      } else if (submitError) {
         fail(
           submitError,
           t('brandDashboard.submitFailedDraftSaved', {
@@ -389,6 +498,11 @@ function OrderForm() {
             defaultValue: 'Beschreibe dein Event und was du dir von Creatorn wünschst. Wir schlagen passende Creator vor und schicken dir ein Angebot.',
           })}
         </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t('brandDashboard.draftHint', {
+            defaultValue: 'Für einen Entwurf reicht der Titel. Zum Einreichen brauchen wir alle Felder mit *.',
+          })}
+        </p>
       </div>
 
       <form
@@ -484,14 +598,52 @@ function OrderForm() {
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
+            {/* Adresssuche wie in CreateEvent. Ein gewählter Vorschlag bringt
+                Koordinaten mit; weitergetippt wird der Text wieder Freitext
+                ohne Koordinaten. */}
+            <div className="space-y-2" ref={locationSearchRef}>
               <Label htmlFor="eventLocation">{t('brandDashboard.fieldEventLocation', { defaultValue: 'Ort' })}</Label>
-              <Input
-                id="eventLocation"
-                value={eventLocation}
-                onChange={(e) => setEventLocation(e.target.value)}
-                placeholder={t('brandDashboard.fieldEventLocationPlaceholder', { defaultValue: 'z. B. Pratersauna, Wien' })}
-              />
+              <div className="relative">
+                <Input
+                  id="eventLocation"
+                  value={eventLocation}
+                  onChange={(e) => {
+                    setEventLocation(e.target.value)
+                    setLocationQuery(e.target.value)
+                    setEventCoordinates(null)
+                  }}
+                  onFocus={() => {
+                    if (!eventCoordinates && locationResults.length > 0) setShowLocationDropdown(true)
+                  }}
+                  placeholder={t('brandDashboard.fieldEventLocationPlaceholder', { defaultValue: 'z. B. Pratersauna, Wien' })}
+                  autoComplete="off"
+                />
+                {showLocationDropdown && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {locationResults.map((result) => (
+                      <button
+                        key={result.place_id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                        onClick={() => pickLocation(result)}
+                      >
+                        {result.display_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {eventCoordinates && (
+                <p className="text-xs text-green-700 dark:text-green-400 flex items-center gap-1">
+                  <Check className="h-3.5 w-3.5" />
+                  {t('brandDashboard.addressRecognized', { defaultValue: 'Adresse erkannt' })}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {t('brandDashboard.fieldEventLocationHint', {
+                  defaultValue: 'Wähle einen Vorschlag aus der Liste, damit das Event später auf der Karte und in der Umkreissuche erscheint.',
+                })}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="eventDescription">{t('brandDashboard.fieldEventDescription', { defaultValue: 'Beschreibung' })}</Label>
@@ -511,7 +663,7 @@ function OrderForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clapperboard className="h-5 w-5" />
-              {t('brandDashboard.deliverablesSection', { defaultValue: 'Gewünschte Inhalte' })}
+              {t('brandDashboard.deliverablesSection', { defaultValue: 'Gewünschte Inhalte' })} *
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
