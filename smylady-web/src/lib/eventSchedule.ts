@@ -133,13 +133,18 @@ export function isDailyHoursEdited(days: string[], state: DailyHoursState): bool
  * Der zu sendende schedule. Leer, solange kein angezeigter Tag bearbeitet
  * wurde. Danach übernehmen unberührte Tage die Vorgabe aus dem Hauptformular,
  * geschlossene Tage fehlen.
+ *
+ * `includeUntouched`: auch ohne Bearbeitung die sichtbaren Tageszeilen mit
+ * ihren Vorgabewerten liefern. Gebraucht, sobald eine Slotdauer gewählt ist —
+ * ohne schedule rechnet das Backend keine Slots, die Wahl wäre folgenlos.
  */
 export function buildSchedule(
   days: string[],
   state: DailyHoursState,
   defaults: { startTime: string; endTime: string },
+  options: { includeUntouched?: boolean } = {},
 ): EventScheduleEntry[] {
-  if (!isDailyHoursEdited(days, state)) return []
+  if (!options.includeUntouched && !isDailyHoursEdited(days, state)) return []
 
   const entries: EventScheduleEntry[] = []
   for (const date of days) {

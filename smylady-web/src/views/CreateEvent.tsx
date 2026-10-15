@@ -379,7 +379,12 @@ function CreateEventContent() {
     startTime: formData.eventStartTime,
     endTime: formData.eventEndTime || eventEndTimeValue,
   }
-  const schedule = showDailyHours ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults) : []
+  // Mit gewählter Slotdauer gehen auch unberührte Tageszeilen mit — ohne
+  // schedule rechnet das Backend keine Slots. Ohne Slotdauer bleibt der Block
+  // optional: erst eine Bearbeitung erzeugt einen schedule.
+  const schedule = showDailyHours
+    ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults, { includeUntouched: !!slotDuration })
+    : []
 
   const validateStep1 = () => {
     if (!formData.eventDate) {
@@ -543,7 +548,7 @@ function CreateEventContent() {
       return
     }
 
-    if (showDailyHours && isDailyHoursEdited(scheduleDays, dailyHours)) {
+    if (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) {
       const scheduleError = validateSchedule(schedule)
       if (scheduleError) {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
@@ -905,9 +910,9 @@ function CreateEventContent() {
                     defaults={dailyHoursDefaults}
                   />
                 )}
-                {/* Slots rechnet das Backend aus den Öffnungszeiten je Tag — ohne
-                    sie gibt es nichts, wozu eine Slotdauer passen könnte. */}
-                {schedule.length > 0 && (
+                {/* Sichtbar, sobald der Block greift — auch mit unberührten
+                    Vorgabezeiten. Slots rechnet das Backend aus diesen Tagen. */}
+                {showDailyHours && (
                   <SlotDurationField value={slotDuration} onChange={setSlotDuration} />
                 )}
                 {isMultiDay && seriesConfig && listDays(formData.eventDate, eventEndDate).length > 1 && (
