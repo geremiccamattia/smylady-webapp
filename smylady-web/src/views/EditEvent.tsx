@@ -285,7 +285,11 @@ export default function EditEvent() {
       setRaffleNotifyWinnerByEmail(event.raffleNotifyWinnerByEmail === true)
       setRafflePartner(event.rafflePartner || '')
       setRafflePartnerMarketing(event.rafflePartnerMarketing === true)
-      setSlotDuration(event.slotDurationMinutes ? String(event.slotDurationMinutes) : '')
+      // Nur mit gespeichertem schedule vorbelegen: Eine Dauer ohne schedule
+      // erzeugt keine Slots, würde aber jetzt beim bloßen Speichern die
+      // unberührten Tageszeilen als schedule mitschicken. Ohne Vorbelegung
+      // räumt das Speichern die verwaiste Dauer wie bisher ab ("").
+      setSlotDuration(scheduleRange && event.slotDurationMinutes ? String(event.slotDurationMinutes) : '')
 
       /*
        * Ein Event mit Öffnungszeiten ist immer mehrtägig, auch wenn es keine
@@ -657,7 +661,12 @@ export default function EditEvent() {
     startTime: formData.eventStartTime,
     endTime: formData.eventEndTime || eventEndTimeValue,
   }
-  const schedule = showDailyHours ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults) : []
+  // Mit gewählter Slotdauer gehen auch unberührte Tageszeilen mit — ohne
+  // schedule rechnet das Backend keine Slots. Ohne Slotdauer bleibt der Block
+  // optional: erst eine Bearbeitung erzeugt einen schedule.
+  const schedule = showDailyHours
+    ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults, { includeUntouched: !!slotDuration })
+    : []
   const hadSchedule = (event?.schedule?.length ?? 0) > 0
 
   /*
@@ -932,7 +941,7 @@ export default function EditEvent() {
       return
     }
 
-    if (showDailyHours && isDailyHoursEdited(scheduleDays, dailyHours)) {
+    if (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) {
       const scheduleError = validateSchedule(schedule)
       if (scheduleError) {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
@@ -1252,9 +1261,9 @@ export default function EditEvent() {
                 defaults={dailyHoursDefaults}
               />
             )}
-            {/* Slots rechnet das Backend aus den Öffnungszeiten je Tag — ohne
-                sie gibt es nichts, wozu eine Slotdauer passen könnte. */}
-            {schedule.length > 0 && (
+            {/* Sichtbar, sobald der Block greift — auch mit unberührten
+                Vorgabezeiten. Slots rechnet das Backend aus diesen Tagen. */}
+            {showDailyHours && (
               <SlotDurationField value={slotDuration} onChange={setSlotDuration} />
             )}
             {isMultiDay && isSeriesEvent && listDays(formData.eventDate, eventEndDate).length > 1 && (
