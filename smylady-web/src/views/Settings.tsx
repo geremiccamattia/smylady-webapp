@@ -15,6 +15,7 @@ import { ChangeEmailModal } from '@/components/settings/ChangeEmailModal'
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal'
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal'
 import { TutorialsCard } from '@/components/settings/TutorialsCard'
+import { BrandCard } from '@/components/settings/BrandCard'
 import { CreatorCard } from '@/components/settings/CreatorCard'
 import {
   MapPin,
@@ -272,6 +273,10 @@ function SettingsContent() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Brand-Bereich: Dashboard und Brand-Profil. Rendert sich selbst weg,
+          wenn das Konto keine Brand ist — siehe BrandCard. */}
+      <BrandCard />
 
       {/* Creator Club. Rendert sich selbst weg, solange der Stand der
           Bewerbung nicht feststeht, und für Brand-Konten — siehe CreatorCard. */}

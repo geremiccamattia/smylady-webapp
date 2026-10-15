@@ -36,6 +36,7 @@ import {
   X,
   Save,
   Megaphone,
+  Building2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -275,6 +276,19 @@ export default function Profile() {
                   </Button>
                 </div>
               </div>
+
+              {/* Firmendaten liegen im Brand-Profil, nicht hier — sonst sucht
+                  eine Brand Website und Ansprechperson vergeblich im Formular. */}
+              {user?.isBrand && (
+                <p className="text-sm text-muted-foreground -mt-3 mb-6">
+                  {t('profile.brandProfileHint', {
+                    defaultValue: 'Firmendaten wie Website, Branche und Ansprechperson änderst du im Brand-Profil.',
+                  })}{' '}
+                  <Link href={localePath('/brand/profile')} className="text-primary hover:underline">
+                    {t('profile.brandProfileLink', { defaultValue: 'Zum Brand-Profil' })}
+                  </Link>
+                </p>
+              )}
 
               <div className="flex flex-col md:flex-row gap-6">
                 {/* Avatar with camera */}
@@ -531,11 +545,20 @@ export default function Profile() {
 
               {/* Actions */}
               <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" onClick={() => setIsEditing(true)}>
                     <Edit className="h-4 w-4 mr-2" />
                     {t('profile.editProfile', { defaultValue: 'Profil bearbeiten' })}
                   </Button>
+                  {/* Brands pflegen ihre Firmendaten unter /brand/profile. */}
+                  {user?.isBrand && (
+                    <Button variant="outline" asChild>
+                      <Link href={localePath('/brand/profile')}>
+                        <Building2 className="h-4 w-4 mr-2" />
+                        {t('profile.brandProfile', { defaultValue: 'Brand-Profil' })}
+                      </Link>
+                    </Button>
+                  )}
                 </div>
                 {/*
                   * Code des ANGEMELDETEN Nutzers aus dem Auth-Kontext

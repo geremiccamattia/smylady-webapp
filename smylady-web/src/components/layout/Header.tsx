@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Search, Bell, MessageCircle, Menu, Plus, Newspaper, Users,
   Ticket, CalendarDays, FileText, Heart, UserCircle, Settings,
-  Ban, ShieldCheck, Star, Wallet, Building2, Sparkles,
+  Ban, ShieldCheck, Star, Wallet, Building2, Sparkles, Pencil,
 } from 'lucide-react'
 import { useCreatorStanding } from '@/hooks/useCreatorStanding'
 import { Button } from '@/components/ui/button'
@@ -342,6 +342,17 @@ export default function Header() {
                       <Building2 className="h-6 w-6 shrink-0 text-primary" />
                       <span className="text-sm font-medium">
                         {t('brandDashboard.title', { defaultValue: 'Brand-Dashboard' })}
+                      </span>
+                    </Link>
+                    {/* Firmendaten liegen im Brand-Profil, nicht im allgemeinen Profil. */}
+                    <Link
+                      href={localePath('/brand/profile')}
+                      onClick={closeSidebar}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                    >
+                      <Pencil className="h-6 w-6 shrink-0 text-primary" />
+                      <span className="text-sm font-medium">
+                        {t('brandDashboard.editBrandProfile', { defaultValue: 'Brand-Profil bearbeiten' })}
                       </span>
                     </Link>
                   </div>

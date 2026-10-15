@@ -149,6 +149,15 @@ export default function Notifications() {
       return
     }
 
+    // Briefing einer Brand → direkt zur Anfrage im Creator-Bereich. Vor der
+    // Event-Weiche unten: Die Benachrichtigung trägt auch die eventId, und
+    // die Eventseite wäre für eine unbeantwortete Anfrage der falsche Ort.
+    if (notification.type === 'creator_assignment_invite') {
+      const assignmentId = typeof notification.data?.assignmentId === 'string' ? notification.data.assignmentId : ''
+      router.push(localePath(assignmentId ? `/creator/assignments/${assignmentId}` : '/creator'))
+      return
+    }
+
     // Navigate based on type
     if (notification.eventId) {
       router.push(`/event/${notification.eventId}`)

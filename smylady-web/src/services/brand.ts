@@ -77,19 +77,30 @@ export interface BrandOrderDeliverable {
 /**
  * Was die Brand beim Anlegen oder Ändern eines Auftrags schickt. Entspricht
  * CreateBrandOrderDto im Backend; Datumsfelder als ISO-Strings.
+ *
+ * Ein Entwurf braucht nur den Titel. Alles andere ist optional und wird erst
+ * beim Einreichen (POST /:id/submit) vom Backend eingefordert. Geschickte
+ * Felder müssen aber stimmen: Ein Datum muss ISO sein, ein Ende nach dem
+ * Beginn liegen, eine Anzahl mindestens 1 sein.
  */
 export interface BrandOrderPayload {
   title: string
-  goal: string
-  budget: number
-  eventDetails: {
-    name: string
-    date: string
+  // Wie targetAudience unten: Wert, weggelassen (unverändert) oder null
+  // (leeren). Beim Bearbeiten leert das Formular mit null, was die Brand
+  // ausgeräumt hat; sonst bliebe der alte Wert im Backend stehen.
+  goal?: string | null
+  budget?: number | null
+  eventDetails?: {
+    name?: string
+    date?: string
     endDate?: string
     locationName?: string
     description?: string
+    // Aus der Adresssuche, nur wenn die Brand einen Vorschlag gewählt hat.
+    // null leert die Koordinaten beim Bearbeiten (Ort wurde zu Freitext).
+    coordinates?: { lat: number; lng: number } | null
   }
-  deliverables: BrandOrderDeliverable[]
+  deliverables?: BrandOrderDeliverable[]
   // Die drei optionalen Angaben kennen drei Zustände: Wert, weggelassen
   // (unverändert) und null (leeren). Beim Bearbeiten eines Entwurfs muss das
   // Formular null schicken, sonst fällt undefined im JSON weg und das Backend
@@ -106,12 +117,19 @@ export interface BrandOrderPayload {
   approvalRequired?: boolean
 }
 
+/** Antwort eines Creators auf das Briefing; entspricht AssignmentResponse im Creator-Bereich. */
+export type CreatorResponse = 'pending' | 'accepted' | 'declined'
+const CREATOR_RESPONSES: readonly string[] = ['pending', 'accepted', 'declined']
+
 /**
  * Ein vorgeschlagener Creator aus Sicht der Brand.
  *
  * Ohne Freigabe (brandVisibilityConsent) liefert das Backend nur die ID und
  * einen Hinweis — die Brand erfährt dann nicht, wer dahintersteht. Eine
  * Vergütung ist nie dabei; die Brand zahlt den Angebotspreis.
+ *
+ * `response` gibt es erst, sobald ein Creator-Auftrag existiert (ab
+ * 'confirmed'); vorher null. Sie kommt auch für nicht freigegebene Creator.
  */
 export interface ProposedCreatorCard {
   creatorUserId: string
@@ -123,6 +141,8 @@ export interface ProposedCreatorCard {
   channels: { platform: string; username: string; url?: string; followerRange?: string }[]
   portfolioLinks: string[]
   bio: string
+  response: CreatorResponse | null
+  respondedAt: string
 }
 
 export interface BrandOrder {
@@ -135,6 +155,8 @@ export interface BrandOrder {
   eventDate: string
   eventEndDate: string
   eventLocation: string
+  /** Nur gesetzt, wenn der Ort aus der Adresssuche kam; Freitext hat keine. */
+  eventCoordinates: { lat: number; lng: number } | null
   eventDescription: string
   deliverables: BrandOrderDeliverable[]
   audienceAgeFrom: number | null
@@ -154,6 +176,10 @@ export interface BrandOrder {
   proposedCreators: ProposedCreatorCard[]
   eventId: string
   createdAt: string
+  /** Nur im Status 'cancelled': wer storniert hat, wann, und (optional) warum. */
+  cancellation: { by: 'brand' | 'admin'; reason: string; at: string } | null
+  /** Zu-/Absagen der Creator, sobald ein Creator-Auftrag existiert (ab 'confirmed'). */
+  responses: { accepted: number; declined: number; pending: number } | null
 }
 
 export interface EventVisibilityResult {
@@ -181,6 +207,13 @@ const numOrNull = (value: unknown): number | null =>
       : null
 const idOf = (value: unknown): string =>
   value && typeof value === 'object' ? str((value as { _id?: unknown })._id) : str(value)
+/** { lat, lng } nur, wenn beides eine Zahl ist — sonst null. */
+const coordinatesOrNull = (value: unknown): { lat: number; lng: number } | null => {
+  if (!value || typeof value !== 'object') return null
+  const lat = numOrNull((value as { lat?: unknown }).lat)
+  const lng = numOrNull((value as { lng?: unknown }).lng)
+  return lat === null || lng === null ? null : { lat, lng }
+}
 
 /** Das Backend antwortet je nach Endpunkt mit oder ohne data-Hülle. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -227,6 +260,8 @@ function mapProposedCreator(raw: any): ProposedCreatorCard {
     })),
     portfolioLinks: Array.isArray(raw?.portfolioLinks) ? raw.portfolioLinks.map(str) : [],
     bio: str(raw?.bio),
+    response: CREATOR_RESPONSES.includes(raw?.response) ? (raw.response as CreatorResponse) : null,
+    respondedAt: str(raw?.respondedAt),
   }
 }
 
@@ -246,6 +281,7 @@ export function mapBrandOrder(raw: any): BrandOrder {
     eventDate: str(raw?.eventDetails?.date),
     eventEndDate: str(raw?.eventDetails?.endDate),
     eventLocation: str(raw?.eventDetails?.locationName),
+    eventCoordinates: coordinatesOrNull(raw?.eventDetails?.coordinates),
     eventDescription: str(raw?.eventDetails?.description),
     deliverables: deliverables.map((entry) => ({
       type: (str(entry?.type) || 'other') as DeliverableType,
@@ -272,6 +308,22 @@ export function mapBrandOrder(raw: any): BrandOrder {
     proposedCreators: proposed.map(mapProposedCreator),
     eventId: idOf(raw?.eventId),
     createdAt: str(raw?.createdAt),
+    cancellation:
+      raw?.cancellation && typeof raw.cancellation === 'object'
+        ? {
+            by: raw.cancellation.by === 'admin' ? 'admin' : 'brand',
+            reason: str(raw.cancellation.reason),
+            at: str(raw.cancellation.at),
+          }
+        : null,
+    responses:
+      raw?.responses && typeof raw.responses === 'object'
+        ? {
+            accepted: num(raw.responses.accepted),
+            declined: num(raw.responses.declined),
+            pending: num(raw.responses.pending),
+          }
+        : null,
   }
 }
 
@@ -316,8 +368,23 @@ export const brandService = {
     return mapBrandOrder(unwrap(response))
   },
 
+  /**
+   * Einreichen. Ein unvollständiger Entwurf bekommt 400 mit der Liste der
+   * fehlenden Felder in data.missing — siehe readMissingFields().
+   */
   async submitOrder(id: string): Promise<BrandOrder> {
     const response = await apiClient.post(`/brand-orders/${id}/submit`)
+    return mapBrandOrder(unwrap(response))
+  },
+
+  /**
+   * Storniert den Auftrag endgültig: Entwurf verwerfen, eingereichten
+   * Auftrag zurückziehen oder das Angebot ablehnen. Erlaubt bis 'offer_sent';
+   * ab 'confirmed' antwortet das Backend mit 409. Ein leerer Grund bleibt weg.
+   */
+  async cancelOrder(id: string, reason?: string): Promise<BrandOrder> {
+    const trimmed = reason?.trim()
+    const response = await apiClient.post(`/brand-orders/${id}/cancel`, trimmed ? { reason: trimmed } : {})
     return mapBrandOrder(unwrap(response))
   },
 
@@ -354,4 +421,16 @@ export function readBrandError(error: unknown, fallback: string): string {
     return data?.message || data?.msg || fallback
   }
   return fallback
+}
+
+/**
+ * Die fehlenden Felder aus der 400-Antwort von POST /brand-orders/:id/submit
+ * (data.missing: 'goal' | 'budget' | 'eventName' | 'eventDate' |
+ * 'eventDateInPast' | 'deliverables'). Leer, wenn es keine solche Liste gibt.
+ */
+export function readMissingFields(error: unknown): string[] {
+  if (!axios.isAxiosError(error)) return []
+  const data = error.response?.data as { data?: { missing?: unknown } } | undefined
+  const missing = data?.data?.missing
+  return Array.isArray(missing) ? missing.filter((entry): entry is string => typeof entry === 'string') : []
 }
