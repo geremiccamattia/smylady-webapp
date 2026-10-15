@@ -35,9 +35,11 @@ import { MUSIC_TYPE_VALUES, OFFERING_VALUES, toStringArray } from '@/lib/eventFi
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
 import { SlotDurationField } from '@/components/events/SlotDurationField'
 import {
+  addDays,
   buildSchedule,
   dailyHoursFromSchedule,
   isDailyHoursEdited,
+  isForcedNextDay,
   listDays,
   localDateKey,
   normalizeSchedule,
@@ -239,7 +241,21 @@ export default function EditEvent() {
        * Wiener Tage des schedule — ein Tag fiel heraus und ging beim Speichern
        * verloren.
        */
-      const scheduleRange = scheduleBounds(normalizeSchedule(event.schedule))
+      const storedSchedule = normalizeSchedule(event.schedule)
+      const scheduleRange = scheduleBounds(storedSchedule)
+      /*
+       * Ein einzelner Eintrag, den das Eintagesformular ausdrücken kann: am
+       * selben Tag, oder über Mitternacht mit einem Ende nicht nach dem Beginn
+       * (der endsNextDay-Fall). Solche Events laden als eintägig — sonst landeten
+       * sie als „mehrtägig" mit nur einer Tageszeile, wo weder der Block noch
+       * der Eintagesweg greift, und der schedule ginge beim Speichern verloren.
+       */
+      const singleEntry =
+        storedSchedule.length === 1 &&
+        (!storedSchedule[0].endDate ||
+          (storedSchedule[0].endDate === addDays(storedSchedule[0].date, 1) && isForcedNextDay(storedSchedule[0])))
+          ? storedSchedule[0]
+          : null
 
       // Ohne schedule: Kalendertag in der Gerätezeitzone, passend zu getHours()
       // unten. Vorher toISOString(), also der UTC-Tag — ein Event kurz nach
@@ -258,9 +274,9 @@ export default function EditEvent() {
         eventStartTime: scheduleRange?.startTime ?? (event.eventStartTime
           ? `${String(new Date(event.eventStartTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventStartTime).getMinutes()).padStart(2, '0')}`
           : ''),
-        eventEndTime: event.eventEndTime
+        eventEndTime: singleEntry?.endTime ?? (event.eventEndTime
           ? `${String(new Date(event.eventEndTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventEndTime).getMinutes()).padStart(2, '0')}`
-          : '',
+          : ''),
         locationName: (() => {
           const existingLocation = event.locationName || ''
           const detailMatch = existingLocation.match(/\s*Top\s+(.+)$/)
@@ -297,7 +313,13 @@ export default function EditEvent() {
        * Tagesliste ausgeblendet und der schedule beim Bearbeiten unerreichbar.
        * Tagesliste und schedule stammen dabei aus denselben Wiener Tagen.
        */
-      if (scheduleRange) {
+      if (singleEntry) {
+        // Eintägig mit schedule: Datum, Beginn und Ende stehen schon oben im Formular.
+        setIsMultiDay(false)
+        setEventEndDate('')
+        setEventEndTimeValue('')
+        setDailyHours({})
+      } else if (scheduleRange) {
         setIsMultiDay(true)
         setEventEndDate(scheduleRange.endDate)
         setEventEndTimeValue(scheduleRange.endTime)
@@ -661,12 +683,25 @@ export default function EditEvent() {
     startTime: formData.eventStartTime,
     endTime: formData.eventEndTime || eventEndTimeValue,
   }
+  /*
+   * Zeitfenster auch für eintägige Events: Datum, Beginn und Ende gesetzt,
+   * keine Serie. Dann gibt es genau eine „Tageszeile" — den Eventtag selbst.
+   */
+  const singleDaySlots =
+    !isSeriesEvent && !isMultiDay &&
+    !!formData.eventDate && !!formData.eventStartTime && !!formData.eventEndTime
+  const showSlotDuration = showDailyHours || singleDaySlots
   // Mit gewählter Slotdauer gehen auch unberührte Tageszeilen mit — ohne
   // schedule rechnet das Backend keine Slots. Ohne Slotdauer bleibt der Block
   // optional: erst eine Bearbeitung erzeugt einen schedule.
+  // Eintägig: derselbe Weg mit dem Eventtag als einziger Zeile und leerem
+  // Bearbeitungsstand — der Eintrag entsteht aus Beginn und Ende des
+  // Hauptformulars. Ein Ende vor dem Beginn endet über endsNextDay am Folgetag.
   const schedule = showDailyHours
     ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults, { includeUntouched: !!slotDuration })
-    : []
+    : singleDaySlots
+      ? buildSchedule([formData.eventDate], {}, dailyHoursDefaults, { includeUntouched: !!slotDuration })
+      : []
   const hadSchedule = (event?.schedule?.length ?? 0) > 0
 
   /*
@@ -941,7 +976,10 @@ export default function EditEvent() {
       return
     }
 
-    if (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) {
+    if (
+      (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) ||
+      (singleDaySlots && slotDuration)
+    ) {
       const scheduleError = validateSchedule(schedule)
       if (scheduleError) {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
@@ -1263,7 +1301,7 @@ export default function EditEvent() {
             )}
             {/* Sichtbar, sobald der Block greift — auch mit unberührten
                 Vorgabezeiten. Slots rechnet das Backend aus diesen Tagen. */}
-            {showDailyHours && (
+            {showSlotDuration && (
               <SlotDurationField value={slotDuration} onChange={setSlotDuration} />
             )}
             {isMultiDay && isSeriesEvent && listDays(formData.eventDate, eventEndDate).length > 1 && (

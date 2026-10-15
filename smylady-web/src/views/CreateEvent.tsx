@@ -379,12 +379,25 @@ function CreateEventContent() {
     startTime: formData.eventStartTime,
     endTime: formData.eventEndTime || eventEndTimeValue,
   }
+  /*
+   * Zeitfenster auch für eintägige Events: Datum, Beginn und Ende gesetzt,
+   * keine Serie. Dann gibt es genau eine „Tageszeile" — den Eventtag selbst.
+   */
+  const singleDaySlots =
+    !seriesConfig && !isMultiDay &&
+    !!formData.eventDate && !!formData.eventStartTime && !!formData.eventEndTime
+  const showSlotDuration = showDailyHours || singleDaySlots
   // Mit gewählter Slotdauer gehen auch unberührte Tageszeilen mit — ohne
   // schedule rechnet das Backend keine Slots. Ohne Slotdauer bleibt der Block
   // optional: erst eine Bearbeitung erzeugt einen schedule.
+  // Eintägig: derselbe Weg mit dem Eventtag als einziger Zeile und leerem
+  // Bearbeitungsstand — der Eintrag entsteht aus Beginn und Ende des
+  // Hauptformulars. Ein Ende vor dem Beginn endet über endsNextDay am Folgetag.
   const schedule = showDailyHours
     ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults, { includeUntouched: !!slotDuration })
-    : []
+    : singleDaySlots
+      ? buildSchedule([formData.eventDate], {}, dailyHoursDefaults, { includeUntouched: !!slotDuration })
+      : []
 
   const validateStep1 = () => {
     if (!formData.eventDate) {
@@ -548,7 +561,10 @@ function CreateEventContent() {
       return
     }
 
-    if (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) {
+    if (
+      (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) ||
+      (singleDaySlots && slotDuration)
+    ) {
       const scheduleError = validateSchedule(schedule)
       if (scheduleError) {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
@@ -912,7 +928,7 @@ function CreateEventContent() {
                 )}
                 {/* Sichtbar, sobald der Block greift — auch mit unberührten
                     Vorgabezeiten. Slots rechnet das Backend aus diesen Tagen. */}
-                {showDailyHours && (
+                {showSlotDuration && (
                   <SlotDurationField value={slotDuration} onChange={setSlotDuration} />
                 )}
                 {isMultiDay && seriesConfig && listDays(formData.eventDate, eventEndDate).length > 1 && (
