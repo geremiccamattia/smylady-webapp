@@ -8,8 +8,8 @@ import { stripeService, PurchaseAnswer } from '@/services/stripe'
  */
 export const useCreatePaymentIntent = () => {
   return useMutation({
-    mutationFn: ({ eventId, tierId, answers, useBalance }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[]; useBalance?: boolean }) =>
-      stripeService.createPaymentIntent({ eventId, tierId, answers, useBalance }),
+    mutationFn: ({ eventId, tierId, answers, useBalance, slotStart }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[]; useBalance?: boolean; slotStart?: string | null }) =>
+      stripeService.createPaymentIntent({ eventId, tierId, answers, useBalance, slotStart }),
   })
 }
 
@@ -42,8 +42,8 @@ export const useBuyFreeEvent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ eventId, tierId, answers }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[] }) =>
-      stripeService.buyFreeEvent(eventId, tierId, answers),
+    mutationFn: ({ eventId, tierId, answers, slotStart }: { eventId: string; tierId?: string; answers?: PurchaseAnswer[]; slotStart?: string | null }) =>
+      stripeService.buyFreeEvent(eventId, tierId, answers, slotStart),
     onSuccess: () => {
       // Invalidate all ticket-related queries to reflect new purchase
       queryClient.invalidateQueries({

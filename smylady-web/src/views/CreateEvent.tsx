@@ -40,6 +40,7 @@ import { EVENT_FORM_CATEGORIES } from '@/lib/constants'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
+import { SlotDurationField } from '@/components/events/SlotDurationField'
 import {
   buildSchedule,
   isDailyHoursEdited,
@@ -173,6 +174,8 @@ function CreateEventContent() {
   const [eventEndDate, setEventEndDate] = useState('')
   const [eventEndTimeValue, setEventEndTimeValue] = useState('')
   const [dailyHours, setDailyHours] = useState<DailyHoursState>({})
+  // Freiwillige Zeitfenster beim Ticketkauf; '' = keine. Nur mit schedule wirksam.
+  const [slotDuration, setSlotDuration] = useState('')
   const [translating, setTranslating] = useState(false)
   const [translatedPreview, setTranslatedPreview] = useState<{
     lang: string; name: string; description: string; restrictions: string
@@ -376,7 +379,25 @@ function CreateEventContent() {
     startTime: formData.eventStartTime,
     endTime: formData.eventEndTime || eventEndTimeValue,
   }
-  const schedule = showDailyHours ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults) : []
+  /*
+   * Zeitfenster auch für eintägige Events: Datum, Beginn und Ende gesetzt,
+   * keine Serie. Dann gibt es genau eine „Tageszeile" — den Eventtag selbst.
+   */
+  const singleDaySlots =
+    !seriesConfig && !isMultiDay &&
+    !!formData.eventDate && !!formData.eventStartTime && !!formData.eventEndTime
+  const showSlotDuration = showDailyHours || singleDaySlots
+  // Mit gewählter Slotdauer gehen auch unberührte Tageszeilen mit — ohne
+  // schedule rechnet das Backend keine Slots. Ohne Slotdauer bleibt der Block
+  // optional: erst eine Bearbeitung erzeugt einen schedule.
+  // Eintägig: derselbe Weg mit dem Eventtag als einziger Zeile und leerem
+  // Bearbeitungsstand — der Eintrag entsteht aus Beginn und Ende des
+  // Hauptformulars. Ein Ende vor dem Beginn endet über endsNextDay am Folgetag.
+  const schedule = showDailyHours
+    ? buildSchedule(scheduleDays, dailyHours, dailyHoursDefaults, { includeUntouched: !!slotDuration })
+    : singleDaySlots
+      ? buildSchedule([formData.eventDate], {}, dailyHoursDefaults, { includeUntouched: !!slotDuration })
+      : []
 
   const validateStep1 = () => {
     if (!formData.eventDate) {
@@ -540,7 +561,10 @@ function CreateEventContent() {
       return
     }
 
-    if (showDailyHours && isDailyHoursEdited(scheduleDays, dailyHours)) {
+    if (
+      (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) ||
+      (singleDaySlots && slotDuration)
+    ) {
       const scheduleError = validateSchedule(schedule)
       if (scheduleError) {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
@@ -591,6 +615,9 @@ function CreateEventContent() {
         // Mit schedule leitet das Backend Datum, Beginn und Ende selbst ab.
         // Mitgesendete Zeiten widersprächen ihm, sobald der erste Tag geschlossen ist.
         eventFormData.append('schedule', JSON.stringify(schedule))
+        if (slotDuration) {
+          eventFormData.append('slotDurationMinutes', slotDuration)
+        }
       } else {
         eventFormData.append('eventDate', eventDate.toISOString())
         eventFormData.append('eventStartTime', eventStartTime.toISOString())
@@ -898,6 +925,11 @@ function CreateEventContent() {
                     onChange={setDailyHours}
                     defaults={dailyHoursDefaults}
                   />
+                )}
+                {/* Sichtbar, sobald der Block greift — auch mit unberührten
+                    Vorgabezeiten. Slots rechnet das Backend aus diesen Tagen. */}
+                {showSlotDuration && (
+                  <SlotDurationField value={slotDuration} onChange={setSlotDuration} />
                 )}
                 {isMultiDay && seriesConfig && listDays(formData.eventDate, eventEndDate).length > 1 && (
                   <p className="text-xs text-muted-foreground">

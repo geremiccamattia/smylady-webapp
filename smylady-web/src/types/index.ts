@@ -101,6 +101,23 @@ export interface ApiEventScheduleEntry {
   _id?: string
 }
 
+/**
+ * Ein wählbares Zeitfenster aus GET /events/:id/slots. `start`/`end` sind
+ * UTC-Zeitpunkte, `date` ist der Wiener Öffnungstag des Fensters, zu dem der
+ * Slot gehört — bei einem Fenster über Mitternacht auch nach 0 Uhr noch der
+ * Vortag. Vergangene Slots liefert das Backend nicht mit.
+ */
+export interface EventSlot {
+  start: string
+  end: string
+  date: string
+}
+
+export interface EventSlotsResponse {
+  slotDurationMinutes: number | null
+  slots: EventSlot[]
+}
+
 export interface Event {
   id: string
   _id?: string
@@ -127,6 +144,12 @@ export interface Event {
    * normalizeSchedule — dort entsteht die Wanduhrzeit.
    */
   schedule?: ApiEventScheduleEntry[]
+  /**
+   * Länge eines freiwillig wählbaren Zeitfensters beim Ticketkauf, in Minuten
+   * (5–1440). Ohne Wert gibt es keine Slots. Die Slots selbst stehen nicht in
+   * der Eventantwort, sondern kommen aus GET /events/:id/slots.
+   */
+  slotDurationMinutes?: number | null
   locationName: string
   location: {
     type: string
@@ -255,6 +278,8 @@ export interface Ticket {
   stripePaymentId?: string
   paymentIntentId?: string
   tierId?: string
+  /** Freiwillig gewähltes Zeitfenster (Beginn, UTC-Zeitpunkt); null ohne Wahl. */
+  slotStart?: string | null
   createdAt: string
   updatedAt?: string
   answers?: {

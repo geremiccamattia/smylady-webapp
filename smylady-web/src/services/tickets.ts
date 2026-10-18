@@ -29,6 +29,16 @@ export const ticketsService = {
     return response.data.data
   },
 
+  /**
+   * Freiwilliges Zeitfenster ändern. `null` entfernt die Wahl. Das Backend
+   * erlaubt das nur dem Besitzer, nur bei aktiven Tickets und nur bis zum
+   * Eventbeginn.
+   */
+  async updateTicketSlot(ticketId: string, slotStart: string | null): Promise<{ ticketId: string; slotStart: string | null }> {
+    const response = await apiClient.patch(`/tickets/${ticketId}/slot`, { slotStart })
+    return response.data.data
+  },
+
   // Get ticket QR code
   async getTicketQRCode(ticketId: string): Promise<{ qrCode: string }> {
     const response = await apiClient.get(`/tickets/${ticketId}/qr`)

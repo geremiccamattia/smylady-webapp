@@ -49,13 +49,15 @@ export const stripeService = {
   /**
    * Create a payment intent for ticket purchase
    */
-  async createPaymentIntent(data: { eventId: string; tierId?: string; answers?: PurchaseAnswer[]; useBalance?: boolean }): Promise<PaymentIntent> {
-    const { eventId, tierId, answers, useBalance } = data
+  async createPaymentIntent(data: { eventId: string; tierId?: string; answers?: PurchaseAnswer[]; useBalance?: boolean; slotStart?: string | null }): Promise<PaymentIntent> {
+    const { eventId, tierId, answers, useBalance, slotStart } = data
     const response = await apiClient.post('/stripe/create-payment-intent', {
       eventId,
       ...(tierId ? { tierId } : {}),
       ...(answers && answers.length > 0 ? { answers } : {}),
       ...(useBalance ? { useBalance } : {}),
+      // Freiwilliges Zeitfenster — ohne Wahl gar nicht erst mitschicken.
+      ...(slotStart ? { slotStart } : {}),
     })
     if (response.data?.status >= 400) {
       const error = new Error(response.data?.message || 'Failed to create payment') as Error & {
@@ -70,11 +72,12 @@ export const stripeService = {
   /**
    * Purchase a free event ticket
    */
-  async buyFreeEvent(eventId: string, tierId?: string, answers?: PurchaseAnswer[]) {
+  async buyFreeEvent(eventId: string, tierId?: string, answers?: PurchaseAnswer[], slotStart?: string | null) {
     const response = await apiClient.post('/stripe/purchase-free-ticket', {
       eventId,
       ...(tierId ? { tierId } : {}),
       ...(answers && answers.length > 0 ? { answers } : {}),
+      ...(slotStart ? { slotStart } : {}),
     })
     if (response.data?.status >= 400) {
       const error = new Error(response.data?.message || 'Failed to claim ticket') as Error & {
