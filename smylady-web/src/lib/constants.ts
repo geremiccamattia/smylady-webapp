@@ -37,6 +37,7 @@ export const EVENT_CATEGORIES = [
   { value: 'Sports', label: 'Sport' },
   { value: 'Workshop', label: 'Workshop' },
   { value: 'Popup', label: 'Pop-up' },
+  { value: 'Weihnachten', label: 'Weihnachten' },
   { value: 'Other', label: 'Sonstiges' },
 ] as const
 
@@ -67,7 +68,7 @@ function orderedCategories(
  */
 export const EVENT_FORM_CATEGORIES = orderedCategories([
   'Music', 'Gastronomy', 'Nature', 'Business', 'On the Roof',
-  'Theme', 'Sports', 'Clubbing', 'Workshop', 'Popup', 'Other',
+  'Theme', 'Sports', 'Clubbing', 'Workshop', 'Popup', 'Weihnachten', 'Other',
 ])
 
 /**
@@ -110,7 +111,7 @@ function orderedCommunityCategories(
  */
 export const COMMUNITY_CATEGORIES = orderedCommunityCategories([
   'Music', 'Clubbing', 'Business', 'Nature', 'Sports',
-  'Workshop', 'Gastronomy', 'Yoga', 'Popup', 'Theme', 'On the Roof', 'Other',
+  'Workshop', 'Gastronomy', 'Yoga', 'Popup', 'Theme', 'On the Roof', 'Weihnachten', 'Other',
 ])
 
 // Music Types
