@@ -19,6 +19,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'Sports': '⚽',
   'Workshop': '📚',
   'Popup': '🛍️',
+  'Weihnachten': '🎄',
 }
 
 const MUSIC_GENRES = [
