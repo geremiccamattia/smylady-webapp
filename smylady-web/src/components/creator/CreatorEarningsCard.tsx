@@ -34,32 +34,36 @@ export function CreatorEarningsCard({ assignments }: { assignments: CreatorAssig
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Stat
-            label={t('creatorDashboard.earningsTotal', { defaultValue: 'Verdient gesamt' })}
-            value={formatPrice(earnings.totalEarned)}
+            label={t('creatorDashboard.earningsPaid', { defaultValue: 'Ausgezahlt' })}
+            value={formatPrice(earnings.totalPaid)}
           />
           <Stat
-            label={t('creatorDashboard.earningsThisMonth', { defaultValue: 'Dieser Monat' })}
-            value={formatPrice(earnings.currentMonthTotal)}
+            label={t('creatorDashboard.earningsOpen', { defaultValue: 'Offen' })}
+            value={formatPrice(earnings.totalOpen)}
           />
           <Stat
             label={t('creatorDashboard.earningsUpcoming', { defaultValue: 'Erwartet' })}
             value={formatPrice(earnings.totalUpcoming)}
+          />
+          <Stat
+            label={t('creatorDashboard.earningsThisMonth', { defaultValue: 'Dieser Monat' })}
+            value={formatPrice(earnings.currentMonthTotal)}
           />
         </div>
 
         <p className="text-xs text-muted-foreground">
           {t('creatorDashboard.earningsHint', {
             defaultValue:
-              'Gezählt werden alle Aufträge, die du angenommen hast, im Monat des Events. Verdient heisst: Das Event liegt hinter dir. Erwartet heisst: Es steht noch bevor.',
+              'Gezählt werden gebuchte Aufträge (die Brand hat bezahlt), im Monat des Events. Ausgezahlt heisst: Die Vergütung ist bei dir. Offen heisst: Das Event liegt hinter dir, die Auszahlung folgt. Erwartet heisst: Das Event steht noch bevor.',
           })}
         </p>
 
         {earnings.months.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             {t('creatorDashboard.earningsEmpty', {
-              defaultValue: 'Noch keine Einnahmen. Sobald du einen Auftrag annimmst, erscheint er hier.',
+              defaultValue: 'Noch keine Einnahmen. Sobald eine Brand dich gebucht hat, erscheint der Auftrag hier.',
             })}
           </p>
         ) : (
@@ -125,7 +129,15 @@ export function CreatorEarningsCard({ assignments }: { assignments: CreatorAssig
                                 <div className="text-xs text-muted-foreground">{formatDate(entry.date)}</div>
                               )}
                             </div>
-                            {!entry.earned && (
+                            {entry.paid ? (
+                              <Badge className="bg-green-100 text-green-800 hover:bg-green-100 font-normal shrink-0">
+                                {t('creatorDashboard.earningsPaidBadge', { defaultValue: 'ausgezahlt' })}
+                              </Badge>
+                            ) : entry.earned ? (
+                              <Badge variant="outline" className="font-normal shrink-0">
+                                {t('creatorDashboard.earningsOpenBadge', { defaultValue: 'offen' })}
+                              </Badge>
+                            ) : (
                               <Badge variant="outline" className="font-normal shrink-0">
                                 {t('creatorDashboard.earningsUpcomingBadge', { defaultValue: 'erwartet' })}
                               </Badge>

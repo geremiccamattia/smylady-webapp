@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronRight, Eye, EyeOff, Inbox, Pencil, Sparkles } from 'lucide-react'
+import { CalendarDays, ChevronRight, Clock, CreditCard, Eye, EyeOff, Inbox, Pencil, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,11 +12,20 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { CREATOR_PROFILE_QUERY_KEY, useCreatorProfile } from '@/hooks/useCreatorProfile'
-import { creatorAreaService, readCreatorError, type CreatorAssignment } from '@/services/creator'
-import { formatDate, formatPrice, isEventOver } from '@/lib/utils'
+import { useGetConnectedAccount } from '@/hooks/useStripe'
+import { creatorAreaService, isPaidOut, isResponseOverdue, readCreatorError, type CreatorAssignment } from '@/services/creator'
+import { formatDate, formatDateTime, formatPrice, isEventOver } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
 import { CreatorEarningsCard } from '@/components/creator/CreatorEarningsCard'
-import { CreatorGate, CreatorStatusBadge, PastEventBadge, ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
+import {
+  CreatorGate,
+  CreatorStatusBadge,
+  PastEventBadge,
+  PayoutBadge,
+  PhaseBadge,
+  ResponseBadge,
+  useCreatorLabels,
+} from '@/components/creator/creatorShared'
 
 export const CREATOR_ASSIGNMENTS_QUERY_KEY = ['creator', 'assignments'] as const
 
@@ -73,12 +82,25 @@ function DashboardContent() {
       }),
   })
 
-  if (!profile) return null
-
   const assignments = assignmentsQuery.data ?? []
-  // Offen heisst: noch unbeantwortet UND das Event liegt noch vor uns. Eine
-  // Anfrage zu einem vergangenen Event wartet auf nichts mehr.
-  const open = assignments.filter((entry) => entry.response === 'pending' && !isEventOver(null, entry.eventDate))
+  // Offen heisst: noch unbeantwortet, Frist läuft noch UND das Event liegt
+  // noch vor uns. Eine Anfrage zu einem vergangenen Event wartet auf nichts.
+  const open = assignments.filter(
+    (entry) =>
+      entry.response === 'pending' &&
+      entry.orderStatus !== 'cancelled' &&
+      !isResponseOverdue(entry) &&
+      !isEventOver(null, entry.eventDate),
+  )
+  // Gebucht und noch nicht ausgezahlt: Dann braucht der Creator ein
+  // Auszahlungskonto, sonst können wir die Vergütung nicht überweisen.
+  const awaitingPayout = assignments.some(
+    (entry) => entry.phase === 'booked' && entry.response === 'accepted' && entry.orderStatus !== 'cancelled' && !isPaidOut(entry),
+  )
+  const connectedAccount = useGetConnectedAccount(standing === 'active' && awaitingPayout)
+  const payoutAccountMissing = awaitingPayout && connectedAccount.isSuccess && connectedAccount.data?.accountStatus !== 'active'
+
+  if (!profile) return null
 
   return (
     <>
@@ -169,6 +191,32 @@ function DashboardContent() {
         </Card>
       )}
 
+      {/* Ohne Auszahlungskonto bleibt die Vergütung liegen: Hinweis, sobald
+          eine Buchung offen ist und Stripe (noch) nicht verbunden ist. */}
+      {payoutAccountMissing && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardContent className="p-4 text-sm flex items-center gap-3 flex-wrap">
+            <CreditCard className="h-5 w-5 text-orange-700 shrink-0" />
+            <div className="flex-1 min-w-[12rem]">
+              <div className="font-medium">
+                {t('creatorDashboard.payoutNudgeTitle', { defaultValue: 'Auszahlungskonto einrichten' })}
+              </div>
+              <p className="text-muted-foreground">
+                {t('creatorDashboard.payoutNudgeDesc', {
+                  defaultValue:
+                    'Du bist gebucht. Verbinde dein Stripe-Konto in den Einstellungen, damit wir deine Vergütung nach dem Event auszahlen können.',
+                })}
+              </p>
+            </div>
+            <Link href={localePath('/settings#payout')}>
+              <Button variant="outline" size="sm">
+                {t('creatorDashboard.payoutNudgeButton', { defaultValue: 'Zu den Einstellungen' })}
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Einnahmen — erst, wenn die Aufträge geladen sind; Laden und Fehler zeigt die Liste darunter. */}
       {assignmentsQuery.isSuccess && <CreatorEarningsCard assignments={assignments} />}
 
@@ -196,7 +244,7 @@ function DashboardContent() {
           ) : assignments.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               {t('creatorDashboard.assignmentsEmpty', {
-                defaultValue: 'Noch keine Anfragen. Sobald eine Brand dich bucht, erscheint der Auftrag hier.',
+                defaultValue: 'Noch keine Anfragen. Sobald wir dich für ein Event anfragen, erscheint die Anfrage hier.',
               })}
             </p>
           ) : (
@@ -212,7 +260,9 @@ function DashboardContent() {
                         <span className="font-medium truncate">
                           {entry.eventName || t('creatorDashboard.assignmentUnnamed', { defaultValue: 'Auftrag' })}
                         </span>
+                        <PhaseBadge assignment={entry} />
                         <ResponseBadge value={entry.response} />
+                        <PayoutBadge assignment={entry} />
                         {isEventOver(null, entry.eventDate) && <PastEventBadge />}
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
@@ -222,6 +272,16 @@ function DashboardContent() {
                           {entry.eventLocation ? ` · ${entry.eventLocation}` : ''}
                         </span>
                       </div>
+                      {/* Offene Verfügbarkeitsanfrage: bis wann die Antwort erwartet wird. */}
+                      {entry.response === 'pending' && entry.responseDeadline && !isResponseOverdue(entry) && (
+                        <div className="text-xs text-orange-700 flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {t('creatorDashboard.answerBy', {
+                            date: formatDateTime(entry.responseDeadline),
+                            defaultValue: 'Antwort bis {{date}}',
+                          })}
+                        </div>
+                      )}
                       {entry.publishDeadline && (
                         <div className="text-xs text-muted-foreground mt-0.5">
                           {t('creatorDashboard.publishDeadline', { defaultValue: 'Veröffentlichung bis' })}: {formatDate(entry.publishDeadline)}

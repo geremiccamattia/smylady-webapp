@@ -118,7 +118,19 @@ export interface UpdateCreatorProfilePayload {
   brandVisibilityConsent?: boolean
 }
 
-export type AssignmentResponse = 'pending' | 'accepted' | 'declined'
+/** 'expired': Die Antwortfrist ist verstrichen, ohne dass der Creator geantwortet hat. */
+export type AssignmentResponse = 'pending' | 'accepted' | 'declined' | 'expired'
+const ASSIGNMENT_RESPONSES: readonly string[] = ['pending', 'accepted', 'declined', 'expired']
+
+/**
+ * In welcher Phase die Anfrage ist:
+ *   'availability' — Verfügbarkeitsanfrage: zusagen oder absagen, verbindlich
+ *                    zur Vergütung, aber noch nicht gebucht
+ *   'booked'       — die Brand hat bezahlt, der Creator ist gebucht
+ */
+export type AssignmentPhase = 'availability' | 'booked'
+
+export type PayoutStatus = 'none' | 'paid' | 'manual' | 'failed'
 
 export interface CreatorAssignment {
   id: string
@@ -128,6 +140,13 @@ export interface CreatorAssignment {
    * steht hier nur noch als Rückfall des Mappings, falls das Feld fehlt.
    */
   status: 'draft' | 'sent' | string
+  phase: AssignmentPhase
+  /** Bis wann die Antwort auf die Verfügbarkeitsanfrage erwartet wird; leer ohne Frist. */
+  responseDeadline: string
+  /** Zeitpunkt der Buchung (Zahlung der Brand); leer in der Anfragephase. */
+  bookedAt: string
+  /** Status des Brand-Auftrags dahinter ('cancelled', 'completed', …); leer bei Admin-Aufträgen. */
+  orderStatus: string
   eventId: string
   eventName: string
   eventDate: string
@@ -140,6 +159,8 @@ export interface CreatorAssignment {
   response: AssignmentResponse
   sentAt: string
   respondedAt: string
+  /** Die Auszahlung der Vergütung, sobald wir sie vermerkt haben. */
+  payout: { status: PayoutStatus; amount: number | null; paidAt: string } | null
 }
 
 const text = (value: unknown): string =>
@@ -172,14 +193,23 @@ export function mapCreatorProfile(raw: any): CreatorProfile {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapCreatorAssignment(raw: any): CreatorAssignment {
-  const event = raw?.eventId && typeof raw.eventId === 'object' ? raw.eventId : {}
+  // Die Eckdaten kommen aus `event` (vom Event oder, in der Anfragephase,
+  // aus dem Brand-Auftrag); ältere Antworten tragen sie noch am populierten
+  // eventId.
+  const populated = raw?.eventId && typeof raw.eventId === 'object' ? raw.eventId : {}
+  const event = raw?.event && typeof raw.event === 'object' ? raw.event : populated
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const deliverables: any[] = Array.isArray(raw?.deliverables) ? raw.deliverables : []
   const own = raw?.own ?? {}
   const compensation = Number(own.compensation)
+  const payoutAmount = Number(own.payout?.amount)
   return {
     id: text(raw?._id || raw?.id),
     status: text(raw?.status) || 'draft',
+    phase: raw?.phase === 'availability' ? 'availability' : 'booked',
+    responseDeadline: text(raw?.responseDeadline),
+    bookedAt: text(raw?.bookedAt),
+    orderStatus: text(raw?.orderStatus),
     eventId: idOf(raw?.eventId),
     eventName: text(event.name),
     eventDate: text(event.eventDate),
@@ -193,10 +223,30 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
       notes: text(entry?.notes) || undefined,
     })),
     compensation: Number.isFinite(compensation) ? compensation : null,
-    response: (own.status || 'pending') as AssignmentResponse,
+    response: ASSIGNMENT_RESPONSES.includes(own.status) ? (own.status as AssignmentResponse) : 'pending',
     sentAt: text(own.sentAt),
     respondedAt: text(own.respondedAt),
+    payout:
+      own.payout && typeof own.payout === 'object'
+        ? {
+            status: (['paid', 'manual', 'failed'].includes(own.payout.status) ? own.payout.status : 'none') as PayoutStatus,
+            amount: Number.isFinite(payoutAmount) ? payoutAmount : null,
+            paidAt: text(own.payout.paidAt),
+          }
+        : null,
   }
+}
+
+/** Die Vergütung ist beim Creator angekommen (Stripe oder von Hand überwiesen). */
+export function isPaidOut(assignment: Pick<CreatorAssignment, 'payout'>): boolean {
+  return assignment.payout?.status === 'paid' || assignment.payout?.status === 'manual'
+}
+
+/** Die Antwortfrist der Verfügbarkeitsanfrage ist verstrichen. */
+export function isResponseOverdue(assignment: Pick<CreatorAssignment, 'responseDeadline'>, now: Date = new Date()): boolean {
+  if (!assignment.responseDeadline) return false
+  const deadline = new Date(assignment.responseDeadline)
+  return !isNaN(deadline.getTime()) && deadline.getTime() < now.getTime()
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

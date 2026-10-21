@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { Clock, Lock, Sparkles, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, Lock, Sparkles, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,7 +13,8 @@ import { useLocalePath } from '@/hooks/useLocalePath'
 import { useCreatorProfile, type CreatorProfileStanding } from '@/hooks/useCreatorProfile'
 import { LoadingBars, StatusPanel } from '@/components/brand/brandShared'
 import { CATEGORY_OPTIONS, FOLLOWER_OPTIONS, OTHER_PLATFORMS } from '@/components/creator/CreatorApplicationForm'
-import type { AssignmentResponse, CreatorProfileStatus } from '@/services/creator'
+import { isPaidOut, type AssignmentPhase, type AssignmentResponse, type CreatorAssignment, type CreatorProfileStatus } from '@/services/creator'
+import { formatDate } from '@/lib/utils'
 
 /** Gemeinsame Bausteine der Creator-Seiten: Zugangsprüfung, Badges, Beschriftungen. */
 
@@ -63,6 +64,13 @@ export function useCreatorLabels() {
       pending: t('creatorDashboard.responsePending', { defaultValue: 'Offen' }),
       accepted: t('creatorDashboard.responseAccepted', { defaultValue: 'Zugesagt' }),
       declined: t('creatorDashboard.responseDeclined', { defaultValue: 'Abgesagt' }),
+      expired: t('creatorDashboard.responseExpired', { defaultValue: 'Abgelaufen' }),
+    })[value] ?? value
+
+  const phase = (value: AssignmentPhase): string =>
+    ({
+      availability: t('creatorDashboard.phaseAvailability', { defaultValue: 'Verfügbarkeitsanfrage' }),
+      booked: t('creatorDashboard.phaseBooked', { defaultValue: 'Gebucht' }),
     })[value] ?? value
 
   const deliverable = (type: string): string =>
@@ -76,7 +84,7 @@ export function useCreatorLabels() {
       other: t('brandDashboard.deliverableOther', { defaultValue: 'Sonstiges' }),
     })[type] ?? type
 
-  return { profileStatus, response, deliverable, followerRange, category, platform }
+  return { profileStatus, response, phase, deliverable, followerRange, category, platform }
 }
 
 export function ResponseBadge({ value }: { value: AssignmentResponse }) {
@@ -86,9 +94,54 @@ export function ResponseBadge({ value }: { value: AssignmentResponse }) {
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{response(value)}</Badge>
     case 'declined':
       return <Badge variant="destructive">{response(value)}</Badge>
+    case 'expired':
+      return <Badge variant="secondary">{response(value)}</Badge>
     default:
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{response(value)}</Badge>
   }
+}
+
+/**
+ * In welcher Phase die Anfrage ist: Verfügbarkeit (noch nicht gebucht) oder
+ * gebucht (die Brand hat bezahlt). Ein stornierter Brand-Auftrag schlägt
+ * beides.
+ */
+export function PhaseBadge({ assignment }: { assignment: Pick<CreatorAssignment, 'phase' | 'orderStatus'> }) {
+  const { t } = useTranslation()
+  const { phase } = useCreatorLabels()
+  if (assignment.orderStatus === 'cancelled') {
+    return <Badge variant="destructive">{t('creatorDashboard.orderCancelled', { defaultValue: 'Storniert' })}</Badge>
+  }
+  if (assignment.orderStatus === 'completed') {
+    return <Badge variant="secondary">{t('creatorDashboard.orderCompleted', { defaultValue: 'Abgeschlossen' })}</Badge>
+  }
+  return assignment.phase === 'booked' ? (
+    <Badge className="bg-green-100 text-green-800 hover:bg-green-100 gap-1">
+      <CheckCircle2 className="h-3 w-3" />
+      {phase('booked')}
+    </Badge>
+  ) : (
+    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{phase('availability')}</Badge>
+  )
+}
+
+/** Der Auszahlungsstand einer zugesagten, gebuchten Anfrage. */
+export function PayoutBadge({ assignment }: { assignment: Pick<CreatorAssignment, 'payout' | 'phase' | 'response'> }) {
+  const { t } = useTranslation()
+  if (assignment.phase !== 'booked' || assignment.response !== 'accepted') return null
+  if (isPaidOut(assignment)) {
+    return (
+      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+        {assignment.payout?.paidAt
+          ? t('creatorDashboard.payoutPaidAt', { date: formatDate(assignment.payout.paidAt), defaultValue: 'Ausgezahlt am {{date}}' })
+          : t('creatorDashboard.payoutPaid', { defaultValue: 'Ausgezahlt' })}
+      </Badge>
+    )
+  }
+  if (assignment.payout?.status === 'failed') {
+    return <Badge variant="destructive">{t('creatorDashboard.payoutFailed', { defaultValue: 'Auszahlung fehlgeschlagen' })}</Badge>
+  }
+  return <Badge variant="outline">{t('creatorDashboard.payoutOpen', { defaultValue: 'Auszahlung offen' })}</Badge>
 }
 
 /** Das Event der Anfrage liegt hinter uns; eine Antwort ändert nichts mehr. */

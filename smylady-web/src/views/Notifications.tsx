@@ -149,21 +149,35 @@ export default function Notifications() {
       return
     }
 
-    // Briefing einer Brand → direkt zur Anfrage im Creator-Bereich. Vor der
-    // Event-Weiche unten: Die Benachrichtigung trägt auch die eventId, und
-    // die Eventseite wäre für eine unbeantwortete Anfrage der falsche Ort.
-    if (notification.type === 'creator_assignment_invite') {
+    // Anfrage, Buchung oder Auszahlung einer Brand → direkt zur Anfrage im
+    // Creator-Bereich. Vor der Event-Weiche unten: Die Benachrichtigung
+    // trägt auch die eventId, und die Eventseite wäre der falsche Ort.
+    const creatorAssignmentTypes = [
+      'creator_assignment_invite',
+      'creator_booking_confirmed',
+      'creator_payout_sent',
+      'creator_request_expired',
+    ]
+    if (creatorAssignmentTypes.includes(notification.type)) {
       const assignmentId = typeof notification.data?.assignmentId === 'string' ? notification.data.assignmentId : ''
       router.push(localePath(assignmentId ? `/creator/assignments/${assignmentId}` : '/creator'))
       return
     }
 
-    // Brand: Angebot, Statuswechsel und Antworten der Creator → der Auftrag,
-    // ersatzweise das Dashboard. Vor der Event-Weiche: Zu- und Absagen tragen
-    // auch eine eventId, der Auftrag ist für die Brand aber der richtige Ort.
+    // Brand: Angebot, Zahlung, Statuswechsel und Antworten der Creator → der
+    // Auftrag, ersatzweise das Dashboard. Vor der Event-Weiche: Zu- und
+    // Absagen tragen auch eine eventId, der Auftrag ist für die Brand aber
+    // der richtige Ort.
     const brandOrderTypes = [
       'brand_order_in_review',
+      'brand_order_creators_requested',
       'brand_order_offer_sent',
+      'brand_order_offer_expiring',
+      'brand_order_offer_expired',
+      'brand_order_payment_received',
+      'brand_order_payment_processing',
+      'brand_order_payment_failed',
+      'brand_order_refunded',
       'brand_order_cancelled',
       'brand_order_completed',
       'creator_assignment_accepted',

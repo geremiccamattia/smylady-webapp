@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { useBrandProfile, type BrandStanding } from '@/hooks/useBrandProfile'
-import type { BrandOrderStatus, BrandProfileStatus, DeliverableType } from '@/services/brand'
+import type { BrandOrderStatus, BrandPaymentStatus, BrandProfileStatus, DeliverableType } from '@/services/brand'
 
 /**
  * Gemeinsame Bausteine der Brand-Seiten: Zugangsprüfung, Status-Badges und
@@ -30,10 +30,22 @@ export function useBrandLabels() {
       draft: t('brandDashboard.statusDraft', { defaultValue: 'Entwurf' }),
       submitted: t('brandDashboard.statusSubmitted', { defaultValue: 'Eingereicht' }),
       in_review: t('brandDashboard.statusInReview', { defaultValue: 'In Prüfung' }),
+      creators_requested: t('brandDashboard.statusCreatorsRequested', { defaultValue: 'Creator werden angefragt' }),
       offer_sent: t('brandDashboard.statusOfferSent', { defaultValue: 'Angebot erhalten' }),
-      confirmed: t('brandDashboard.statusConfirmed', { defaultValue: 'Bestätigt' }),
+      awaiting_payment: t('brandDashboard.statusAwaitingPayment', { defaultValue: 'Zahlung ausstehend' }),
+      confirmed: t('brandDashboard.statusConfirmed', { defaultValue: 'Gebucht' }),
       completed: t('brandDashboard.statusCompleted', { defaultValue: 'Abgeschlossen' }),
       cancelled: t('brandDashboard.statusCancelled', { defaultValue: 'Storniert' }),
+    })[status] ?? status
+
+  const paymentStatus = (status: BrandPaymentStatus): string =>
+    ({
+      pending: t('brandDashboard.paymentPending', { defaultValue: 'Zahlung offen' }),
+      processing: t('brandDashboard.paymentProcessing', { defaultValue: 'Zahlung unterwegs' }),
+      paid: t('brandDashboard.paymentPaid', { defaultValue: 'Bezahlt' }),
+      failed: t('brandDashboard.paymentFailed', { defaultValue: 'Zahlung fehlgeschlagen' }),
+      expired: t('brandDashboard.paymentExpired', { defaultValue: 'Zahlung abgebrochen' }),
+      refunded: t('brandDashboard.paymentRefunded', { defaultValue: 'Erstattet' }),
     })[status] ?? status
 
   const profileStatus = (status: BrandProfileStatus): string =>
@@ -84,7 +96,7 @@ export function useBrandLabels() {
       deliverables: t('brandDashboard.missingDeliverables', { defaultValue: 'mindestens ein gewünschter Inhalt' }),
     })[code] ?? code
 
-  return { orderStatus, profileStatus, deliverable, gender, platform, missingField }
+  return { orderStatus, paymentStatus, profileStatus, deliverable, gender, platform, missingField }
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -100,8 +112,12 @@ export function OrderStatusBadge({ status }: { status: BrandOrderStatus }) {
     case 'submitted':
     case 'in_review':
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{label}</Badge>
+    case 'creators_requested':
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{label}</Badge>
     case 'offer_sent':
       return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{label}</Badge>
+    case 'awaiting_payment':
+      return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">{label}</Badge>
     case 'confirmed':
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{label}</Badge>
     case 'completed':
@@ -110,6 +126,23 @@ export function OrderStatusBadge({ status }: { status: BrandOrderStatus }) {
       return <Badge variant="destructive">{label}</Badge>
     default:
       return <Badge variant="outline">{label}</Badge>
+  }
+}
+
+export function PaymentStatusBadge({ status }: { status: BrandPaymentStatus }) {
+  const { paymentStatus } = useBrandLabels()
+  const label = paymentStatus(status)
+  switch (status) {
+    case 'paid':
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{label}</Badge>
+    case 'processing':
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{label}</Badge>
+    case 'pending':
+      return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">{label}</Badge>
+    case 'failed':
+      return <Badge variant="destructive">{label}</Badge>
+    default:
+      return <Badge variant="secondary">{label}</Badge>
   }
 }
 

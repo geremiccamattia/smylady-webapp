@@ -15,6 +15,7 @@ import {
   useGetStripeDashboardLink,
 } from '@/hooks/useStripe'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCreatorProfile } from '@/hooks/useCreatorProfile'
 import { formatPrice } from '@/lib/utils'
 import {
   CreditCard,
@@ -38,9 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { navigateToExternalUrl } from '@/lib/navigation'
-
-const STRIPE_HOSTS = ['stripe.com']
+import { navigateToExternalUrl, STRIPE_HOSTS } from '@/lib/navigation'
 
 function StripeConnectCardContent() {
   const { t } = useTranslation()
@@ -51,15 +50,22 @@ function StripeConnectCardContent() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
 
-  // Only show for organizers
+  // Veranstalter (Ticketerlöse) und aktive Creator (Vergütung aus
+  // Brand-Aufträgen) verbinden dasselbe Stripe-Konto; die Texte
+  // unterscheiden sich. Creator ist keine Rolle im Token, sondern ein
+  // aktives Creator-Profil.
   const isOrganizer = user?.role === 'organizer'
+  const { standing: creatorStanding } = useCreatorProfile()
+  const isCreator = creatorStanding === 'active'
+  const visible = Boolean(isOrganizer || isCreator)
+  const variant: 'organizer' | 'creator' = isOrganizer ? 'organizer' : 'creator'
 
   // Fetch connected account status
   const {
     data: connectedAccount,
     isLoading: isLoadingAccount,
     refetch: refetchAccount,
-  } = useGetConnectedAccount(isOrganizer ?? false)
+  } = useGetConnectedAccount(visible)
 
   // Determine account status - Backend returns accountStatus field
   const accountStatus = connectedAccount?.accountStatus
@@ -71,7 +77,7 @@ function StripeConnectCardContent() {
   const {
     data: balance,
     refetch: refetchBalance,
-  } = useGetAccountBalance(isOrganizer && isConnected)
+  } = useGetAccountBalance(visible && isConnected)
 
   // Mutations
   const { mutate: createAccountLink } = useCreateAccountLink()
@@ -163,13 +169,13 @@ function StripeConnectCardContent() {
     })
   }
 
-  if (!isOrganizer) {
+  if (!visible) {
     return null
   }
 
   if (isLoadingAccount) {
     return (
-      <Card>
+      <Card id="payout">
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
@@ -178,16 +184,22 @@ function StripeConnectCardContent() {
   }
 
   return (
-    <Card>
+    <Card id="payout">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5 text-primary" />
-          {t('settings.stripe.title', { defaultValue: 'Zahlungen' })}
+          {variant === 'creator'
+            ? t('settings.payout.title', { defaultValue: 'Auszahlungskonto' })
+            : t('settings.stripe.title', { defaultValue: 'Zahlungen' })}
         </CardTitle>
         <CardDescription>
-          {t('settings.stripe.description', {
-            defaultValue: 'Verbinde dein Stripe-Konto um Zahlungen für deine Events zu erhalten.',
-          })}
+          {variant === 'creator'
+            ? t('settings.payout.description', {
+                defaultValue: 'Verbinde dein Stripe-Konto, damit wir deine Vergütung aus Brand-Aufträgen nach dem Event auszahlen können.',
+              })
+            : t('settings.stripe.description', {
+                defaultValue: 'Verbinde dein Stripe-Konto um Zahlungen für deine Events zu erhalten.',
+              })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -325,10 +337,15 @@ function StripeConnectCardContent() {
           <>
             {/* Not connected */}
             <p className="text-sm text-muted-foreground">
-              {t('settings.stripe.notConnected', {
-                defaultValue:
-                  'Verbinde dein Stripe-Konto, um Zahlungen für Tickets zu erhalten. Die Einrichtung dauert nur wenige Minuten.',
-              })}
+              {variant === 'creator'
+                ? t('settings.payout.notConnected', {
+                    defaultValue:
+                      'Noch kein Auszahlungskonto. Die Einrichtung bei Stripe dauert nur wenige Minuten – danach landet deine Vergütung direkt auf deinem Bankkonto.',
+                  })
+                : t('settings.stripe.notConnected', {
+                    defaultValue:
+                      'Verbinde dein Stripe-Konto, um Zahlungen für Tickets zu erhalten. Die Einrichtung dauert nur wenige Minuten.',
+                  })}
             </p>
             <div className="flex flex-col gap-2">
               <Button onClick={handleConnect} disabled={isConnecting} className="w-full sm:w-auto">
