@@ -34,14 +34,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    /*
+     * Der Cache im localStorage stammt vom Login-Zeitpunkt. Kennzeichen wie
+     * isBrand oder isCreator setzt der Admin serverseitig (Freischaltung),
+     * ohne dass sich der Nutzer neu anmeldet — die Brand-Links im Header und
+     * in den Einstellungen blieben deshalb bis zum nächsten Login weg
+     * (Testlauf-Schritt A8). Darum nach dem Start /users/me nachladen.
+     *
+     * Im Hintergrund, nicht davor: Der Cache bleibt sofort sichtbar, die
+     * Seite erscheint nicht erst leer. Scheitert der Abruf, bleibt der Cache;
+     * ein 401 landet ohnehin im Interceptor (lib/api.ts), der abmeldet.
+     */
+    const refreshUserInBackground = async () => {
+      try {
+        const freshUser = await authService.getCurrentUser()
+        if (freshUser && (freshUser._id || freshUser.id)) {
+          setUser(freshUser)
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(freshUser))
+        }
+      } catch {
+        // Nicht kritisch, siehe oben.
+      }
+    }
+
     const initAuth = async () => {
       try {
         const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
         const storedUser = localStorage.getItem(STORAGE_KEYS.USER)
-        
+
         if (storedToken) {
           setToken(storedToken)
-          
+
           // Try to parse stored user
           if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
             try {
@@ -49,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Check for _id OR id (backend may return either)
               if (parsedUser && (parsedUser._id || parsedUser.id)) {
                 setUser(parsedUser)
+                void refreshUserInBackground()
               } else {
                 // Invalid user data - fetch from API
                 const freshUser = await authService.getCurrentUser()

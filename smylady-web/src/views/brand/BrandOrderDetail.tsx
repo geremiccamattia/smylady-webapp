@@ -746,8 +746,11 @@ function StatusHint({ order }: { order: BrandOrder }) {
     offer_sent: t('brandDashboard.hintOfferSent', {
       defaultValue: 'Unser Angebot liegt vor. Sieh dir Preis und vorgeschlagene Creator an und bestätige, wenn es passt.',
     }),
+    // Ab 'confirmed' gibt es keinen Storno-Button mehr (siehe CANCELLABLE).
+    // Ohne diesen Satz sucht die Brand ihn vergeblich (Testlauf 17.10., D1).
     confirmed: t('brandDashboard.hintConfirmed', {
-      defaultValue: 'Angebot angenommen. Dein Event ist angelegt, die Creator wurden informiert und melden sich mit Zu- oder Absage.',
+      defaultValue:
+        'Angebot angenommen. Dein Event ist angelegt, die Creator wurden informiert und melden sich mit Zu- oder Absage. Eine Absage ist ab jetzt nur noch über uns möglich, damit wir die Creator persönlich informieren können.',
     }),
     completed: t('brandDashboard.hintCompleted', { defaultValue: 'Dieser Auftrag ist abgeschlossen.' }),
     cancelled: cancelledText,
