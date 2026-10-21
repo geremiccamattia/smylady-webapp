@@ -158,6 +158,43 @@ export default function Notifications() {
       return
     }
 
+    // Brand: Angebot, Statuswechsel und Antworten der Creator → der Auftrag,
+    // ersatzweise das Dashboard. Vor der Event-Weiche: Zu- und Absagen tragen
+    // auch eine eventId, der Auftrag ist für die Brand aber der richtige Ort.
+    const brandOrderTypes = [
+      'brand_order_in_review',
+      'brand_order_offer_sent',
+      'brand_order_cancelled',
+      'brand_order_completed',
+      'creator_assignment_accepted',
+      'creator_assignment_declined',
+    ]
+    if (brandOrderTypes.includes(notification.type)) {
+      const orderId = typeof notification.data?.orderId === 'string' ? notification.data.orderId : ''
+      router.push(localePath(orderId ? `/brand/orders/${orderId}` : '/brand'))
+      return
+    }
+
+    // Brand-Freischaltung → das Dashboard; es zeigt jeden Stand (aktiv,
+    // abgelehnt, pausiert) mit dem passenden Hinweis.
+    if (notification.type.startsWith('brand_profile_')) {
+      router.push(localePath('/brand'))
+      return
+    }
+
+    // Creator: Ergebnis der Bewerbung bzw. Status des Profils → die Statusseite.
+    if (notification.type.startsWith('creator_application_') || notification.type.startsWith('creator_profile_')) {
+      router.push(localePath('/creator/apply'))
+      return
+    }
+
+    // Zurückgezogene Anfrage → der Creator-Bereich. Die Anfrage selbst ist
+    // nicht mehr offen, ihre Seite wäre eine Sackgasse.
+    if (notification.type === 'creator_assignment_cancelled') {
+      router.push(localePath('/creator'))
+      return
+    }
+
     // Navigate based on type
     if (notification.eventId) {
       router.push(`/event/${notification.eventId}`)

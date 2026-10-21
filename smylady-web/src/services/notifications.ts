@@ -23,6 +23,9 @@ export interface Notification {
   data?: {
     type?: string
     eventId?: string
+    /** Brand-Auftrag bzw. Creator-Anfrage, zu der die Benachrichtigung gehört. */
+    orderId?: string
+    assignmentId?: string
     [key: string]: unknown
   }
   sender?: {
