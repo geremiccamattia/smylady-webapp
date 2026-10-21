@@ -503,7 +503,10 @@ export const brandService = {
    * Stripe zurückleitet. Nur aus 'offer_sent'/'awaiting_payment'; sonst 409.
    */
   async startCheckout(id: string, returnPath: string, locale: 'de' | 'en'): Promise<CheckoutStart> {
-    const response = await apiClient.post(`/brand-orders/${id}/checkout`, { returnPath, locale })
+    // Die eigene Origin mitschicken (Vercel-Preview beim Testen); das Backend
+    // übernimmt sie nur, wenn sie auf seiner Allowlist steht.
+    const returnOrigin = typeof window !== 'undefined' ? window.location.origin : undefined
+    const response = await apiClient.post(`/brand-orders/${id}/checkout`, { returnPath, locale, returnOrigin })
     const data = unwrap(response) ?? {}
     return { url: str(data.url), sessionId: str(data.sessionId), expiresAt: str(data.expiresAt) }
   },
