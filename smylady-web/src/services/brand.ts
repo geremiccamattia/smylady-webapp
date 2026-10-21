@@ -49,14 +49,41 @@ export interface UpdateBrandProfilePayload {
   description?: string
 }
 
+/**
+ * Der Ablauf eines Auftrags:
+ *   draft → submitted → in_review → creators_requested (wir fragen Creator
+ *   nach ihrer Verfügbarkeit) → offer_sent (Angebot aus den Zusagen) →
+ *   awaiting_payment (Brand bezahlt bei Stripe) → confirmed (bezahlt, Event
+ *   und Buchung stehen) → completed. 'cancelled' aus jedem Zwischenstand.
+ */
 export type BrandOrderStatus =
   | 'draft'
   | 'submitted'
   | 'in_review'
+  | 'creators_requested'
   | 'offer_sent'
+  | 'awaiting_payment'
   | 'confirmed'
   | 'completed'
   | 'cancelled'
+
+export type BrandPaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'expired' | 'refunded'
+const PAYMENT_STATUSES: readonly string[] = ['pending', 'processing', 'paid', 'failed', 'expired', 'refunded']
+
+/** Die Zahlung der Brand, soweit sie sie sehen soll: Stand, Betrag, Belege. */
+export interface BrandOrderPayment {
+  status: BrandPaymentStatus
+  provider: 'stripe' | 'external'
+  amount: number
+  paidAt: string
+  /** Gehostete Rechnung bei Stripe und PDF, sobald die Zahlung durch ist. */
+  invoiceUrl: string
+  invoicePdfUrl: string
+  receiptUrl: string
+  refundedAt: string
+  /** Woran es lag, wenn die Zahlung gescheitert ist. */
+  failureReason: string
+}
 
 export const DELIVERABLE_TYPES = ['reel', 'tiktok', 'feed_post', 'story', 'youtube_video', 'photo', 'other'] as const
 export type DeliverableType = (typeof DELIVERABLE_TYPES)[number]
@@ -120,9 +147,9 @@ export interface BrandOrderPayload {
   approvalRequired?: boolean
 }
 
-/** Antwort eines Creators auf das Briefing; entspricht AssignmentResponse im Creator-Bereich. */
-export type CreatorResponse = 'pending' | 'accepted' | 'declined'
-const CREATOR_RESPONSES: readonly string[] = ['pending', 'accepted', 'declined']
+/** Antwort eines Creators auf die Anfrage; entspricht AssignmentResponse im Creator-Bereich. */
+export type CreatorResponse = 'pending' | 'accepted' | 'declined' | 'expired'
+const CREATOR_RESPONSES: readonly string[] = ['pending', 'accepted', 'declined', 'expired']
 
 /**
  * Ein vorgeschlagener Creator aus Sicht der Brand.
@@ -184,13 +211,26 @@ export interface BrandOrder {
   offerPrice: number | null
   offerNotes: string
   offerSentAt: string
+  /** Bis wann die Brand annehmen und bezahlen kann; danach storniert das System. */
+  offerExpiresAt: string
   proposedCreators: ProposedCreatorCard[]
   eventId: string
   createdAt: string
   /** Nur im Status 'cancelled': wer storniert hat, wann, und (optional) warum. */
-  cancellation: { by: 'brand' | 'admin'; reason: string; at: string } | null
-  /** Zu-/Absagen der Creator, sobald ein Creator-Auftrag existiert (ab 'confirmed'). */
-  responses: { accepted: number; declined: number; pending: number } | null
+  cancellation: { by: 'brand' | 'admin' | 'system'; reason: string; at: string } | null
+  /** Zu-/Absagen der Creator, sobald ein Angebot vorliegt (nur die Besetzung). */
+  responses: { accepted: number; declined: number; pending: number; expired: number } | null
+  /** Die Zahlung, sobald die Brand den Checkout gestartet hat. */
+  payment: BrandOrderPayment | null
+  /** Nach der Zahlung: Stehen Event und Buchung schon? 'failed' heisst: wir holen es nach. */
+  provisioning: 'pending' | 'done' | 'failed' | null
+}
+
+/** Was POST /brand-orders/:id/checkout liefert: die Stripe-Seite. */
+export interface CheckoutStart {
+  url: string
+  sessionId: string
+  expiresAt: string
 }
 
 export interface EventVisibilityResult {
@@ -319,13 +359,14 @@ export function mapBrandOrder(raw: any): BrandOrder {
     offerPrice: numOrNull(raw?.offer?.price),
     offerNotes: str(raw?.offer?.notes),
     offerSentAt: str(raw?.offer?.sentAt),
+    offerExpiresAt: str(raw?.offer?.expiresAt),
     proposedCreators: proposed.map(mapProposedCreator),
     eventId: idOf(raw?.eventId),
     createdAt: str(raw?.createdAt),
     cancellation:
       raw?.cancellation && typeof raw.cancellation === 'object'
         ? {
-            by: raw.cancellation.by === 'admin' ? 'admin' : 'brand',
+            by: raw.cancellation.by === 'admin' ? 'admin' : raw.cancellation.by === 'system' ? 'system' : 'brand',
             reason: str(raw.cancellation.reason),
             at: str(raw.cancellation.at),
           }
@@ -336,9 +377,40 @@ export function mapBrandOrder(raw: any): BrandOrder {
             accepted: num(raw.responses.accepted),
             declined: num(raw.responses.declined),
             pending: num(raw.responses.pending),
+            expired: num(raw.responses.expired),
           }
         : null,
+    payment: mapPayment(raw?.payment),
+    provisioning:
+      raw?.provisioning?.status === 'pending' ||
+      raw?.provisioning?.status === 'done' ||
+      raw?.provisioning?.status === 'failed'
+        ? raw.provisioning.status
+        : null,
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPayment(raw: any): BrandOrderPayment | null {
+  if (!raw || typeof raw !== 'object' || !PAYMENT_STATUSES.includes(raw.status)) return null
+  return {
+    status: raw.status as BrandPaymentStatus,
+    provider: raw.provider === 'external' ? 'external' : 'stripe',
+    amount: num(raw.amount),
+    paidAt: str(raw.paidAt),
+    invoiceUrl: str(raw.invoiceUrl),
+    invoicePdfUrl: str(raw.invoicePdfUrl),
+    receiptUrl: str(raw.receiptUrl),
+    refundedAt: str(raw.refundedAt),
+    failureReason: str(raw.failureReason),
+  }
+}
+
+/** Die Angebotsfrist ist verstrichen (das System storniert in Kürze). */
+export function isOfferExpired(order: Pick<BrandOrder, 'offerExpiresAt'>, now: Date = new Date()): boolean {
+  if (!order.offerExpiresAt) return false
+  const expires = new Date(order.offerExpiresAt)
+  return !isNaN(expires.getTime()) && expires.getTime() < now.getTime()
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -413,8 +485,9 @@ export const brandService = {
 
   /**
    * Storniert den Auftrag endgültig: Entwurf verwerfen, eingereichten
-   * Auftrag zurückziehen oder das Angebot ablehnen. Erlaubt bis 'offer_sent';
-   * ab 'confirmed' antwortet das Backend mit 409. Ein leerer Grund bleibt weg.
+   * Auftrag zurückziehen, das Angebot ablehnen oder den Checkout abbrechen.
+   * Erlaubt bis 'awaiting_payment' (solange kein Geld unterwegs ist); ab
+   * 'confirmed' antwortet das Backend mit 409. Ein leerer Grund bleibt weg.
    */
   async cancelOrder(id: string, reason?: string): Promise<BrandOrder> {
     const trimmed = reason?.trim()
@@ -423,11 +496,24 @@ export const brandService = {
   },
 
   /**
-   * Nimmt das Angebot an. Das Backend legt danach Event und Creator-Auftrag
-   * an und setzt 'confirmed'. Nur im Status 'offer_sent'; sonst 409.
+   * Angebot annehmen und bezahlen: startet den Stripe-Checkout und liefert
+   * die Seite, auf die die Brand weitergeleitet wird. Der Auftrag steht
+   * danach auf 'awaiting_payment'; bestätigt wird er mit dem Zahlungseingang.
+   * `returnPath` ist der (sprachabhängige) Pfad dieses Auftrags, auf den
+   * Stripe zurückleitet. Nur aus 'offer_sent'/'awaiting_payment'; sonst 409.
    */
-  async acceptOffer(id: string): Promise<BrandOrder> {
-    const response = await apiClient.post(`/brand-orders/${id}/accept-offer`)
+  async startCheckout(id: string, returnPath: string, locale: 'de' | 'en'): Promise<CheckoutStart> {
+    const response = await apiClient.post(`/brand-orders/${id}/checkout`, { returnPath, locale })
+    const data = unwrap(response) ?? {}
+    return { url: str(data.url), sessionId: str(data.sessionId), expiresAt: str(data.expiresAt) }
+  },
+
+  /**
+   * Zieht den Zahlungsstand bei Stripe nach — nach der Rückkehr aus dem
+   * Checkout, weil der Webhook ein paar Sekunden später kommen kann.
+   */
+  async syncCheckout(id: string): Promise<BrandOrder> {
+    const response = await apiClient.post(`/brand-orders/${id}/checkout/sync`)
     return mapBrandOrder(unwrap(response))
   },
 

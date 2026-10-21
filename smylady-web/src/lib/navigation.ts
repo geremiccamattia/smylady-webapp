@@ -13,6 +13,14 @@
  * kompletten Reload brauchen (Sprachwechsel, Logout, 401-Redirect).
  */
 
+/**
+ * Die Hosts, zu denen Stripe uns schickt: connect.stripe.com (Onboarding),
+ * checkout.stripe.com (Bezahlseite) und weitere Subdomains. Nur HTTPS, nur
+ * diese Hosts — ein manipulierter Backend-Response darf nicht auf eine
+ * fremde Domain umleiten (siehe navigateToExternalUrl).
+ */
+export const STRIPE_HOSTS = ['stripe.com']
+
 // Backslash + Steuerzeichen: Browser normalisieren "\" zu "/", wodurch "/\evil.com"
 // zur protokoll-relativen URL wird. Tab/Newline werden beim URL-Parsen entfernt und
 // lassen sich deshalb einstreuen, um eine naive Prefix-Prüfung zu umgehen.

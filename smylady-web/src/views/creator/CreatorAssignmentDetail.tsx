@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CalendarDays, Check, Clapperboard, ExternalLink, FileText, X } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, CheckCircle2, Clapperboard, Clock, ExternalLink, FileText, Wallet, X } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,16 +20,36 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { creatorAreaService, isCreatorConflict, readCreatorError, type CreatorAssignment } from '@/services/creator'
+import {
+  creatorAreaService,
+  isCreatorConflict,
+  isPaidOut,
+  isResponseOverdue,
+  readCreatorError,
+  type CreatorAssignment,
+} from '@/services/creator'
 import { formatDate, formatDateTime, formatPrice, isEventOver } from '@/lib/utils'
+import { formatRemaining, useCountdown } from '@/lib/deadline'
 import { LoadingBars } from '@/components/brand/brandShared'
-import { CreatorGate, PastEventBadge, ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
+import {
+  CreatorGate,
+  PastEventBadge,
+  PayoutBadge,
+  PhaseBadge,
+  ResponseBadge,
+  useCreatorLabels,
+} from '@/components/creator/creatorShared'
 import { CREATOR_ASSIGNMENTS_QUERY_KEY } from './CreatorDashboard'
 
 /**
  * Eine Anfrage aus Sicht des Creators: Event, Vergütung, Briefing, gewünschte
- * Inhalte — und die Antwort. Zu- oder Absage sind endgültig; wer sich geirrt
- * hat, meldet sich bei uns (das Backend weist eine zweite Antwort mit 409 ab).
+ * Inhalte — und die Antwort.
+ *
+ * Zwei Phasen: Erst die VERFÜGBARKEITSANFRAGE (zusagen oder absagen, mit
+ * Frist; verbindlich zur Vergütung, aber noch nicht gebucht), dann die
+ * BUCHUNG, sobald die Brand bezahlt hat. Zu- oder Absage sind endgültig; wer
+ * sich geirrt hat, meldet sich bei uns (das Backend weist eine zweite
+ * Antwort mit 409 ab).
  */
 export default function CreatorAssignmentDetail() {
   return (
@@ -67,14 +87,14 @@ function AssignmentDetail() {
           ? t('creatorDashboard.acceptedTitle', { defaultValue: 'Zugesagt' })
           : t('creatorDashboard.declinedTitle', { defaultValue: 'Abgesagt' }),
         description: answer === 'accept'
-          ? t('creatorDashboard.acceptedDesc', { defaultValue: 'Danke! Wir melden uns mit den Details zum Event.' })
+          ? t('creatorDashboard.acceptedDesc', { defaultValue: 'Danke! Sobald die Brand gebucht hat, bekommst du die Bestätigung mit allen Details.' })
           : t('creatorDashboard.declinedDesc', { defaultValue: 'Schade, vielleicht beim nächsten Mal.' }),
       })
     },
     onError: (error: unknown) => {
       // 409: Es liegt schon eine (andere) Antwort vor, etwa vom Admin per
-      // Mail nachgetragen. Die Karte zeigte dann weiter "Offen" mit aktiven
-      // Buttons; der echte Stand muss her, damit Badge und Text stimmen.
+      // Mail nachgetragen, oder die Frist ist abgelaufen. Die Karte zeigte
+      // dann weiter "Offen" mit aktiven Buttons; der echte Stand muss her.
       if (isCreatorConflict(error)) {
         queryClient.invalidateQueries({ queryKey: ['creator', 'assignment', id] })
         queryClient.invalidateQueries({ queryKey: CREATOR_ASSIGNMENTS_QUERY_KEY })
@@ -117,7 +137,11 @@ function AssignmentDetail() {
   // nichts mehr. Buttons bleiben stehen, damit klar ist, was hier möglich
   // gewesen wäre — nur gesperrt und mit Hinweis.
   const eventPast = isEventOver(null, assignment.eventDate)
-  const pending = assignment.response === 'pending'
+  const overdue = isResponseOverdue(assignment)
+  const cancelled = assignment.orderStatus === 'cancelled'
+  const pending = assignment.response === 'pending' && !cancelled
+  const canAnswer = pending && !eventPast && !overdue
+  const booked = assignment.phase === 'booked' && assignment.response === 'accepted' && !cancelled
 
   return (
     <>
@@ -130,13 +154,15 @@ function AssignmentDetail() {
           <h1 className="text-3xl font-bold">
             {assignment.eventName || t('creatorDashboard.assignmentUnnamed', { defaultValue: 'Auftrag' })}
           </h1>
+          <PhaseBadge assignment={assignment} />
           <ResponseBadge value={assignment.response} />
+          <PayoutBadge assignment={assignment} />
           {eventPast && <PastEventBadge />}
         </div>
       </div>
 
-      {/* Antwort */}
-      <Card className={pending && !eventPast ? 'border-yellow-200 bg-yellow-50/40' : undefined}>
+      {/* Antwort bzw. Stand */}
+      <Card className={canAnswer ? 'border-yellow-200 bg-yellow-50/40' : booked ? 'border-green-200 bg-green-50/40' : undefined}>
         <CardContent className="p-6 space-y-4">
           {assignment.compensation !== null && (
             <div className="flex items-baseline gap-2">
@@ -146,45 +172,86 @@ function AssignmentDetail() {
               </span>
             </div>
           )}
-          {pending ? (
+
+          {cancelled ? (
+            <p className="text-sm text-muted-foreground">
+              {t('creatorDashboard.orderCancelledHint', {
+                defaultValue: 'Dieser Auftrag wurde storniert. Es gibt nichts mehr zu tun – danke fürs Mitmachen.',
+              })}
+            </p>
+          ) : pending ? (
             <>
+              {assignment.responseDeadline && !eventPast && <AnswerDeadline deadline={assignment.responseDeadline} />}
               <p className="text-sm">
                 {eventPast
                   ? t('creatorDashboard.eventPastHint', {
                       defaultValue: 'Dieses Event liegt in der Vergangenheit. Eine Zu- oder Absage ist nicht mehr möglich.',
                     })
-                  : t('creatorDashboard.respondHint', {
-                      defaultValue: 'Sieh dir Event und Briefing an und gib uns Bescheid. Deine Antwort ist verbindlich.',
-                    })}
+                  : overdue
+                    ? t('creatorDashboard.deadlinePassedHint', {
+                        defaultValue: 'Die Antwortfrist ist abgelaufen. Falls du doch dabei sein möchtest, melde dich bei uns.',
+                      })
+                    : assignment.phase === 'availability'
+                      ? t('creatorDashboard.availabilityHint', {
+                          date: assignment.eventDate ? formatDate(assignment.eventDate) : '',
+                          defaultValue:
+                            'Bist du am {{date}} verfügbar? Deine Zusage ist verbindlich zu dieser Vergütung. Gebucht bist du, sobald die Brand das Angebot bezahlt hat – dann bekommst du die Bestätigung.',
+                        })
+                      : t('creatorDashboard.respondHint', {
+                          defaultValue: 'Sieh dir Event und Briefing an und gib uns Bescheid. Deine Antwort ist verbindlich.',
+                        })}
               </p>
               <div className="flex gap-3">
                 <Button
                   variant="gradient"
                   className="gap-2 flex-1"
                   loading={respond.isPending}
-                  disabled={eventPast}
+                  disabled={!canAnswer}
                   onClick={() => setConfirm('accept')}
                 >
                   <Check className="h-4 w-4" />
-                  {t('creatorDashboard.accept', { defaultValue: 'Zusagen' })}
+                  {assignment.phase === 'availability'
+                    ? t('creatorDashboard.acceptAvailable', { defaultValue: 'Ich bin verfügbar' })
+                    : t('creatorDashboard.accept', { defaultValue: 'Zusagen' })}
                 </Button>
                 <Button
                   variant="outline"
                   className="gap-2 flex-1"
-                  disabled={respond.isPending || eventPast}
+                  disabled={respond.isPending || !canAnswer}
                   onClick={() => setConfirm('decline')}
                 >
                   <X className="h-4 w-4" />
-                  {t('creatorDashboard.decline', { defaultValue: 'Absagen' })}
+                  {assignment.phase === 'availability'
+                    ? t('creatorDashboard.declineUnavailable', { defaultValue: 'Nicht verfügbar' })
+                    : t('creatorDashboard.decline', { defaultValue: 'Absagen' })}
                 </Button>
               </div>
             </>
+          ) : booked ? (
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-700 shrink-0 mt-0.5" />
+                <p>
+                  {t('creatorDashboard.bookedHint', {
+                    defaultValue: 'Verbindlich gebucht – die Brand hat bezahlt. Das Briefing unten gilt, wir freuen uns auf dich!',
+                  })}
+                  {assignment.bookedAt ? ` (${formatDateTime(assignment.bookedAt)})` : ''}
+                </p>
+              </div>
+              <PayoutHint assignment={assignment} />
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               {assignment.response === 'accepted'
-                ? t('creatorDashboard.alreadyAccepted', { defaultValue: 'Du hast zugesagt. Wir melden uns mit allen Details.' })
-                : t('creatorDashboard.alreadyDeclined', { defaultValue: 'Du hast abgesagt.' })}
-              {assignment.respondedAt ? ` (${formatDateTime(assignment.respondedAt)})` : ''}
+                ? t('creatorDashboard.alreadyAccepted', {
+                    defaultValue: 'Du hast zugesagt. Sobald die Brand gebucht hat, bekommst du die Bestätigung mit allen Details.',
+                  })
+                : assignment.response === 'expired'
+                  ? t('creatorDashboard.alreadyExpired', {
+                      defaultValue: 'Die Anfrage ist ohne deine Antwort abgelaufen. Beim nächsten Mal gern schneller – oder melde dich bei uns.',
+                    })
+                  : t('creatorDashboard.alreadyDeclined', { defaultValue: 'Du hast abgesagt.' })}
+              {assignment.respondedAt && assignment.response !== 'expired' ? ` (${formatDateTime(assignment.respondedAt)})` : ''}
             </p>
           )}
         </CardContent>
@@ -214,6 +281,13 @@ function AssignmentDetail() {
               {t('brandDashboard.openEvent', { defaultValue: 'Event öffnen' })}
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
+          )}
+          {!assignment.eventId && assignment.phase === 'availability' && (
+            <p className="text-xs text-muted-foreground">
+              {t('creatorDashboard.eventFollows', {
+                defaultValue: 'Die Eventseite entsteht, sobald die Brand gebucht hat.',
+              })}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -280,9 +354,15 @@ function AssignmentDetail() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm === 'accept'
-                ? t('creatorDashboard.acceptConfirmDesc', {
-                    defaultValue: 'Du sagst für dieses Event zu. Eine Zusage lässt sich danach nur über uns zurücknehmen.',
-                  })
+                ? assignment.phase === 'availability'
+                  ? t('creatorDashboard.acceptAvailabilityConfirmDesc', {
+                      amount: assignment.compensation !== null ? formatPrice(assignment.compensation) : '',
+                      defaultValue:
+                        'Du bestätigst, dass du für dieses Event zu {{amount}} verfügbar bist. Sobald die Brand bezahlt, bist du verbindlich gebucht. Eine Zusage lässt sich danach nur über uns zurücknehmen.',
+                    })
+                  : t('creatorDashboard.acceptConfirmDesc', {
+                      defaultValue: 'Du sagst für dieses Event zu. Eine Zusage lässt sich danach nur über uns zurücknehmen.',
+                    })
                 : t('creatorDashboard.declineConfirmDesc', {
                     defaultValue: 'Du sagst für dieses Event ab. Die Anfrage lässt sich danach nicht mehr annehmen.',
                   })}
@@ -303,5 +383,71 @@ function AssignmentDetail() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  )
+}
+
+/** „Antwort bis … (noch 1 Tag 3 Std)" — laufend aktualisiert. */
+function AnswerDeadline({ deadline }: { deadline: string }) {
+  const { t } = useTranslation()
+  const remaining = useCountdown(deadline)
+  if (!remaining) return null
+
+  const units = {
+    days: t('brandDashboard.unitDays', { defaultValue: 'Tage' }),
+    hours: t('brandDashboard.unitHours', { defaultValue: 'Std' }),
+    minutes: t('brandDashboard.unitMinutes', { defaultValue: 'Min' }),
+  }
+  const urgent = !remaining.expired && remaining.totalMs < 12 * 60 * 60 * 1000
+
+  return (
+    <div className={`flex items-center gap-2 text-sm ${urgent ? 'text-orange-700' : 'text-muted-foreground'}`}>
+      <Clock className="h-4 w-4 shrink-0" />
+      {remaining.expired
+        ? t('creatorDashboard.deadlinePassed', { defaultValue: 'Antwortfrist abgelaufen' })
+        : t('creatorDashboard.answerByRemaining', {
+            date: formatDateTime(deadline),
+            remaining: formatRemaining(remaining, units),
+            defaultValue: 'Antwort bis {{date}} (noch {{remaining}})',
+          })}
+    </div>
+  )
+}
+
+/** Nach der Buchung: Wie es mit der Vergütung weitergeht. */
+function PayoutHint({ assignment }: { assignment: CreatorAssignment }) {
+  const { t } = useTranslation()
+  const localePath = useLocalePath()
+
+  if (isPaidOut(assignment)) {
+    return (
+      <div className="flex items-start gap-2 text-green-800">
+        <Wallet className="h-5 w-5 shrink-0 mt-0.5" />
+        <p>
+          {assignment.payout?.status === 'manual'
+            ? t('creatorDashboard.payoutManualHint', {
+                date: assignment.payout.paidAt ? formatDate(assignment.payout.paidAt) : '',
+                defaultValue: 'Deine Vergütung wurde am {{date}} überwiesen.',
+              })
+            : t('creatorDashboard.payoutPaidHint', {
+                date: assignment.payout?.paidAt ? formatDate(assignment.payout.paidAt) : '',
+                defaultValue: 'Deine Vergütung wurde am {{date}} auf dein Stripe-Konto ausgezahlt.',
+              })}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-start gap-2 text-muted-foreground">
+      <Wallet className="h-5 w-5 shrink-0 mt-0.5" />
+      <p>
+        {t('creatorDashboard.payoutOpenHint', {
+          defaultValue: 'Nach dem Event zahlen wir deine Vergütung auf dein Stripe-Auszahlungskonto aus.',
+        })}{' '}
+        <Link href={localePath('/settings#payout')} className="text-primary hover:underline">
+          {t('creatorDashboard.payoutSettingsLink', { defaultValue: 'Auszahlungskonto prüfen' })}
+        </Link>
+      </p>
+    </div>
   )
 }

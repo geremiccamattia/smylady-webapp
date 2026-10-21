@@ -11,7 +11,7 @@ import { useLocalePath } from '@/hooks/useLocalePath'
 import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { brandService, type BrandOrder } from '@/services/brand'
 import { formatDate, formatPrice, resolveImageUrl } from '@/lib/utils'
-import { BrandGate, LoadingBars, OrderStatusBadge, ProfileStatusBadge } from '@/components/brand/brandShared'
+import { BrandGate, LoadingBars, OrderStatusBadge, PaymentStatusBadge, ProfileStatusBadge } from '@/components/brand/brandShared'
 
 export const BRAND_ORDERS_QUERY_KEY = ['brand', 'orders'] as const
 
@@ -48,7 +48,13 @@ function DashboardContent() {
   if (!profile) return null
 
   const orders = ordersQuery.data ?? []
-  const needsAttention = orders.filter((order) => order.status === 'offer_sent')
+  // Die Brand ist dran: Angebot annehmen und bezahlen, oder eine offene
+  // Zahlung abschliessen. Geld, das unterwegs ist, braucht nichts von ihr.
+  const needsAttention = orders.filter(
+    (order) =>
+      order.status === 'offer_sent' ||
+      (order.status === 'awaiting_payment' && order.payment?.status !== 'processing'),
+  )
 
   return (
     <>
@@ -115,10 +121,14 @@ function DashboardContent() {
           <Card className="border-purple-200 bg-purple-50/50 hover:bg-purple-50 transition-colors">
             <CardContent className="p-4 text-sm flex items-center gap-3">
               <span className="flex-1">
-                {t('brandDashboard.offerHint', {
-                  count: 1,
-                  defaultValue: 'Für einen Auftrag liegt ein Angebot vor. Sieh es dir an und bestätige es.',
-                })}{' '}
+                {needsAttention[0].status === 'awaiting_payment'
+                  ? t('brandDashboard.paymentHint', {
+                      defaultValue: 'Für einen Auftrag ist die Zahlung noch offen. Schliesse sie ab, um die Creator zu buchen.',
+                    })
+                  : t('brandDashboard.offerHint', {
+                      count: 1,
+                      defaultValue: 'Für einen Auftrag liegt ein Angebot vor. Nimm es an und bezahle, um die Creator zu buchen.',
+                    })}{' '}
                 <span className="font-medium">{needsAttention[0].title}</span>
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -132,7 +142,7 @@ function DashboardContent() {
             <p>
               {t('brandDashboard.offerHint', {
                 count: needsAttention.length,
-                defaultValue: 'Für {{count}} Aufträge liegen Angebote vor. Sieh sie dir an und bestätige sie.',
+                defaultValue: 'Für {{count}} Aufträge liegen Angebote vor oder Zahlungen sind offen. Sieh sie dir an.',
               })}
             </p>
             <ul className="space-y-1">
@@ -209,19 +219,40 @@ function DashboardContent() {
                           {order.eventDate ? ` · ${formatDate(order.eventDate)}` : ''}
                         </span>
                       </div>
-                      {/* Zu-/Absagen der Creator, sobald ein Creator-Auftrag existiert (ab 'confirmed'). */}
+                      {/* Die Besetzung, sobald ein Angebot vorliegt. */}
                       {order.responses && (
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {t('brandDashboard.responsesShort', {
-                            accepted: order.responses.accepted,
-                            total: order.responses.accepted + order.responses.declined + order.responses.pending,
-                            defaultValue: '{{accepted}}/{{total}} Creator zugesagt',
-                          })}
+                          {order.responses.pending > 0
+                            ? t('brandDashboard.responsesShort', {
+                                accepted: order.responses.accepted,
+                                total: order.responses.accepted + order.responses.declined + order.responses.pending,
+                                defaultValue: '{{accepted}}/{{total}} Creator zugesagt',
+                              })
+                            : t('brandDashboard.creatorsBookedShort', {
+                                count: order.responses.accepted,
+                                defaultValue_one: '1 Creator',
+                                defaultValue_other: '{{count}} Creator',
+                                defaultValue: '{{count}} Creator',
+                              })}
                         </div>
                       )}
                     </div>
                     <div className="text-right text-sm shrink-0">
-                      {order.offerPrice !== null ? (
+                      {order.payment?.status === 'paid' ? (
+                        <>
+                          <div className="font-medium">{formatPrice(order.payment.amount)}</div>
+                          <div className="text-xs text-green-700">
+                            {t('brandDashboard.paymentPaid', { defaultValue: 'Bezahlt' })}
+                          </div>
+                        </>
+                      ) : order.payment && order.status === 'awaiting_payment' ? (
+                        <>
+                          <div className="font-medium">{formatPrice(order.payment.amount)}</div>
+                          <div className="mt-0.5">
+                            <PaymentStatusBadge status={order.payment.status} />
+                          </div>
+                        </>
+                      ) : order.offerPrice !== null ? (
                         <>
                           <div className="font-medium">{formatPrice(order.offerPrice)}</div>
                           <div className="text-xs text-muted-foreground">
