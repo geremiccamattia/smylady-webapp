@@ -102,7 +102,21 @@ export default function CreatorApply() {
           )}
 
           {view === 'form' && (
-            <CreatorApplicationForm onSubmitted={() => setView('pending')} />
+            <CreatorApplicationForm
+              onSubmitted={() => setView('pending')}
+              // 409: Es liegt schon etwas vor — aber was? Eine Bewerbung in
+              // Prüfung, eine abgelehnte oder ein fertiges Profil. Den Stand
+              // frisch holen statt stur „in Prüfung" zu zeigen.
+              onConflict={async () => {
+                try {
+                  const payload = await creatorService.getMyApplication()
+                  const standing = payload ? resolveCreatorStanding(payload) : 'pending'
+                  setView(standing === 'none' ? 'pending' : standing)
+                } catch {
+                  setView('pending')
+                }
+              }}
+            />
           )}
 
           {view === 'member' && (

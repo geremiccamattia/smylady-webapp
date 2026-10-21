@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Clock, Lock, Sparkles, XCircle } from 'lucide-react'
+import { isEventOver } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -103,32 +104,54 @@ export function ResponseBadge({ value }: { value: AssignmentResponse }) {
 
 /**
  * In welcher Phase die Anfrage ist: Verfügbarkeit (noch nicht gebucht) oder
- * gebucht (die Brand hat bezahlt). Ein stornierter Brand-Auftrag schlägt
- * beides.
+ * gebucht (die Brand hat bezahlt). Eine zurückgezogene Anfrage und ein
+ * stornierter Brand-Auftrag schlagen beides.
+ *
+ * „Gebucht" gilt nur für eine ZUSAGE: Wer abgesagt hat oder dessen Frist
+ * verstrichen ist, ist in der Buchungsphase nicht gebucht — da sagt der
+ * Antwort-Badge daneben schon alles, ein Phasen-Badge käme nur dazwischen.
  */
-export function PhaseBadge({ assignment }: { assignment: Pick<CreatorAssignment, 'phase' | 'orderStatus'> }) {
+export function PhaseBadge({
+  assignment,
+}: {
+  assignment: Pick<CreatorAssignment, 'phase' | 'orderStatus' | 'response' | 'cancelledAt'>
+}) {
   const { t } = useTranslation()
   const { phase } = useCreatorLabels()
+  if (assignment.cancelledAt) {
+    return <Badge variant="destructive">{t('creatorDashboard.assignmentWithdrawn', { defaultValue: 'Zurückgezogen' })}</Badge>
+  }
   if (assignment.orderStatus === 'cancelled') {
     return <Badge variant="destructive">{t('creatorDashboard.orderCancelled', { defaultValue: 'Storniert' })}</Badge>
   }
   if (assignment.orderStatus === 'completed') {
     return <Badge variant="secondary">{t('creatorDashboard.orderCompleted', { defaultValue: 'Abgeschlossen' })}</Badge>
   }
-  return assignment.phase === 'booked' ? (
-    <Badge className="bg-green-100 text-green-800 hover:bg-green-100 gap-1">
-      <CheckCircle2 className="h-3 w-3" />
-      {phase('booked')}
-    </Badge>
-  ) : (
-    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{phase('availability')}</Badge>
-  )
+  if (assignment.phase === 'booked') {
+    if (assignment.response !== 'accepted') return null
+    return (
+      <Badge className="bg-green-100 text-green-800 hover:bg-green-100 gap-1">
+        <CheckCircle2 className="h-3 w-3" />
+        {phase('booked')}
+      </Badge>
+    )
+  }
+  return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{phase('availability')}</Badge>
 }
 
-/** Der Auszahlungsstand einer zugesagten, gebuchten Anfrage. */
-export function PayoutBadge({ assignment }: { assignment: Pick<CreatorAssignment, 'payout' | 'phase' | 'response'> }) {
+/**
+ * Der Auszahlungsstand einer zugesagten, gebuchten Anfrage. „Offen" ist die
+ * Auszahlung erst, wenn das Event vorbei ist (oder der Auftrag abgeschlossen);
+ * davor steht sie schlicht noch bevor.
+ */
+export function PayoutBadge({
+  assignment,
+}: {
+  assignment: Pick<CreatorAssignment, 'payout' | 'phase' | 'response' | 'eventDate' | 'eventEndDate' | 'orderStatus' | 'cancelledAt'>
+}) {
   const { t } = useTranslation()
   if (assignment.phase !== 'booked' || assignment.response !== 'accepted') return null
+  if (assignment.cancelledAt || assignment.orderStatus === 'cancelled') return null
   if (isPaidOut(assignment)) {
     return (
       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
@@ -141,7 +164,13 @@ export function PayoutBadge({ assignment }: { assignment: Pick<CreatorAssignment
   if (assignment.payout?.status === 'failed') {
     return <Badge variant="destructive">{t('creatorDashboard.payoutFailed', { defaultValue: 'Auszahlung fehlgeschlagen' })}</Badge>
   }
-  return <Badge variant="outline">{t('creatorDashboard.payoutOpen', { defaultValue: 'Auszahlung offen' })}</Badge>
+  const eventDone =
+    assignment.orderStatus === 'completed' || isEventOver(assignment.eventEndDate || null, assignment.eventDate || null)
+  return eventDone ? (
+    <Badge variant="outline">{t('creatorDashboard.payoutOpen', { defaultValue: 'Auszahlung offen' })}</Badge>
+  ) : (
+    <Badge variant="outline">{t('creatorDashboard.payoutAfterEvent', { defaultValue: 'Auszahlung nach dem Event' })}</Badge>
+  )
 }
 
 /** Das Event der Anfrage liegt hinter uns; eine Antwort ändert nichts mehr. */
@@ -180,16 +209,19 @@ export function CreatorGate({
 }) {
   const { t } = useTranslation()
   const localePath = useLocalePath()
-  const { standing, isError, refetch } = useCreatorProfile()
+  const { profile, standing, isError, refetch } = useCreatorProfile()
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
   const guest = !authLoading && !user
-  const loginTarget = localePath(`/login?next=${encodeURIComponent(pathname)}`)
+  const loginBase = localePath('/login')
   useEffect(() => {
-    if (guest) router.replace(loginTarget)
-  }, [guest, loginTarget, router])
+    if (!guest) return
+    // Die Query gehört zum Rücksprung (siehe BrandGate).
+    const search = typeof window !== 'undefined' ? window.location.search : ''
+    router.replace(`${loginBase}?next=${encodeURIComponent(pathname + search)}`)
+  }, [guest, loginBase, pathname, router])
 
   if (guest) {
     return (
@@ -265,11 +297,36 @@ export function CreatorGate({
             description={t('creatorDashboard.pendingDesc', {
               defaultValue: 'Sobald es aktiv ist, siehst du hier Anfragen von Brands.',
             })}
+            action={
+              // Wer sich vertippt hat, soll das vor der Aktivierung korrigieren können.
+              <Link href={localePath('/creator/profile')}>
+                <Button variant="outline">{t('creatorDashboard.editProfile', { defaultValue: 'Profil bearbeiten' })}</Button>
+              </Link>
+            }
           />
         </CardContent>
       </Card>
     )
   }
+
+  // Pausiert, gesperrt oder abgelehnt — je Status ein eigener Satz, denn
+  // „nicht aktiv" sagt nicht, ob und wie es weitergeht.
+  const blockedDescription =
+    profile?.status === 'paused'
+      ? t('creatorDashboard.blockedPausedDesc', {
+          defaultValue: 'Dein Profil ist pausiert – melde dich bei uns, wenn du wieder Aufträge möchtest.',
+        })
+      : profile?.status === 'suspended'
+        ? t('creatorDashboard.blockedSuspendedDesc', {
+            defaultValue: 'Dein Profil ist gesperrt. Bei Fragen melde dich bei office@shareyourparty.de.',
+          })
+        : profile?.status === 'rejected'
+          ? t('creatorDashboard.blockedRejectedDesc', {
+              defaultValue: 'Dein Profil wurde abgelehnt. Bei Fragen melde dich bei office@shareyourparty.de.',
+            })
+          : t('creatorDashboard.blockedDesc', {
+              defaultValue: 'Anfragen sind im Moment nicht möglich. Bei Fragen melde dich bei office@shareyourparty.de.',
+            })
 
   return (
     <Card>
@@ -277,9 +334,7 @@ export function CreatorGate({
         <StatusPanel
           icon={<Lock className="h-8 w-8 text-white" />}
           title={t('creatorDashboard.blockedTitle', { defaultValue: 'Dein Creator-Profil ist derzeit nicht aktiv.' })}
-          description={t('creatorDashboard.blockedDesc', {
-            defaultValue: 'Anfragen sind im Moment nicht möglich. Bei Fragen melde dich bei office@shareyourparty.de.',
-          })}
+          description={blockedDescription}
           action={
             <Link href={localePath('/explore')}>
               <Button variant="outline">{t('brandRegister.doneButton', { defaultValue: 'Events entdecken' })}</Button>

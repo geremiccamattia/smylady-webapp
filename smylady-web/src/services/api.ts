@@ -81,9 +81,14 @@ apiClient.interceptors.response.use(
       if (!isPublicPath) {
         // Sprache beim Redirect halten — sonst landen EN-Nutzer auf der deutschen Seite
         const localePrefix = /^\/en(?=\/|$)/.test(window.location.pathname) ? '/en' : ''
+        // Rücksprung auf die aktuelle Seite samt Query (?next=): Eine Brand,
+        // die aus dem Stripe-Checkout mit ?payment=success zurückkommt und
+        // deren Sitzung abgelaufen ist, landet nach dem Login wieder genau
+        // dort. safeNextPath in lib/postLogin.ts prüft den Wert beim Lesen.
+        const { pathname, search } = window.location
         // replace statt assign: die abgelaufene Seite soll nicht im Verlauf bleiben,
         // sonst landet der Zurück-Button direkt wieder im 401.
-        replaceWithPath(`${localePrefix}/login`)
+        replaceWithPath(`${localePrefix}/login?next=${encodeURIComponent(pathname + search)}`)
       }
     }
     return Promise.reject(error)

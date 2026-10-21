@@ -81,6 +81,15 @@ export function useBrandLabels() {
   const platform = (value: string): string =>
     value === 'Sonstige' ? t('brandDashboard.platformOther', { defaultValue: 'Sonstige' }) : value
 
+  // Die Zahlungsart, wie Stripe sie nennt (payment.paymentMethod). Unbekannte
+  // Werte bleiben roh — besser als nichts.
+  const paymentMethod = (value: string): string =>
+    ({
+      card: t('brandDashboard.paymentMethodCard', { defaultValue: 'Karte' }),
+      sepa_debit: t('brandDashboard.paymentMethodSepa', { defaultValue: 'SEPA-Lastschrift' }),
+      customer_balance: t('brandDashboard.paymentMethodTransfer', { defaultValue: 'Überweisung' }),
+    })[value] ?? value
+
   // Die Codes aus data.missing, wenn das Einreichen an einem unvollständigen
   // Entwurf scheitert (400 von POST /brand-orders/:id/submit).
   const missingField = (code: string): string =>
@@ -96,7 +105,7 @@ export function useBrandLabels() {
       deliverables: t('brandDashboard.missingDeliverables', { defaultValue: 'mindestens ein gewünschter Inhalt' }),
     })[code] ?? code
 
-  return { orderStatus, paymentStatus, profileStatus, deliverable, gender, platform, missingField }
+  return { orderStatus, paymentStatus, profileStatus, deliverable, gender, platform, paymentMethod, missingField }
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -232,10 +241,16 @@ export function BrandGate({
   const pathname = usePathname()
 
   const guest = !authLoading && !user
-  const loginTarget = localePath(`/login?next=${encodeURIComponent(pathname)}`)
+  const loginBase = localePath('/login')
   useEffect(() => {
-    if (guest) router.replace(loginTarget)
-  }, [guest, loginTarget, router])
+    if (!guest) return
+    // Die Query gehört zum Rücksprung: Nach der Rückkehr aus dem Checkout
+    // (?payment=success) darf der Login sie nicht verschlucken. Bewusst aus
+    // window statt useSearchParams — das verlangte eine Suspense-Grenze um
+    // jede Seite, die das Gate nutzt.
+    const search = typeof window !== 'undefined' ? window.location.search : ''
+    router.replace(`${loginBase}?next=${encodeURIComponent(pathname + search)}`)
+  }, [guest, loginBase, pathname, router])
 
   if (guest) {
     return (

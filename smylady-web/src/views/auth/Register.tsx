@@ -144,7 +144,8 @@ export default function Register() {
         setStep('creator')
         return
       }
-      router.replace('/interests')
+      // Mit Sprachpräfix — sonst landete eine englische Registrierung auf der deutschen Seite.
+      router.replace(localePath('/interests'))
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -199,8 +200,8 @@ export default function Register() {
                * Alter zu fragen, wäre schwer zu erklären.
                */
               dateOfBirth={dateOfBirth}
-              onSubmitted={() => router.replace('/interests')}
-              onSkip={() => router.replace('/interests')}
+              onSubmitted={() => router.replace(localePath('/interests'))}
+              onSkip={() => router.replace(localePath('/interests'))}
             />
           ) : step === 'verify' ? (
             <form onSubmit={handleVerify} className="space-y-4">

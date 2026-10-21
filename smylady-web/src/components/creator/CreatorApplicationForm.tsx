@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { apiClient } from '@/services/api'
-import { cn } from '@/lib/utils'
+import { authService } from '@/services/auth'
+import { cn, isValidEmail } from '@/lib/utils'
 
 /*
  * Creator-Bewerbung als eigenständige Komponente.
@@ -129,8 +130,14 @@ function apiMessage(error: unknown): string | undefined {
 }
 
 interface CreatorApplicationFormProps {
-  /** Nach erfolgreichem Absenden — und nach 409, weil das Ziel dann erreicht ist. */
+  /** Nach erfolgreichem Absenden — und nach 409, wenn kein onConflict gesetzt ist. */
   onSubmitted: () => void
+  /**
+   * Nach 409: Für das Konto liegt schon eine Bewerbung oder ein Profil vor.
+   * Die aufrufende Seite kann den tatsächlichen Stand nachladen, statt
+   * „in Prüfung" anzunehmen. Ohne diese Prop greift onSubmitted.
+   */
+  onConflict?: () => void | Promise<void>
   /** Optionaler Ausstieg, im Registrierungsflow „Später bewerben". */
   onSkip?: () => void
   skipLabel?: string
@@ -147,6 +154,7 @@ interface CreatorApplicationFormProps {
 
 export default function CreatorApplicationForm({
   onSubmitted,
+  onConflict,
   onSkip,
   skipLabel,
   dateOfBirth,
@@ -154,7 +162,7 @@ export default function CreatorApplicationForm({
   const { t } = useTranslation()
   const { toast } = useToast()
   const localePath = useLocalePath()
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
 
   /*
    * Alter aus dem Geburtsdatum, nicht abgefragt.
@@ -304,12 +312,41 @@ export default function CreatorApplicationForm({
 
     setIsSubmitting(true)
     try {
+      /*
+       * Die E-Mail ist im DTO Pflicht (@IsNotEmpty @IsEmail). Direkt nach der
+       * Registrierung steht im Kontext ein Rumpf-Nutzer ohne Adresse, und das
+       * Nutzerobjekt aus dem localStorage kann veraltet sein — dann einmal
+       * frisch von /users/me holen. Bleibt sie leer, hilft nur ein neuer Login.
+       */
+      let email = user?.email ?? ''
+      if (!isValidEmail(email)) {
+        try {
+          const fresh = await authService.getCurrentUser()
+          if (fresh) {
+            updateUser(fresh)
+            email = fresh.email ?? ''
+          }
+        } catch {
+          // Unten abgefangen: ohne Adresse keine Bewerbung.
+        }
+      }
+      if (!isValidEmail(email)) {
+        toast({
+          variant: 'destructive',
+          title: t('common.error', { defaultValue: 'Fehler' }),
+          description: t('influencer.emailMissing', {
+            defaultValue: 'Deine E-Mail-Adresse fehlt im Konto. Bitte melde dich neu an und versuche es noch einmal.',
+          }),
+        })
+        return
+      }
+
       await apiClient.post('/influencer/apply', {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         // Eingeloggt nimmt das Backend die Adresse aus dem Token; mitgeschickt
         // wird sie trotzdem, damit der Endpunkt anonym unverändert bleibt.
-        email: user?.email ?? '',
+        email,
         city: form.city.trim(),
         age: parseInt(form.age, 10),
         instagram: form.instagram.trim(),
@@ -336,7 +373,8 @@ export default function CreatorApplicationForm({
             defaultValue: 'Für dein Konto liegt bereits eine Bewerbung vor.',
           }),
         })
-        onSubmitted()
+        if (onConflict) await onConflict()
+        else onSubmitted()
         return
       }
 

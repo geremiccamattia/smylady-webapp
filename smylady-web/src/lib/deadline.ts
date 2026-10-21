@@ -44,16 +44,30 @@ export function useCountdown(deadline: string | Date | null | undefined, tickMs 
   return remainingTime(deadline, now)
 }
 
+/** Einheiten in Ein- und Mehrzahl, übersetzt vom Aufrufer. */
+export interface RemainingUnits {
+  day: string
+  days: string
+  hour: string
+  hours: string
+  minute: string
+  minutes: string
+}
+
 /**
- * „3 Tage 4 Std", „5 Std 12 Min", „12 Min" — kurz, für Badges und Hinweise.
- * Die Einheiten kommen vom Aufrufer, damit sie übersetzt sind.
+ * „3 Tage 4 Std", „1 Tag 1 Std", „5 Std 12 Min", „1 Min" — kurz, für Badges
+ * und Hinweise. Die Einheiten kommen vom Aufrufer, damit sie übersetzt sind;
+ * Ein- und Mehrzahl werden hier gewählt („1 Tag", nicht „1 Tage").
  */
-export function formatRemaining(
-  remaining: RemainingTime,
-  units: { days: string; hours: string; minutes: string },
-): string {
+export function formatRemaining(remaining: RemainingTime, units: RemainingUnits): string {
   if (remaining.expired) return ''
-  if (remaining.days > 0) return `${remaining.days} ${units.days} ${remaining.hours} ${units.hours}`
-  if (remaining.hours > 0) return `${remaining.hours} ${units.hours} ${remaining.minutes} ${units.minutes}`
-  return `${Math.max(1, remaining.minutes)} ${units.minutes}`
+  const unit = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
+  if (remaining.days > 0) {
+    return `${unit(remaining.days, units.day, units.days)} ${unit(remaining.hours, units.hour, units.hours)}`
+  }
+  if (remaining.hours > 0) {
+    return `${unit(remaining.hours, units.hour, units.hours)} ${unit(remaining.minutes, units.minute, units.minutes)}`
+  }
+  const minutes = Math.max(1, remaining.minutes)
+  return unit(minutes, units.minute, units.minutes)
 }

@@ -29,6 +29,15 @@ function optional(value: string): string | undefined {
 }
 
 /**
+ * Beim Bearbeiten heisst leer wirklich leer: null statt undefined, damit das
+ * Backend den alten Wert entfernt. undefined fiele im JSON weg und liesse
+ * ihn stehen — die Brand bekäme ihr Logo oder ihre Website nicht mehr los.
+ */
+function optionalOrNull(value: string): string | null {
+  return optional(value) ?? null
+}
+
+/**
  * Eigenes Brand-Profil bearbeiten.
  *
  * Auch für eine Brand in Prüfung erreichbar: Wer sich vertippt hat, soll das
@@ -84,6 +93,8 @@ function ProfileForm() {
 
   const mutation = useMutation({
     mutationFn: () => {
+      // Die Links gehen als Ganzes: Ein geleerter Kanal fehlt im Objekt und
+      // verschwindet damit; sind alle leer, löscht null das ganze Objekt.
       const socialLinks = {
         instagram: optional(instagram),
         tiktok: optional(tiktok),
@@ -95,13 +106,14 @@ function ProfileForm() {
         contactPerson: {
           name: contactName.trim(),
           email: contactEmail.trim(),
+          // Die Position bleibt weg statt null: Das DTO der Ansprechperson kennt kein Leeren.
           position: optional(contactPosition),
         },
         industry,
-        description: optional(description),
-        logoUrl: optional(logoUrl),
-        website: optional(website),
-        socialLinks: hasSocialLinks ? socialLinks : undefined,
+        description: optionalOrNull(description),
+        logoUrl: optionalOrNull(logoUrl),
+        website: optionalOrNull(website),
+        socialLinks: hasSocialLinks ? socialLinks : null,
       })
     },
     onSuccess: (updated: BrandProfile) => {

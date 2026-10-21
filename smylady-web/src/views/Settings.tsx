@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCreatorProfile } from '@/hooks/useCreatorProfile'
 import { StripeConnectCard } from '@/components/settings/StripeConnectCard'
 import { SpotifyConnectCard } from '@/components/settings/SpotifyConnectCard'
 import { BalanceCard } from '@/components/settings/BalanceCard'
@@ -89,14 +90,30 @@ function SettingsContent() {
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [showDeleteAccount, setShowDeleteAccount] = useState(false)
 
+  // Wer hier Stripe verbindet: ein Veranstalter (Ticketerlöse) oder ein
+  // aktiver Creator (Vergütung aus Brand-Aufträgen) — dieselbe Weiche wie in
+  // StripeConnectCard. Creator ist keine Rolle im Token, sondern ein aktives
+  // Creator-Profil; dessen Stand muss da sein, bevor der Toast den Text wählt.
+  const isOrganizer = user?.role === 'organizer'
+  const { standing: creatorStanding, isError: creatorStandingError } = useCreatorProfile()
+  const isCreator = !isOrganizer && creatorStanding === 'active'
+  const roleKnown = isOrganizer || creatorStanding !== undefined || creatorStandingError
+
   // Handle Stripe Connect callback
   useEffect(() => {
     const stripeStatus = searchParams.get('stripe')
+    if (!stripeStatus || !roleKnown) return
 
     if (stripeStatus === 'success') {
       toast({
-        title: t('settings.stripeConnected'),
-        description: t('settings.stripeConnectedDesc'),
+        title: isCreator
+          ? t('settings.stripeConnectedCreator', { defaultValue: 'Auszahlungskonto verbunden' })
+          : t('settings.stripeConnected'),
+        description: isCreator
+          ? t('settings.stripeConnectedCreatorDesc', {
+              defaultValue: 'Dein Auszahlungskonto ist verbunden. Vergütungen aus Brand-Aufträgen gehen dorthin.',
+            })
+          : t('settings.stripeConnectedDesc'),
       })
       // Remove the query parameter
       router.replace(pathname)
@@ -112,9 +129,9 @@ function SettingsContent() {
     // t fehlt bewusst: Die Funktion wechselt bei einem Sprachwechsel die
     // Referenz. Aufgenommen liefe der Effekt dann erneut und könnte die
     // Stripe-Rückmeldung ein zweites Mal einblenden. Ausgelöst werden soll sie
-    // allein durch den Query-Parameter der Rückkehr.
+    // allein durch den Query-Parameter der Rückkehr (und den bekannten Stand).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, router, pathname, toast])
+  }, [searchParams, router, pathname, toast, roleKnown, isCreator])
 
   // Load settings on mount
   useEffect(() => {

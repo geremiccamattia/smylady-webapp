@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import axios from 'axios'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -64,14 +65,32 @@ function StripeConnectCardContent() {
   const {
     data: connectedAccount,
     isLoading: isLoadingAccount,
+    isError: isAccountError,
+    error: accountError,
+    isFetching: isFetchingAccount,
     refetch: refetchAccount,
   } = useGetConnectedAccount(visible)
+  // 403: Der Endpunkt ist nur für Veranstalter und aktive Creator — etwa,
+  // wenn das Creator-Profil gerade pausiert wurde und die Seite noch offen ist.
+  const accountForbidden = axios.isAxiosError(accountError) && accountError.response?.status === 403
 
   // Determine account status - Backend returns accountStatus field
   const accountStatus = connectedAccount?.accountStatus
   const isConnected = accountStatus === 'active'
   const needsOnboarding = accountStatus === 'incomplete' || accountStatus === 'restricted'
-  const isNotConnected = !accountStatus || accountStatus === 'not connected'
+  // Ein Fehler ist KEIN „nicht verbunden": Sonst böte die Karte das Verbinden
+  // an, obwohl das Konto längst steht.
+  const isNotConnected = !isAccountError && (!accountStatus || accountStatus === 'not connected')
+
+  // Aus dem Creator-Bereich kommt der Link /settings#payout; die Karte lädt
+  // erst, danach springt die Seite hin — einmal.
+  const scrolledToPayout = useRef(false)
+  useEffect(() => {
+    if (scrolledToPayout.current || !visible || isLoadingAccount) return
+    if (typeof window === 'undefined' || window.location.hash !== '#payout') return
+    scrolledToPayout.current = true
+    document.getElementById('payout')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [visible, isLoadingAccount])
 
   // Fetch account balance only when connected
   const {
@@ -110,7 +129,7 @@ function StripeConnectCardContent() {
             toast({
               variant: 'destructive',
               title: t('common.error'),
-              description: 'Stripe-Verbindung konnte nicht erstellt werden.',
+              description: t('settings.stripe.linkFailed', { defaultValue: 'Stripe-Verbindung konnte nicht erstellt werden.' }),
             })
             setIsConnecting(false)
           }
@@ -118,7 +137,7 @@ function StripeConnectCardContent() {
           toast({
             variant: 'destructive',
             title: t('common.error'),
-            description: 'Stripe-Verbindung konnte nicht erstellt werden.',
+            description: t('settings.stripe.linkFailed', { defaultValue: 'Stripe-Verbindung konnte nicht erstellt werden.' }),
           })
           setIsConnecting(false)
         }
@@ -127,7 +146,9 @@ function StripeConnectCardContent() {
         toast({
           variant: 'destructive',
           title: t('common.error'),
-          description: error.response?.data?.message || 'Stripe-Verbindung fehlgeschlagen.',
+          description:
+            error.response?.data?.message ||
+            t('settings.stripe.connectFailed', { defaultValue: 'Stripe-Verbindung fehlgeschlagen.' }),
         })
         setIsConnecting(false)
       },
@@ -145,7 +166,9 @@ function StripeConnectCardContent() {
         toast({
           variant: 'destructive',
           title: t('common.error'),
-          description: error.response?.data?.message || 'Dashboard konnte nicht geöffnet werden.',
+          description:
+            error.response?.data?.message ||
+            t('settings.stripe.dashboardFailed', { defaultValue: 'Dashboard konnte nicht geöffnet werden.' }),
         })
       },
     })
@@ -155,15 +178,16 @@ function StripeConnectCardContent() {
     disconnectAccount(undefined, {
       onSuccess: () => {
         toast({
-          title: 'Stripe getrennt',
-          description: 'Dein Stripe-Konto wurde erfolgreich getrennt.',
+          title: t('settings.stripe.disconnectedTitle', { defaultValue: 'Stripe getrennt' }),
+          description: t('settings.stripe.disconnectedDesc', { defaultValue: 'Dein Stripe-Konto wurde erfolgreich getrennt.' }),
         })
       },
       onError: (error: any) => {
         toast({
           variant: 'destructive',
           title: t('common.error'),
-          description: error.response?.data?.message || 'Trennung fehlgeschlagen.',
+          description:
+            error.response?.data?.message || t('settings.stripe.disconnectFailed', { defaultValue: 'Trennung fehlgeschlagen.' }),
         })
       },
     })
@@ -203,7 +227,26 @@ function StripeConnectCardContent() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isConnected ? (
+        {isAccountError ? (
+          // Fehler beim Laden: eigener Zustand mit Wiederholung statt „nicht verbunden".
+          <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+            <span className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
+              {accountForbidden
+                ? t('settings.stripe.forbidden', {
+                    defaultValue: 'Das Auszahlungskonto gibt es nur für Veranstalter und freigeschaltete Creator.',
+                  })
+                : t('settings.stripe.loadFailed', {
+                    defaultValue: 'Der Stand deines Stripe-Kontos lässt sich gerade nicht laden.',
+                  })}
+            </span>
+            {!accountForbidden && (
+              <Button variant="outline" size="sm" onClick={() => refetchAccount()} disabled={isFetchingAccount}>
+                {t('common.retry', { defaultValue: 'Erneut versuchen' })}
+              </Button>
+            )}
+          </div>
+        ) : isConnected ? (
           <>
             {/* Connected Status */}
             <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -284,7 +327,13 @@ function StripeConnectCardContent() {
                       {t('settings.stripe.disconnectTitle', { defaultValue: 'Stripe trennen?' })}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      {t('settings.stripeDisconnectWarning')}
+                      {/* Creator haben keine „bestehenden Events" — bei ihnen geht es um die Vergütung. */}
+                      {variant === 'creator'
+                        ? t('settings.stripeDisconnectWarningCreator', {
+                            defaultValue:
+                              'Ohne Auszahlungskonto können wir deine Vergütung aus Brand-Aufträgen nicht auszahlen. Du kannst es jederzeit wieder verbinden.',
+                          })
+                        : t('settings.stripeDisconnectWarning')}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

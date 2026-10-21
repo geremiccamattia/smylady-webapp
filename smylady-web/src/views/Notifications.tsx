@@ -27,9 +27,23 @@ import {
   Star,
   PartyPopper,
   Camera,
+  Building2,
+  Sparkles,
+  CreditCard,
 } from 'lucide-react'
 
 const getNotificationIcon = (type: string) => {
+  // Brand-Creator-System: Geldfluss (Zahlung, Auszahlung, Erstattung) mit
+  // Karte, alles Übrige der Brand mit dem Gebäude, des Creators mit dem Funkeln.
+  if (/^(brand_order_payment|brand_order_refunded|creator_payout)/.test(type)) {
+    return <CreditCard className="h-5 w-5 text-green-600" />
+  }
+  if (type.startsWith('brand_')) {
+    return <Building2 className="h-5 w-5 text-purple-500" />
+  }
+  if (type.startsWith('creator_')) {
+    return <Sparkles className="h-5 w-5 text-pink-500" />
+  }
   const iconMap: Record<string, React.ReactNode> = {
     chat_message: <MessageCircle className="h-5 w-5 text-blue-500" />,
     event_reminder: <Calendar className="h-5 w-5 text-orange-500" />,
@@ -196,9 +210,17 @@ export default function Notifications() {
       return
     }
 
-    // Creator: Ergebnis der Bewerbung bzw. Status des Profils → die Statusseite.
-    if (notification.type.startsWith('creator_application_') || notification.type.startsWith('creator_profile_')) {
+    // Creator: Ergebnis der Bewerbung → die Statusseite der Bewerbung.
+    if (notification.type.startsWith('creator_application_')) {
       router.push(localePath('/creator/apply'))
+      return
+    }
+
+    // Creator-Profil freigeschaltet, pausiert, abgelehnt → der Creator-Bereich;
+    // er zeigt jeden Stand mit dem passenden Hinweis. /creator/apply meldete
+    // einem Mitglied nur „Du bist bereits Teil des Creator Clubs".
+    if (notification.type.startsWith('creator_profile_')) {
+      router.push(localePath('/creator'))
       return
     }
 

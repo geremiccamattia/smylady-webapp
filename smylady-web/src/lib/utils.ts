@@ -155,6 +155,27 @@ export function formatDateTime(date: string | Date): string {
 }
 
 /**
+ * Datum mit Uhrzeit — ausser die Uhrzeit ist in Wiener Zeit genau 00:00, dann
+ * nur das Datum. Ein Brand-Auftrag speichert ein Event ohne Uhrzeit als
+ * Mitternacht; „15.11.2026 00:00" läse sich wie eine echte Startzeit.
+ */
+export function formatDateTimeSmart(date: string | Date): string {
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return formatDateTime(date)
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hourCycle: 'h23',
+    timeZone: VIENNA_TIME_ZONE,
+  }).formatToParts(d)
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value)
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value)
+  // Ältere Engines geben Mitternacht trotz h23 als „24" aus.
+  const midnight = (hour === 0 || hour === 24) && minute === 0
+  return midnight ? formatDate(d) : formatDateTime(d)
+}
+
+/**
  * Whether an event genuinely spans more than one day, measured by its duration
  * rather than by calendar days: a party from 22:00 to 04:00 crosses midnight but
  * is still a single-day event — that is what the >24h check is for.
