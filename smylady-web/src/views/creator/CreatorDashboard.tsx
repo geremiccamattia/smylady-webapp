@@ -83,19 +83,42 @@ function DashboardContent() {
   })
 
   const assignments = assignmentsQuery.data ?? []
-  // Offen heisst: noch unbeantwortet, Frist läuft noch UND das Event liegt
-  // noch vor uns. Eine Anfrage zu einem vergangenen Event wartet auf nichts.
-  const open = assignments.filter(
-    (entry) =>
-      entry.response === 'pending' &&
-      entry.orderStatus !== 'cancelled' &&
-      !isResponseOverdue(entry) &&
-      !isEventOver(null, entry.eventDate),
-  )
+  // Vorbei ist ein Event mit seinem Ende, sonst mit seinem Beginn.
+  const eventOver = (entry: CreatorAssignment) => isEventOver(entry.eventEndDate || null, entry.eventDate)
+  // Offen heisst: noch unbeantwortet, nicht zurückgezogen, Frist läuft noch
+  // UND das Event liegt noch vor uns. Eine Anfrage zu einem vergangenen
+  // Event wartet auf nichts.
+  const isOpen = (entry: CreatorAssignment) =>
+    entry.response === 'pending' &&
+    entry.orderStatus !== 'cancelled' &&
+    !entry.cancelledAt &&
+    !isResponseOverdue(entry) &&
+    !eventOver(entry)
+  const open = assignments.filter(isOpen)
+  // Was auf eine Antwort wartet, zuerst — dringendste Frist oben. Der Rest
+  // nach Eventdatum, das jüngste zuerst; ohne Datum ganz unten.
+  const time = (value: string) => {
+    const parsed = value ? new Date(value).getTime() : NaN
+    return Number.isNaN(parsed) ? null : parsed
+  }
+  const sorted = [...assignments].sort((a, b) => {
+    const openA = isOpen(a) && a.phase === 'availability'
+    const openB = isOpen(b) && b.phase === 'availability'
+    if (openA !== openB) return openA ? -1 : 1
+    if (openA && openB) {
+      return (time(a.responseDeadline) ?? Infinity) - (time(b.responseDeadline) ?? Infinity)
+    }
+    return (time(b.eventDate) ?? -Infinity) - (time(a.eventDate) ?? -Infinity)
+  })
   // Gebucht und noch nicht ausgezahlt: Dann braucht der Creator ein
   // Auszahlungskonto, sonst können wir die Vergütung nicht überweisen.
   const awaitingPayout = assignments.some(
-    (entry) => entry.phase === 'booked' && entry.response === 'accepted' && entry.orderStatus !== 'cancelled' && !isPaidOut(entry),
+    (entry) =>
+      entry.phase === 'booked' &&
+      entry.response === 'accepted' &&
+      entry.orderStatus !== 'cancelled' &&
+      !entry.cancelledAt &&
+      !isPaidOut(entry),
   )
   const connectedAccount = useGetConnectedAccount(standing === 'active' && awaitingPayout)
   const payoutAccountMissing = awaitingPayout && connectedAccount.isSuccess && connectedAccount.data?.accountStatus !== 'active'
@@ -249,7 +272,7 @@ function DashboardContent() {
             </p>
           ) : (
             <ul className="divide-y">
-              {assignments.map((entry) => (
+              {sorted.map((entry) => (
                 <li key={entry.id}>
                   <Link
                     href={localePath(`/creator/assignments/${entry.id}`)}
@@ -263,7 +286,7 @@ function DashboardContent() {
                         <PhaseBadge assignment={entry} />
                         <ResponseBadge value={entry.response} />
                         <PayoutBadge assignment={entry} />
-                        {isEventOver(null, entry.eventDate) && <PastEventBadge />}
+                        {eventOver(entry) && <PastEventBadge />}
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                         <CalendarDays className="h-3.5 w-3.5" />
@@ -273,7 +296,7 @@ function DashboardContent() {
                         </span>
                       </div>
                       {/* Offene Verfügbarkeitsanfrage: bis wann die Antwort erwartet wird. */}
-                      {entry.response === 'pending' && entry.responseDeadline && !isResponseOverdue(entry) && (
+                      {isOpen(entry) && entry.responseDeadline && (
                         <div className="text-xs text-orange-700 flex items-center gap-1 mt-0.5">
                           <Clock className="h-3 w-3" />
                           {t('creatorDashboard.answerBy', {

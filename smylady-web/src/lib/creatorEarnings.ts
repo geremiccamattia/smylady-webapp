@@ -1,5 +1,6 @@
 import { isPaidOut, type CreatorAssignment } from '@/services/creator'
 import { isEventOver } from '@/lib/utils'
+import { VIENNA_TIME_ZONE } from '@/lib/eventSchedule'
 
 /**
  * Einnahmen eines Creators, aus seinen Aufträgen berechnet.
@@ -28,7 +29,7 @@ export interface EarningEntry {
 }
 
 export interface EarningsMonth {
-  /** 'YYYY-MM' in lokaler Zeit, '' für Aufträge ohne jedes Datum. */
+  /** 'YYYY-MM' in Wiener Zeit, '' für Aufträge ohne jedes Datum. */
   key: string
   /** Erster Tag des Monats, null für den Sammeltopf ohne Datum. */
   monthStart: Date | null
@@ -57,8 +58,19 @@ const validDate = (value: string): Date | null => {
   return isNaN(date.getTime()) ? null : date
 }
 
+/**
+ * Monat in Wiener Zeit, nicht in der des Geräts: Ein Event am 1.11. um 00:30
+ * gehört in den November, auch wenn der Creator es aus New York ansieht.
+ * en-CA liefert „YYYY-MM".
+ */
 const monthKey = (date: Date): string =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  date.toLocaleDateString('en-CA', { timeZone: VIENNA_TIME_ZONE, year: 'numeric', month: '2-digit' })
+
+/** Erster Tag des Monats zu einem Schlüssel — mittags, damit die Anzeige in jeder Zeitzone im richtigen Monat bleibt. */
+const monthStartOf = (key: string): Date => {
+  const [year, month] = key.split('-').map(Number)
+  return new Date(year, month - 1, 1, 12)
+}
 
 /** Zählt dieser Auftrag als Einnahme? */
 export function countsAsEarning(assignment: CreatorAssignment): boolean {
@@ -66,10 +78,15 @@ export function countsAsEarning(assignment: CreatorAssignment): boolean {
     assignment.response === 'accepted' &&
     assignment.phase === 'booked' &&
     assignment.orderStatus !== 'cancelled' &&
+    !assignment.cancelledAt &&
     assignment.compensation !== null &&
     assignment.compensation >= 0
   )
 }
+
+/** Was tatsächlich beim Creator angekommen ist — der vermerkte Betrag, sonst die Vergütung. */
+const paidAmount = (assignment: CreatorAssignment): number =>
+  assignment.payout?.amount ?? (assignment.compensation as number)
 
 export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Date = new Date()): CreatorEarnings {
   const byMonth = new Map<string, EarningsMonth>()
@@ -85,7 +102,9 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
     const paid = isPaidOut(assignment)
     // Ohne Eventdatum lässt sich nicht sagen, ob die Leistung erbracht ist.
     // Dann zählt der Betrag als erwartet — ausser er ist schon ausgezahlt.
-    const earned = paid || (assignment.eventDate ? isEventOver(null, assignment.eventDate) : false)
+    // Vorbei ist das Event mit seinem Ende, sonst mit seinem Beginn.
+    const earned =
+      paid || (assignment.eventDate ? isEventOver(assignment.eventEndDate || null, assignment.eventDate) : false)
     const amount = assignment.compensation as number
     const key = date ? monthKey(date) : ''
 
@@ -93,7 +112,7 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
     if (!month) {
       month = {
         key,
-        monthStart: date ? new Date(date.getFullYear(), date.getMonth(), 1) : null,
+        monthStart: key ? monthStartOf(key) : null,
         entries: [],
         earned: 0,
         upcoming: 0,
@@ -107,7 +126,8 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
     month.total += amount
     if (earned) month.earned += amount
     else month.upcoming += amount
-    if (paid) month.paid += amount
+    // Ausgezahlt zählt, was überwiesen wurde — kann von der Vergütung abweichen.
+    if (paid) month.paid += paidAmount(assignment)
   }
 
   const months = [...byMonth.values()].sort((a, b) => {
@@ -128,7 +148,13 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
     totalEarned,
     totalUpcoming: months.reduce((sum, month) => sum + month.upcoming, 0),
     totalPaid,
-    totalOpen: totalEarned - totalPaid,
+    // Offen ist, was verdient, aber noch nicht ausgezahlt ist — gerechnet über
+    // die Vergütungen der nicht ausgezahlten Aufträge, nicht als Differenz zu
+    // den (ggf. abweichenden) Auszahlungsbeträgen.
+    totalOpen: months.reduce(
+      (sum, month) => sum + month.entries.filter((entry) => entry.earned && !entry.paid).reduce((inner, entry) => inner + entry.amount, 0),
+      0,
+    ),
     currentMonthTotal: byMonth.get(monthKey(now))?.total ?? 0,
   }
 }

@@ -39,14 +39,19 @@ export interface BrandProfile {
   createdAt: string
 }
 
+/**
+ * Was PATCH /brands/me entgegennimmt. Die optionalen Felder kennen drei
+ * Zustände: Wert, weggelassen (unverändert) und null (leeren) — undefined
+ * fiele im JSON weg und das Backend behielte den alten Wert.
+ */
 export interface UpdateBrandProfilePayload {
   companyName?: string
   contactPerson?: { name: string; email: string; position?: string }
   industry?: string
-  logoUrl?: string
-  website?: string
-  socialLinks?: { instagram?: string; tiktok?: string; other?: string }
-  description?: string
+  logoUrl?: string | null
+  website?: string | null
+  socialLinks?: { instagram?: string; tiktok?: string; other?: string } | null
+  description?: string | null
 }
 
 /**
@@ -76,6 +81,8 @@ export interface BrandOrderPayment {
   provider: 'stripe' | 'external'
   amount: number
   paidAt: string
+  /** Wie Stripe die Zahlungsart nennt ('card', 'sepa_debit', 'customer_balance'); leer, bis bekannt. */
+  paymentMethod: string
   /** Gehostete Rechnung bei Stripe und PDF, sobald die Zahlung durch ist. */
   invoiceUrl: string
   invoicePdfUrl: string
@@ -180,7 +187,8 @@ export interface BrandOrder {
   status: BrandOrderStatus
   title: string
   goal: string
-  budget: number
+  /** Budgetvorstellung der Brand; null, solange der Entwurf keines hat. */
+  budget: number | null
   eventName: string
   eventDate: string
   eventEndDate: string
@@ -327,7 +335,7 @@ export function mapBrandOrder(raw: any): BrandOrder {
     status: (raw?.status || 'draft') as BrandOrderStatus,
     title: str(raw?.title),
     goal: str(raw?.goal),
-    budget: num(raw?.budget),
+    budget: numOrNull(raw?.budget),
     eventName: str(raw?.eventDetails?.name),
     eventDate: str(raw?.eventDetails?.date),
     eventEndDate: str(raw?.eventDetails?.endDate),
@@ -398,6 +406,7 @@ function mapPayment(raw: any): BrandOrderPayment | null {
     provider: raw.provider === 'external' ? 'external' : 'stripe',
     amount: num(raw.amount),
     paidAt: str(raw.paidAt),
+    paymentMethod: str(raw.paymentMethod),
     invoiceUrl: str(raw.invoiceUrl),
     invoicePdfUrl: str(raw.invoicePdfUrl),
     receiptUrl: str(raw.receiptUrl),
@@ -504,8 +513,11 @@ export const brandService = {
    */
   async startCheckout(id: string, returnPath: string, locale: 'de' | 'en'): Promise<CheckoutStart> {
     // Die eigene Origin mitschicken (Vercel-Preview beim Testen); das Backend
-    // übernimmt sie nur, wenn sie auf seiner Allowlist steht.
-    const returnOrigin = typeof window !== 'undefined' ? window.location.origin : undefined
+    // übernimmt sie nur, wenn sie auf seiner Allowlist steht. Nur HTTPS: Eine
+    // http://localhost-Origin wiese das Backend ohnehin ab, und Stripe leitet
+    // nicht auf unverschlüsselte Seiten zurück.
+    const returnOrigin =
+      typeof window !== 'undefined' && window.location.protocol === 'https:' ? window.location.origin : undefined
     const response = await apiClient.post(`/brand-orders/${id}/checkout`, { returnPath, locale, returnOrigin })
     const data = unwrap(response) ?? {}
     return { url: str(data.url), sessionId: str(data.sessionId), expiresAt: str(data.expiresAt) }
@@ -537,11 +549,18 @@ export function isBrandNotFound(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404
 }
 
+/** 429: Das Backend drosselt — der Rohtext („ThrottlerException") hilft der Brand nicht. */
+export function isRateLimited(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 429
+}
+
 /** Die Fehlermeldung des Backends, sonst der Fallback. */
 export function readBrandError(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; msg?: string } | undefined
-    return data?.message || data?.msg || fallback
+    const data = error.response?.data as { message?: string | string[]; msg?: string } | undefined
+    // class-validator liefert die Meldungen als Liste.
+    const message = Array.isArray(data?.message) ? data.message.join(', ') : data?.message
+    return message || data?.msg || fallback
   }
   return fallback
 }

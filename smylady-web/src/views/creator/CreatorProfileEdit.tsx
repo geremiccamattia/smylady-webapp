@@ -40,6 +40,19 @@ interface ChannelRow {
 
 const emptyChannel = (): ChannelRow => ({ platform: 'Instagram', username: '', url: '', followerRange: '' })
 
+/** Gültig im Sinne von @IsUrl (class-validator): http(s), Host mit Punkt, keine Leerzeichen. */
+function isValidPortfolioLink(value: string): boolean {
+  if (/\s/.test(value)) return false
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+    // „localhost" oder „foo" ohne TLD lehnt validator.js ab.
+    return /^[^.]+(\.[^.]+)+$/.test(url.hostname) && !url.hostname.endsWith('.')
+  } catch {
+    return false
+  }
+}
+
 /**
  * Eigenes Creator-Profil bearbeiten: Kanäle, Kategorien, Stadt, Bio und
  * Portfolio. Die Freigabe für Brands sitzt auf der Übersichtsseite, der
@@ -139,13 +152,21 @@ function ProfileForm() {
     if (categories.length === 0) {
       return problem(t('creatorDashboard.validateCategories', { defaultValue: 'Bitte wähle mindestens eine Kategorie.' }))
     }
+    // Dieselbe Regel wie @IsUrl im Backend: eine parsebare http(s)-URL mit
+    // Host samt Top-Level-Domain — „https://foo" ginge am Backend vorbei
+    // und käme als 400 zurück. Die Meldung nennt den betroffenen Link.
     const badLink = portfolio
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
-      .find((line) => !/^https?:\/\/\S+$/i.test(line))
+      .find((line) => !isValidPortfolioLink(line))
     if (badLink) {
-      return problem(t('creatorDashboard.validatePortfolio', { defaultValue: 'Portfolio-Links müssen mit http:// oder https:// beginnen.' }))
+      return problem(
+        t('creatorDashboard.validatePortfolioLink', {
+          link: badLink,
+          defaultValue: 'Ungültiger Portfolio-Link: {{link}} – bitte eine vollständige Adresse mit http:// oder https:// angeben.',
+        }),
+      )
     }
     mutation.mutate()
   }

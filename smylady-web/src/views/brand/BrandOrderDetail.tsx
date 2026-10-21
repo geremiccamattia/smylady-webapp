@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +21,7 @@ import {
   Lock,
   Pencil,
   Receipt,
+  RefreshCw,
   Send,
   Target,
   Users,
@@ -46,15 +47,15 @@ import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import {
   brandService,
-  isOfferExpired,
+  isRateLimited,
   readBrandError,
   readMissingFields,
   type BrandOrder,
   type ProposedCreatorCard,
 } from '@/services/brand'
 import { eventsService } from '@/services/events'
-import { formatDate, formatDateTime, formatPrice, getInitials, resolveImageUrl } from '@/lib/utils'
-import { formatRemaining, useCountdown } from '@/lib/deadline'
+import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, getInitials, resolveImageUrl } from '@/lib/utils'
+import { formatRemaining, useCountdown, type RemainingUnits } from '@/lib/deadline'
 import { navigateToExternalUrl, STRIPE_HOSTS } from '@/lib/navigation'
 import { BrandGate, LoadingBars, OrderStatusBadge, PaymentStatusBadge, useBrandLabels } from '@/components/brand/brandShared'
 import { ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
@@ -75,6 +76,9 @@ const CANCELLABLE: BrandOrder['status'][] = [
 
 /** Wie oft die Seite nach der Rückkehr aus dem Checkout nachfragt, bis sie aufgibt. */
 const MAX_PAYMENT_POLLS = 20
+
+/** Abstand zwischen zwei Nachfragen bei Stripe (POST /:id/checkout/sync). */
+const PAYMENT_POLL_MS = 3000
 
 /**
  * Ein Auftrag aus Sicht der Brand.
@@ -136,6 +140,9 @@ function OrderDetail() {
   // Zurück aus dem Checkout: 'success' lässt die Seite nachfragen, bis die
   // Zahlung angekommen ist.
   const [returnState, setReturnState] = useState<'success' | 'cancelled' | null>(null)
+  // Nach MAX_PAYMENT_POLLS Nachfragen gibt die Seite auf und bietet die
+  // Prüfung von Hand an. Als State, weil die Anzeige davon abhängt.
+  const [pollsExhausted, setPollsExhausted] = useState(false)
   const pollCount = useRef(0)
   const handledReturn = useRef(false)
 
@@ -144,22 +151,6 @@ function OrderDetail() {
     queryFn: () => brandService.getMyOrder(id),
     enabled: Boolean(id),
     retry: false,
-    // Nachfragen, solange die Zahlung noch nicht gebucht ist (der Webhook
-    // kann ein paar Sekunden hinterherkommen) oder Event und Buchung nach
-    // der Zahlung noch angelegt werden.
-    refetchInterval: (query) => {
-      const current = query.state.data
-      if (!current) return false
-      const paymentOpen =
-        returnState === 'success' &&
-        current.status === 'awaiting_payment' &&
-        current.payment?.status === 'pending'
-      const provisioning = current.status === 'confirmed' && current.provisioning !== 'done'
-      if (!paymentOpen && !provisioning) return false
-      if (pollCount.current >= MAX_PAYMENT_POLLS) return false
-      pollCount.current += 1
-      return 3000
-    },
   })
   const order = orderQuery.data
 
@@ -173,13 +164,98 @@ function OrderDetail() {
     retry: false,
   })
 
-  const applyUpdate = (updated: BrandOrder) => {
-    queryClient.setQueryData(['brand', 'order', id], updated)
-    queryClient.invalidateQueries({ queryKey: BRAND_ORDERS_QUERY_KEY })
-  }
+  const applyUpdate = useCallback(
+    (updated: BrandOrder) => {
+      queryClient.setQueryData(['brand', 'order', id], updated)
+      queryClient.invalidateQueries({ queryKey: BRAND_ORDERS_QUERY_KEY })
+    },
+    [queryClient, id],
+  )
 
   const fail = (error: unknown, fallback: string) =>
-    toast({ variant: 'destructive', title: t('common.error', { defaultValue: 'Fehler' }), description: readBrandError(error, fallback) })
+    toast({
+      variant: 'destructive',
+      title: t('common.error', { defaultValue: 'Fehler' }),
+      // 429: Der Rohtext des Backends („ThrottlerException") sagt der Brand nichts.
+      description: isRateLimited(error)
+        ? t('brandRegister.rateLimited', { defaultValue: 'Zu viele Versuche, bitte kurz warten.' })
+        : readBrandError(error, fallback),
+    })
+
+  // Die Angebotsfrist läuft live mit: Verstreicht sie, während die Seite
+  // offen ist, verschwindet der Bezahlknopf, statt in einen 409 zu laufen.
+  const offerRemaining = useCountdown(order?.offerExpiresAt)
+  const offerExpired = offerRemaining?.expired ?? false
+
+  // Nachfragen bei Stripe statt nur den Auftrag zu lesen: POST /checkout/sync
+  // zieht den Zahlungsstand nach, falls der Webhook hinterherhinkt, und holt
+  // nach der Zahlung das Anlegen von Event und Buchung nach (provisioning).
+  const paymentPolling =
+    returnState === 'success' &&
+    order?.status === 'awaiting_payment' &&
+    order.payment?.status === 'pending' &&
+    !pollsExhausted
+  const provisioningPolling =
+    order?.status === 'confirmed' && order.provisioning !== null && order.provisioning !== 'done' && !pollsExhausted
+  const syncPolling = Boolean(id) && (paymentPolling || provisioningPolling)
+
+  useEffect(() => {
+    if (!syncPolling) return
+    let active = true
+    let inFlight = false
+    const timer = setInterval(() => {
+      if (inFlight) return
+      if (pollCount.current >= MAX_PAYMENT_POLLS) {
+        setPollsExhausted(true)
+        return
+      }
+      pollCount.current += 1
+      inFlight = true
+      brandService
+        .syncCheckout(id)
+        .then((updated) => {
+          if (active) applyUpdate(updated)
+        })
+        .catch(() => {
+          // Ein einzelner Fehlschlag ist kein Grund aufzugeben; der nächste Tick fragt wieder.
+        })
+        .finally(() => {
+          inFlight = false
+        })
+    }, PAYMENT_POLL_MS)
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [syncPolling, id, applyUpdate])
+
+  // Zurück per Browser-Zurück aus dem Checkout: Safari und Firefox stellen
+  // die Seite aus dem bfcache wieder her — samt „weiterleiten…"-Zustand am
+  // Knopf. Dann den Knopf freigeben und den Stand frisch laden.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return
+      setRedirecting(false)
+      orderQuery.refetch()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+    // orderQuery wechselt bei jedem Render die Referenz; refetch() ist stabil.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Von Hand nachfragen, nachdem das automatische Nachfragen aufgegeben hat.
+  const checkPayment = useMutation({
+    mutationFn: () => brandService.syncCheckout(id),
+    onSuccess: (updated) => {
+      applyUpdate(updated)
+      // Ein neuer Anlauf fürs automatische Nachfragen, falls es weiter offen ist.
+      pollCount.current = 0
+      setPollsExhausted(false)
+    },
+    onError: (error: unknown) =>
+      fail(error, t('brandDashboard.checkPaymentFailed', { defaultValue: 'Der Zahlungsstand lässt sich gerade nicht prüfen.' })),
+  })
 
   // Rückkehr von Stripe: ?payment=success&session_id=… bzw. ?payment=cancelled.
   // Einmal den Stand nachziehen, dann die Parameter aus der Adresse nehmen,
@@ -192,6 +268,7 @@ function OrderDetail() {
     if (payment === 'success') {
       setReturnState('success')
       pollCount.current = 0
+      setPollsExhausted(false)
       brandService
         .syncCheckout(id)
         .then(applyUpdate)
@@ -338,46 +415,67 @@ function OrderDetail() {
 
   const payment = order.payment
   const paymentProcessing = order.status === 'awaiting_payment' && payment?.status === 'processing'
-  const offerExpired = isOfferExpired(order)
   // Bezahlen geht aus dem Angebot und aus einem offenen oder gescheiterten
-  // Checkout — nicht, solange Geld unterwegs ist, und nicht nach der Frist.
+  // Checkout — nicht, solange Geld unterwegs ist, nicht nach der Frist, und
+  // nicht, während die Seite nach der Rückkehr aus dem Checkout noch auf die
+  // Bestätigung wartet (sonst startet jemand eine zweite Zahlung).
   const canPay =
     !offerExpired &&
+    !paymentPolling &&
     order.offerPrice !== null &&
     (order.status === 'offer_sent' ||
       (order.status === 'awaiting_payment' && payment?.status !== 'processing'))
+  // Welcher Text auf dem Bezahlknopf steht, hängt am Zahlungsstand: Ein
+  // gescheiterter Versuch heisst „erneut", ein offener Checkout „fortsetzen".
+  const payLabel =
+    payment?.status === 'failed'
+      ? t('brandDashboard.retryPayment', { defaultValue: 'Zahlung erneut versuchen' })
+      : order.status === 'awaiting_payment' && payment?.status === 'pending'
+        ? t('brandDashboard.continuePayment', { defaultValue: 'Zahlung fortsetzen' })
+        : t('brandDashboard.acceptAndPay', { defaultValue: 'Angebot annehmen und bezahlen' })
 
   // Stornieren heisst je nach Status etwas anderes; Wortwahl und Icon folgen
-  // dem. Solange Geld unterwegs ist, geht es nur über uns.
+  // dem. Solange Geld unterwegs ist oder die Bestätigung erwartet wird, geht
+  // es nur über uns.
   const offerLike = order.status === 'offer_sent' || order.status === 'awaiting_payment'
-  const canCancel = CANCELLABLE.includes(order.status) && !paymentProcessing
+  const checkoutLike = order.status === 'awaiting_payment'
+  const canCancel = CANCELLABLE.includes(order.status) && !paymentProcessing && !paymentPolling
   const cancelLabel =
     order.status === 'draft'
       ? t('brandDashboard.cancelDraft', { defaultValue: 'Entwurf verwerfen' })
-      : offerLike
-        ? t('brandDashboard.declineOffer', { defaultValue: 'Angebot ablehnen' })
-        : t('brandDashboard.withdrawOrder', { defaultValue: 'Auftrag zurückziehen' })
+      : checkoutLike
+        ? t('brandDashboard.cancelCheckout', { defaultValue: 'Checkout abbrechen' })
+        : offerLike
+          ? t('brandDashboard.declineOffer', { defaultValue: 'Angebot ablehnen' })
+          : t('brandDashboard.withdrawOrder', { defaultValue: 'Auftrag zurückziehen' })
   const cancelTitle =
     order.status === 'draft'
       ? t('brandDashboard.cancelDraftConfirmTitle', { defaultValue: 'Entwurf verwerfen?' })
-      : offerLike
-        ? t('brandDashboard.declineOfferConfirmTitle', { defaultValue: 'Angebot ablehnen?' })
-        : t('brandDashboard.withdrawConfirmTitle', { defaultValue: 'Auftrag zurückziehen?' })
+      : checkoutLike
+        ? t('brandDashboard.cancelCheckoutConfirmTitle', { defaultValue: 'Checkout abbrechen?' })
+        : offerLike
+          ? t('brandDashboard.declineOfferConfirmTitle', { defaultValue: 'Angebot ablehnen?' })
+          : t('brandDashboard.withdrawConfirmTitle', { defaultValue: 'Auftrag zurückziehen?' })
   const cancelDescription =
     order.status === 'draft'
       ? t('brandDashboard.cancelDraftConfirmDesc', {
           defaultValue:
             'Der Entwurf wird storniert und lässt sich danach weder bearbeiten noch einreichen. Das lässt sich nicht rückgängig machen.',
         })
-      : offerLike
-        ? t('brandDashboard.declineOfferConfirmDesc', {
+      : checkoutLike
+        ? t('brandDashboard.cancelCheckoutConfirmDesc', {
             defaultValue:
-              'Der Auftrag wird storniert, die zugesagten Creator werden wieder freigegeben. Das lässt sich nicht rückgängig machen – für ein neues Angebot leg bitte einen neuen Auftrag an.',
+              'Die Zahlung wird abgebrochen und der Auftrag storniert, die zugesagten Creator werden wieder freigegeben. Das lässt sich nicht rückgängig machen – für ein neues Angebot leg bitte einen neuen Auftrag an.',
           })
-        : t('brandDashboard.withdrawConfirmDesc', {
-            defaultValue:
-              'Wir stoppen die Bearbeitung und der Auftrag wird storniert. Das lässt sich nicht rückgängig machen – ein neuer Auftrag ist jederzeit möglich.',
-          })
+        : offerLike
+          ? t('brandDashboard.declineOfferConfirmDesc', {
+              defaultValue:
+                'Der Auftrag wird storniert, die zugesagten Creator werden wieder freigegeben. Das lässt sich nicht rückgängig machen – für ein neues Angebot leg bitte einen neuen Auftrag an.',
+            })
+          : t('brandDashboard.withdrawConfirmDesc', {
+              defaultValue:
+                'Wir stoppen die Bearbeitung und der Auftrag wird storniert. Das lässt sich nicht rückgängig machen – ein neuer Auftrag ist jederzeit möglich.',
+            })
   // Derselbe Knopf im Kopf der Seite und, beim Angebot, noch einmal in der Angebotskarte.
   const cancelButton = canCancel ? (
     <Button variant="outline" className="gap-2" disabled={busy} loading={cancel.isPending} onClick={() => setConfirmCancel(true)}>
@@ -400,9 +498,16 @@ function OrderDetail() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bold">{order.title}</h1>
             <OrderStatusBadge status={order.status} />
-            {payment && (order.status === 'awaiting_payment' || payment.status === 'refunded') && (
-              <PaymentStatusBadge status={payment.status} />
-            )}
+            {/* Der Zahlungsstand neben dem Status, wo er etwas sagt: im
+                Checkout, nach einer Erstattung — und am Angebot, wenn ein
+                Versuch gescheitert oder die Bezahlseite abgelaufen ist (das
+                Backend setzt den Auftrag dann auf offer_sent zurück). */}
+            {payment &&
+              (order.status === 'awaiting_payment' ||
+                payment.status === 'refunded' ||
+                (order.status === 'offer_sent' && (payment.status === 'failed' || payment.status === 'expired'))) && (
+                <PaymentStatusBadge status={payment.status} />
+              )}
           </div>
           {order.status === 'draft' ? (
             <div className="flex gap-2 flex-wrap">
@@ -435,7 +540,13 @@ function OrderDetail() {
       </div>
 
       {/* Statushinweis */}
-      <StatusHint order={order} returnState={returnState} />
+      <StatusHint
+        order={order}
+        returnState={returnState}
+        pollsExhausted={pollsExhausted}
+        checking={checkPayment.isPending}
+        onCheckPayment={() => checkPayment.mutate()}
+      />
 
       {/* Angebot und Zahlung */}
       {order.offerPrice !== null && (
@@ -465,11 +576,7 @@ function OrderDetail() {
                 <div className="flex flex-wrap gap-2">
                   <Button variant="gradient" className="gap-2" loading={checkout.isPending || redirecting} disabled={busy} onClick={() => checkout.mutate()}>
                     <CreditCard className="h-4 w-4" />
-                    {order.status === 'awaiting_payment'
-                      ? payment?.status === 'failed'
-                        ? t('brandDashboard.retryPayment', { defaultValue: 'Zahlung erneut versuchen' })
-                        : t('brandDashboard.continuePayment', { defaultValue: 'Zahlung fortsetzen' })
-                      : t('brandDashboard.acceptAndPay', { defaultValue: 'Angebot annehmen und bezahlen' })}
+                    {payLabel}
                   </Button>
                   {cancelButton}
                 </div>
@@ -640,7 +747,10 @@ function OrderDetail() {
             <p className="whitespace-pre-wrap">{order.goal}</p>
           </Field>
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label={t('brandDashboard.budgetLabel', { defaultValue: 'Budget' })}>{formatPrice(order.budget)}</Field>
+            {/* Ohne Budget (Entwurf) ein Strich — formatPrice(0) hiesse „0 €". */}
+            <Field label={t('brandDashboard.budgetLabel', { defaultValue: 'Budget' })}>
+              {order.budget === null ? '—' : formatPrice(order.budget)}
+            </Field>
             {order.submittedAt && (
               <Field label={t('brandDashboard.submittedAt', { defaultValue: 'Eingereicht am' })}>{formatDateTime(order.submittedAt)}</Field>
             )}
@@ -678,9 +788,10 @@ function OrderDetail() {
           )}
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label={t('brandDashboard.fieldEventName', { defaultValue: 'Name des Events' })}>{order.eventName}</Field>
+            {/* Ohne Uhrzeit (Mitternacht in Wien) nur das Datum — „00:00" wäre eine Scheinangabe. */}
             <Field label={t('brandDashboard.fieldEventDate', { defaultValue: 'Beginn' })}>
-              {order.eventDate ? formatDateTime(order.eventDate) : '—'}
-              {order.eventEndDate ? ` – ${formatDateTime(order.eventEndDate)}` : ''}
+              {order.eventDate ? formatDateTimeSmart(order.eventDate) : '—'}
+              {order.eventEndDate ? ` – ${formatDateTimeSmart(order.eventEndDate)}` : ''}
             </Field>
             {order.eventLocation && (
               <Field label={t('brandDashboard.fieldEventLocation', { defaultValue: 'Ort' })}>
@@ -798,7 +909,9 @@ function OrderDetail() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel', { defaultValue: 'Abbrechen' })}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => cancel.mutate({ reason: cancelReason, fromOffer: offerLike })}>
+            {/* Nur das Ablehnen eines Angebots meldet „Angebot abgelehnt"; ein
+                abgebrochener Checkout ist schlicht ein stornierter Auftrag. */}
+            <AlertDialogAction onClick={() => cancel.mutate({ reason: cancelReason, fromOffer: order.status === 'offer_sent' })}>
               {cancelLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -823,9 +936,12 @@ function OfferDeadline({ expiresAt }: { expiresAt: string }) {
   const remaining = useCountdown(expiresAt)
   if (!remaining) return null
 
-  const units = {
+  const units: RemainingUnits = {
+    day: t('brandDashboard.unitDay', { defaultValue: 'Tag' }),
     days: t('brandDashboard.unitDays', { defaultValue: 'Tage' }),
+    hour: t('brandDashboard.unitHour', { defaultValue: 'Std' }),
     hours: t('brandDashboard.unitHours', { defaultValue: 'Std' }),
+    minute: t('brandDashboard.unitMinute', { defaultValue: 'Min' }),
     minutes: t('brandDashboard.unitMinutes', { defaultValue: 'Min' }),
   }
   const urgent = !remaining.expired && remaining.totalMs < 24 * 60 * 60 * 1000
@@ -844,9 +960,10 @@ function OfferDeadline({ expiresAt }: { expiresAt: string }) {
   )
 }
 
-/** Bezahlt: Betrag, Datum und die Belege von Stripe. */
+/** Bezahlt: Betrag, Datum, Zahlungsart und die Belege von Stripe. */
 function PaymentSummary({ payment }: { payment: NonNullable<BrandOrder['payment']> }) {
   const { t } = useTranslation()
+  const labels = useBrandLabels()
   const refunded = payment.status === 'refunded'
 
   return (
@@ -866,10 +983,16 @@ function PaymentSummary({ payment }: { payment: NonNullable<BrandOrder['payment'
                 defaultValue: '{{amount}} bezahlt am {{date}}',
               })}
         </span>
-        {payment.provider === 'external' && (
+        {payment.provider === 'external' ? (
           <Badge variant="outline" className="font-normal">
             {t('brandDashboard.paidExternally', { defaultValue: 'per Überweisung' })}
           </Badge>
+        ) : (
+          payment.paymentMethod && (
+            <Badge variant="outline" className="font-normal">
+              {labels.paymentMethod(payment.paymentMethod)}
+            </Badge>
+          )
         )}
       </div>
       {(payment.invoiceUrl || payment.invoicePdfUrl || payment.receiptUrl) && (
@@ -993,7 +1116,20 @@ function CreatorCardRow({
 }
 
 /** Ein Satz dazu, was gerade passiert und was als Nächstes kommt. */
-function StatusHint({ order, returnState }: { order: BrandOrder; returnState: 'success' | 'cancelled' | null }) {
+function StatusHint({
+  order,
+  returnState,
+  pollsExhausted,
+  checking,
+  onCheckPayment,
+}: {
+  order: BrandOrder
+  returnState: 'success' | 'cancelled' | null
+  /** Das automatische Nachfragen bei Stripe hat aufgegeben; die Brand kann von Hand prüfen. */
+  pollsExhausted: boolean
+  checking: boolean
+  onCheckPayment: () => void
+}) {
   const { t } = useTranslation()
   const { cancellation, responses, payment } = order
 
@@ -1013,8 +1149,36 @@ function StatusHint({ order, returnState }: { order: BrandOrder; returnState: 's
         : cancelledAt
           ? t('brandDashboard.hintCancelledAt', { date: cancelledAt, defaultValue: 'Dieser Auftrag wurde am {{date}} storniert.' })
           : t('brandDashboard.hintCancelled', { defaultValue: 'Dieser Auftrag wurde storniert.' })
+  // Storniert, obwohl schon bezahlt (etwa durch uns nach der Zahlung): Die
+  // Brand soll wissen, dass ihr Geld nicht verloren ist.
+  const cancelledPaidText =
+    payment?.status === 'paid'
+      ? t('brandDashboard.hintCancelledPaidRefundPending', {
+          defaultValue: 'Deine Zahlung ist eingegangen; die Rückerstattung folgt, wir melden uns.',
+        })
+      : ''
+
+  // Angebot: Nach einem gescheiterten oder abgelaufenen Checkout setzt das
+  // Backend den Auftrag auf offer_sent zurück; der Zahlungsstand sagt dann,
+  // was war.
+  const offerSentText =
+    payment?.status === 'failed'
+      ? t('brandDashboard.hintAwaitingFailed', {
+          defaultValue: 'Die Zahlung ist fehlgeschlagen. Bitte versuche es erneut – das Angebot gilt weiterhin bis zur Frist.',
+        })
+      : payment?.status === 'expired'
+        ? t('brandDashboard.hintOfferSentExpiredCheckout', {
+            defaultValue: 'Die Zahlungsseite ist abgelaufen. Du kannst die Zahlung neu starten, solange das Angebot gilt.',
+          })
+        : t('brandDashboard.hintOfferSent', {
+            defaultValue:
+              'Unser Angebot liegt vor: Die Creator unten haben für dein Event zugesagt. Nimm das Angebot an und bezahle, dann sind sie verbindlich gebucht und dein Event ist angelegt.',
+          })
 
   // Zahlung: Was gerade los ist, hängt am Zahlungsstand, nicht nur am Status.
+  // Nach der Rückkehr aus dem Checkout fragt die Seite bei Stripe nach; gibt
+  // sie auf, bekommt die Brand einen Knopf zum Nachprüfen.
+  const awaitingUnconfirmed = returnState === 'success' && payment?.status === 'pending' && pollsExhausted
   const awaitingText =
     payment?.status === 'processing'
       ? t('brandDashboard.hintAwaitingProcessing', {
@@ -1025,23 +1189,46 @@ function StatusHint({ order, returnState }: { order: BrandOrder; returnState: 's
         ? t('brandDashboard.hintAwaitingFailed', {
             defaultValue: 'Die Zahlung ist fehlgeschlagen. Bitte versuche es erneut – das Angebot gilt weiterhin bis zur Frist.',
           })
-        : returnState === 'success'
-          ? t('brandDashboard.hintAwaitingSuccess', {
-              defaultValue: 'Danke! Wir warten auf die Bestätigung von Stripe – das dauert meist nur Sekunden.',
+        : awaitingUnconfirmed
+          ? t('brandDashboard.hintAwaitingUnconfirmed', {
+              defaultValue: 'Noch nicht bestätigt. Prüfe den Zahlungsstand oder melde dich bei uns.',
             })
-          : t('brandDashboard.hintAwaitingPending', {
-              defaultValue: 'Die Zahlung ist noch offen. Schliesse sie ab, um die Creator verbindlich zu buchen.',
-            })
+          : returnState === 'success'
+            ? t('brandDashboard.hintAwaitingSuccess', {
+                defaultValue: 'Danke! Wir warten auf die Bestätigung von Stripe – das dauert meist nur Sekunden.',
+              })
+            : t('brandDashboard.hintAwaitingPending', {
+                defaultValue: 'Die Zahlung ist noch offen. Schliesse sie ab, um die Creator verbindlich zu buchen.',
+              })
 
+  // Bestätigt: Event und Buchung entstehen nach der Zahlung. Scheitert das
+  // (provisioning 'failed'), bleibt der Auftrag bezahlt und wir holen es
+  // nach — die Brand soll wissen, wohin sie sich wenden kann.
+  const provisioningOpen = order.provisioning !== null && order.provisioning !== 'done'
   const confirmedText =
-    order.provisioning && order.provisioning !== 'done'
-      ? t('brandDashboard.hintConfirmedProvisioning', {
-          defaultValue: 'Zahlung eingegangen, danke! Wir legen gerade dein Event und die Buchung der Creator an.',
-        })
-      : t('brandDashboard.hintConfirmed', {
+    order.provisioning === 'failed'
+      ? t('brandDashboard.hintConfirmedProvisioningFailed', {
           defaultValue:
-            'Bezahlt und gebucht. Dein Event ist angelegt und die Creator sind verbindlich dabei – das Briefing haben sie bekommen. Eine Absage ist ab jetzt nur noch über uns möglich (mit Rückerstattung), damit wir die Creator persönlich informieren können.',
+            'Zahlung eingegangen. Event und Buchung werden gerade nachgeholt – falls das länger dauert, melde dich bei office@shareyourparty.de.',
         })
+      : provisioningOpen
+        ? pollsExhausted
+          ? t('brandDashboard.hintConfirmedProvisioningSlow', {
+              defaultValue:
+                'Zahlung eingegangen. Event und Buchung brauchen gerade etwas länger – prüfe den Stand oder melde dich bei office@shareyourparty.de.',
+            })
+          : t('brandDashboard.hintConfirmedProvisioning', {
+              defaultValue: 'Zahlung eingegangen, danke! Wir legen gerade dein Event und die Buchung der Creator an.',
+            })
+        : t('brandDashboard.hintConfirmed', {
+            defaultValue:
+              'Bezahlt und gebucht. Dein Event ist angelegt und die Creator sind verbindlich dabei – das Briefing haben sie bekommen. Eine Absage ist ab jetzt nur noch über uns möglich (mit Rückerstattung), damit wir die Creator persönlich informieren können.',
+          })
+
+  // Der Knopf zum Nachprüfen, wenn das automatische Nachfragen aufgegeben hat.
+  const showCheckPayment =
+    (order.status === 'awaiting_payment' && awaitingUnconfirmed) ||
+    (order.status === 'confirmed' && provisioningOpen && pollsExhausted)
 
   const text = {
     draft: t('brandDashboard.hintDraft', {
@@ -1057,10 +1244,7 @@ function StatusHint({ order, returnState }: { order: BrandOrder; returnState: 's
       defaultValue:
         'Wir fragen gerade passende Creator nach ihrer Verfügbarkeit. Sobald Zusagen vorliegen, bekommst du ein Angebot – nur mit Creatorn, die wirklich dabei sind.',
     }),
-    offer_sent: t('brandDashboard.hintOfferSent', {
-      defaultValue:
-        'Unser Angebot liegt vor: Die Creator unten haben für dein Event zugesagt. Nimm das Angebot an und bezahle, dann sind sie verbindlich gebucht und dein Event ist angelegt.',
-    }),
+    offer_sent: offerSentText,
     awaiting_payment: awaitingText,
     confirmed: confirmedText,
     completed: t('brandDashboard.hintCompleted', { defaultValue: 'Dieser Auftrag ist abgeschlossen. Danke für die Zusammenarbeit!' }),
@@ -1095,12 +1279,21 @@ function StatusHint({ order, returnState }: { order: BrandOrder; returnState: 's
   return (
     <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-4 text-sm">
       <Icon className="h-5 w-5 shrink-0 text-primary mt-0.5" />
-      <div className="space-y-1">
+      <div className="space-y-1 flex-1 min-w-0">
         <p>
           {text}
           {responsesText ? ` ${responsesText}` : ''}
+          {order.status === 'cancelled' && cancelledPaidText ? ` ${cancelledPaidText}` : ''}
         </p>
         {reason && <p className="text-muted-foreground whitespace-pre-wrap">„{reason}“</p>}
+        {showCheckPayment && (
+          <div className="pt-1">
+            <Button variant="outline" size="sm" className="gap-2" loading={checking} onClick={onCheckPayment}>
+              <RefreshCw className="h-4 w-4" />
+              {t('brandDashboard.checkPayment', { defaultValue: 'Zahlungsstand prüfen' })}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

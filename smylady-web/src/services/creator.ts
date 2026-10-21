@@ -150,9 +150,15 @@ export interface CreatorAssignment {
   eventId: string
   eventName: string
   eventDate: string
+  /** Ende des Events, wenn bekannt; leer bei Events ohne Ende. Entscheidet mit eventDate, ob das Event vorbei ist. */
+  eventEndDate: string
   eventLocation: string
   /** Frist für die Veröffentlichung der Inhalte, aus dem Brand-Auftrag; null, wenn keine gesetzt ist. */
   publishDeadline: string | null
+  /** Es gibt Briefing-Unterlagen (PDF), die per E-Mail kommen. */
+  hasBriefingFiles: boolean
+  /** Gesetzt, wenn die Anfrage an diesen Creator zurückgezogen wurde; leer sonst. */
+  cancelledAt: string
   briefingText: string
   deliverables: { type: string; quantity: number; platform?: string; notes?: string }[]
   compensation: number | null
@@ -213,8 +219,12 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
     eventId: idOf(raw?.eventId),
     eventName: text(event.name),
     eventDate: text(event.eventDate),
+    eventEndDate: text(event.eventEndDate ?? event.endDate),
     eventLocation: text(event.locationName),
+    // Top-level am Auftrag; fehlt das Feld (älteres Backend), gibt es keine Frist.
     publishDeadline: text(raw?.publishDeadline) || null,
+    hasBriefingFiles: Boolean(raw?.hasBriefingFiles),
+    cancelledAt: text(raw?.cancelledAt),
     briefingText: text(raw?.briefingText),
     deliverables: deliverables.map((entry) => ({
       type: text(entry?.type) || 'other',
@@ -297,10 +307,29 @@ export function isCreatorConflict(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 409
 }
 
+/**
+ * Was ein 409 von POST /creators/me/assignments/:id/accept|decline bedeutet,
+ * erkannt am Text des Backends (ASSIGNMENT_EXPIRED, ASSIGNMENT_ALREADY_ANSWERED
+ * in creator-assignment.service.ts) — so bekommt die Meldung eine Übersetzung.
+ * 'unknown', wenn der Text keinem bekannten Fall entspricht.
+ */
+export type CreatorConflictKind = 'expired' | 'answered' | 'withdrawn' | 'unknown'
+
+export function readCreatorConflict(error: unknown): CreatorConflictKind {
+  if (!isCreatorConflict(error)) return 'unknown'
+  const message = readCreatorError(error, '').toLowerCase()
+  if (message.includes('abgelaufen')) return 'expired'
+  if (message.includes('bereits') && message.includes('antwort')) return 'answered'
+  if (message.includes('zurückgezogen')) return 'withdrawn'
+  return 'unknown'
+}
+
 export function readCreatorError(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; msg?: string } | undefined
-    return data?.message || data?.msg || fallback
+    const data = error.response?.data as { message?: string | string[]; msg?: string } | undefined
+    // class-validator liefert die Meldungen als Liste.
+    const message = Array.isArray(data?.message) ? data.message.join(', ') : data?.message
+    return message || data?.msg || fallback
   }
   return fallback
 }

@@ -261,7 +261,8 @@ function DashboardContent() {
                         </>
                       ) : (
                         <>
-                          <div className="font-medium">{formatPrice(order.budget)}</div>
+                          {/* Ohne Budget (Entwurf) ein Strich — formatPrice(0) hiesse „0 €". */}
+                          <div className="font-medium">{order.budget === null ? '—' : formatPrice(order.budget)}</div>
                           <div className="text-xs text-muted-foreground">
                             {t('brandDashboard.budgetLabel', { defaultValue: 'Budget' })}
                           </div>

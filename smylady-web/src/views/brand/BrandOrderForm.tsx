@@ -30,6 +30,7 @@ import {
   DELIVERABLE_PLATFORMS,
   DELIVERABLE_TYPES,
   EVENT_IMAGE_MAX_BYTES,
+  isRateLimited,
   readBrandError,
   readMissingFields,
   type AudienceGender,
@@ -169,7 +170,7 @@ function OrderForm() {
     if (!order) return
     setTitle(order.title)
     setGoal(order.goal)
-    setBudget(String(order.budget))
+    setBudget(order.budget === null ? '' : String(order.budget))
     setEventName(order.eventName)
     const start = splitIso(order.eventDate)
     setEventDate(start.date)
@@ -258,7 +259,10 @@ function OrderForm() {
     toast({
       variant: 'destructive',
       title: t('common.error', { defaultValue: 'Fehler' }),
-      description: readBrandError(error, fallback),
+      // 429: Der Rohtext des Backends („ThrottlerException") sagt der Brand nichts.
+      description: isRateLimited(error)
+        ? t('brandRegister.rateLimited', { defaultValue: 'Zu viele Versuche, bitte kurz warten.' })
+        : readBrandError(error, fallback),
     })
 
   // Objekt-URLs der Vorschau wieder freigeben — beim Wechsel und beim
@@ -276,8 +280,13 @@ function OrderForm() {
     // Dieselben Grenzen wie das Backend (Typ im Service, Größe als
     // Multer-Limit), nur früher: Ein 10-MB-Upload, der am Ende mit 413
     // scheitert, ist für die Brand nicht nachvollziehbar.
-    if (!file.type.startsWith('image/')) {
-      fail(null, t('brandDashboard.validateEventImageType', { defaultValue: 'Bitte wähle eine Bilddatei (JPG, PNG oder WebP).' }))
+    //
+    // HEIC/HEIF (iPhone) meldet der Browser oft ohne MIME-Typ; dann zählt
+    // die Endung. Das Backend konvertiert beim Speichern — eine Vorschau
+    // kann der Browser aber nicht rendern, deshalb bleibt sie weg.
+    const isHeic = /\.(heic|heif)$/i.test(file.name) || file.type === 'image/heic' || file.type === 'image/heif'
+    if (!file.type.startsWith('image/') && !isHeic) {
+      fail(null, t('brandDashboard.validateEventImageType', { defaultValue: 'Bitte wähle eine Bilddatei (JPG, PNG, WebP oder HEIC).' }))
       return
     }
     if (file.size > EVENT_IMAGE_MAX_BYTES) {
@@ -285,7 +294,7 @@ function OrderForm() {
       return
     }
     setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
+    setImagePreview(isHeic ? '' : URL.createObjectURL(file))
     setImageRemoved(false)
   }
 
@@ -384,7 +393,8 @@ function OrderForm() {
     if ((from !== undefined && (!Number.isFinite(from) || from < 0)) || (to !== undefined && (!Number.isFinite(to) || to < 0))) {
       return problem(t('brandDashboard.validateAge', { defaultValue: 'Bitte prüfe die Altersangaben.' }))
     }
-    if (submit && from !== undefined && to !== undefined && from > to) {
+    // Auch im Entwurf: Das Backend lehnt eine verdrehte Spanne in jedem Fall ab.
+    if (from !== undefined && to !== undefined && from > to) {
       return problem(t('brandDashboard.validateAgeRange', { defaultValue: '„Alter von“ darf nicht größer sein als „Alter bis“.' }))
     }
     const interestList = interests
@@ -748,9 +758,22 @@ function OrderForm() {
                 Events. */}
             <div className="space-y-2">
               <Label htmlFor="eventImage">{t('brandDashboard.fieldEventImage', { defaultValue: 'Eventbild' })} *</Label>
-              {imagePreview ? (
+              {imagePreview || imageFile ? (
                 <div className="relative w-full max-w-md aspect-video rounded-lg overflow-hidden border">
-                  <img src={resolveImageUrl(imagePreview)} alt="" className="w-full h-full object-cover" />
+                  {imagePreview ? (
+                    <img src={resolveImageUrl(imagePreview)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    // HEIC: keine Vorschau möglich, die Datei ist aber gewählt.
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-muted/40 px-4 text-center">
+                      <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm font-medium truncate max-w-full">{imageFile?.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t('brandDashboard.heicPreviewUnavailable', {
+                          defaultValue: 'Vorschau für HEIC nicht möglich, das Bild wird beim Speichern konvertiert.',
+                        })}
+                      </span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={removeImage}
@@ -779,14 +802,14 @@ function OrderForm() {
                 className="hidden"
                 onChange={handleImageChange}
               />
-              {imagePreview && (
+              {(imagePreview || imageFile) && (
                 <label htmlFor="eventImage" className="inline-block text-sm text-primary cursor-pointer hover:underline">
                   {t('brandDashboard.replaceEventImage', { defaultValue: 'Bild ersetzen' })}
                 </label>
               )}
               <p className="text-xs text-muted-foreground">
                 {t('brandDashboard.fieldEventImageHint', {
-                  defaultValue: 'Pflicht zum Einreichen. Ideales Format 16:9 (z. B. 1920 × 1080 px), JPG, PNG oder WebP, höchstens 10 MB.',
+                  defaultValue: 'Pflicht zum Einreichen. Ideales Format 16:9 (z. B. 1920 × 1080 px), JPG, PNG, WebP oder HEIC, höchstens 10 MB.',
                 })}
               </p>
             </div>

@@ -11,6 +11,7 @@ import {
   Ban, ShieldCheck, Star, Wallet, Building2, Sparkles, Pencil,
 } from 'lucide-react'
 import { useCreatorStanding } from '@/hooks/useCreatorStanding'
+import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -34,6 +35,13 @@ export default function Header() {
   // (einmal pro Sitzung, react-query-Cache, vgl. CreatorCard in den Einstellungen).
   const { standing: creatorStanding } = useCreatorStanding()
   const isCreator = creatorStanding === 'member'
+
+  // Brand-Bereich für Marken: isBrand aus GET /users/me ODER ein Brand-Profil
+  // in Prüfung bzw. freigeschaltet (GET /brands/me, 404 = keins, gecacht).
+  // Eine frisch registrierte Brand hat isBrand noch nicht im gespeicherten
+  // Nutzerobjekt und fand den Bereich sonst nur über die Adresszeile.
+  const { standing: brandStanding } = useBrandProfile()
+  const isBrand = Boolean(user?.isBrand) || brandStanding === 'pending' || brandStanding === 'active'
 
   // Fetch unread notification count
   const { data: unreadCount = 0 } = useQuery({
@@ -162,8 +170,8 @@ export default function Header() {
                   {t('nav.createEvent')}
                 </Button>
               </Link>
-              {/* Brand-Dashboard — nur für Marken (isBrand aus GET /users/me, siehe types/index.ts). */}
-              {user?.isBrand && (
+              {/* Brand-Dashboard — nur für Marken (siehe isBrand oben). */}
+              {isBrand && (
                 <Link href={localePath("/brand")}>
                   <Button suppressHydrationWarning variant="ghost" size="sm" className="gap-2">
                     <Building2 className="h-4 w-4" />
@@ -329,7 +337,7 @@ export default function Header() {
                 ))}
 
                 {/* Brand-Bereich — nur für Marken */}
-                {user?.isBrand && (
+                {isBrand && (
                   <div className="border-t mt-2 pt-3">
                     <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {t('brandDashboard.navSection', { defaultValue: 'Für Marken' })}

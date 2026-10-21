@@ -736,9 +736,16 @@ export default function BrandRegister() {
                   defaultValue: 'Wir prüfen deine Angaben und schalten dich zeitnah frei.',
                 })}
               </p>
-              {/* Kein automatischer Redirect — der Hinweis soll gelesen werden können. */}
-              <Link href={localePath('/explore')} className="block">
+              {/* Kein automatischer Redirect — der Hinweis soll gelesen werden können.
+                  Der Brand-Bereich zeigt in Prüfung den Wartehinweis und lässt das
+                  Profil schon bearbeiten. */}
+              <Link href={localePath('/brand')} className="block">
                 <Button variant="gradient" className="w-full">
+                  {t('brandRegister.doneBrandButton', { defaultValue: 'Zum Brand-Bereich' })}
+                </Button>
+              </Link>
+              <Link href={localePath('/explore')} className="block">
+                <Button variant="outline" className="w-full">
                   {t('brandRegister.doneButton', { defaultValue: 'Events entdecken' })}
                 </Button>
               </Link>

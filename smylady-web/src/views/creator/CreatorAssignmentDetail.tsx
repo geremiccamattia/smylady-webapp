@@ -24,12 +24,12 @@ import {
   creatorAreaService,
   isCreatorConflict,
   isPaidOut,
-  isResponseOverdue,
+  readCreatorConflict,
   readCreatorError,
   type CreatorAssignment,
 } from '@/services/creator'
-import { formatDate, formatDateTime, formatPrice, isEventOver } from '@/lib/utils'
-import { formatRemaining, useCountdown } from '@/lib/deadline'
+import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, isEventOver } from '@/lib/utils'
+import { formatRemaining, useCountdown, type RemainingUnits } from '@/lib/deadline'
 import { LoadingBars } from '@/components/brand/brandShared'
 import {
   CreatorGate,
@@ -99,13 +99,29 @@ function AssignmentDetail() {
         queryClient.invalidateQueries({ queryKey: ['creator', 'assignment', id] })
         queryClient.invalidateQueries({ queryKey: CREATOR_ASSIGNMENTS_QUERY_KEY })
       }
+      // Die bekannten 409-Fälle bekommen eine Übersetzung; alles andere
+      // zeigt den Text des Backends.
+      const conflict = readCreatorConflict(error)
+      const description =
+        conflict === 'expired'
+          ? t('creatorDashboard.conflictExpired', { defaultValue: 'Die Antwortfrist für diese Anfrage ist abgelaufen.' })
+          : conflict === 'answered'
+            ? t('creatorDashboard.conflictAnswered', { defaultValue: 'Für diese Anfrage liegt bereits eine Antwort vor.' })
+            : conflict === 'withdrawn'
+              ? t('creatorDashboard.conflictWithdrawn', { defaultValue: 'Diese Anfrage wurde zurückgezogen.' })
+              : readCreatorError(error, t('creatorDashboard.respondFailed', { defaultValue: 'Die Antwort konnte nicht gespeichert werden.' }))
       toast({
         variant: 'destructive',
         title: t('common.error', { defaultValue: 'Fehler' }),
-        description: readCreatorError(error, t('creatorDashboard.respondFailed', { defaultValue: 'Die Antwort konnte nicht gespeichert werden.' })),
+        description,
       })
     },
   })
+
+  // Die Antwortfrist läuft live mit: Verstreicht sie, während die Seite
+  // offen ist, sperren die Knöpfe, statt in einen 409 zu laufen.
+  const deadlineRemaining = useCountdown(query.data?.responseDeadline)
+  const overdue = deadlineRemaining?.expired ?? false
 
   if (query.isLoading) {
     return (
@@ -135,10 +151,12 @@ function AssignmentDetail() {
 
   // Vergangenes Event: Die Anfrage bleibt sichtbar, aber eine Antwort ändert
   // nichts mehr. Buttons bleiben stehen, damit klar ist, was hier möglich
-  // gewesen wäre — nur gesperrt und mit Hinweis.
-  const eventPast = isEventOver(null, assignment.eventDate)
-  const overdue = isResponseOverdue(assignment)
-  const cancelled = assignment.orderStatus === 'cancelled'
+  // gewesen wäre — nur gesperrt und mit Hinweis. Vorbei ist das Event mit
+  // seinem Ende, sonst mit seinem Beginn.
+  const eventPast = isEventOver(assignment.eventEndDate || null, assignment.eventDate)
+  // Zurückgezogen (nur diese Anfrage) oder der ganze Auftrag storniert.
+  const withdrawn = Boolean(assignment.cancelledAt)
+  const cancelled = assignment.orderStatus === 'cancelled' || withdrawn
   const pending = assignment.response === 'pending' && !cancelled
   const canAnswer = pending && !eventPast && !overdue
   const booked = assignment.phase === 'booked' && assignment.response === 'accepted' && !cancelled
@@ -175,13 +193,19 @@ function AssignmentDetail() {
 
           {cancelled ? (
             <p className="text-sm text-muted-foreground">
-              {t('creatorDashboard.orderCancelledHint', {
-                defaultValue: 'Dieser Auftrag wurde storniert. Es gibt nichts mehr zu tun – danke fürs Mitmachen.',
-              })}
+              {withdrawn
+                ? t('creatorDashboard.assignmentWithdrawnHint', {
+                    date: assignment.cancelledAt ? formatDate(assignment.cancelledAt) : '',
+                    defaultValue: 'Diese Anfrage wurde am {{date}} zurückgezogen. Es gibt nichts mehr zu tun – danke fürs Mitmachen.',
+                  })
+                : t('creatorDashboard.orderCancelledHint', {
+                    defaultValue: 'Dieser Auftrag wurde storniert. Es gibt nichts mehr zu tun – danke fürs Mitmachen.',
+                  })}
             </p>
           ) : pending ? (
             <>
-              {assignment.responseDeadline && !eventPast && <AnswerDeadline deadline={assignment.responseDeadline} />}
+              {/* Die laufende Frist; abgelaufen sagt es der Hinweis darunter. */}
+              {assignment.responseDeadline && !eventPast && !overdue && <AnswerDeadline deadline={assignment.responseDeadline} />}
               <p className="text-sm">
                 {eventPast
                   ? t('creatorDashboard.eventPastHint', {
@@ -266,7 +290,11 @@ function AssignmentDetail() {
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm space-y-2">
-          <div>{assignment.eventDate ? formatDateTime(assignment.eventDate) : '—'}</div>
+          {/* Ohne Uhrzeit (Mitternacht in Wien) nur das Datum — „00:00" wäre eine Scheinangabe. */}
+          <div>
+            {assignment.eventDate ? formatDateTimeSmart(assignment.eventDate) : '—'}
+            {assignment.eventEndDate ? ` – ${formatDateTimeSmart(assignment.eventEndDate)}` : ''}
+          </div>
           {assignment.eventLocation && <div className="text-muted-foreground">{assignment.eventLocation}</div>}
           {assignment.publishDeadline && (
             <div>
@@ -306,7 +334,7 @@ function AssignmentDetail() {
               {assignment.deliverables.map((entry, index) => (
                 <li key={`${entry.type}-${index}`}>
                   {entry.quantity}× {labels.deliverable(entry.type)}
-                  {entry.platform ? ` (${entry.platform})` : ''}
+                  {entry.platform ? ` (${labels.platform(entry.platform)})` : ''}
                   {entry.notes ? <span className="text-muted-foreground"> – {entry.notes}</span> : null}
                 </li>
               ))}
@@ -331,16 +359,19 @@ function AssignmentDetail() {
           )}
           {/* Die Unterlagen (PDF) gibt es hier nicht zum Herunterladen, sie
               kommen per E-Mail: bei 'sent' sind sie schon raus, sonst folgen
-              sie noch. */}
-          <p className="text-xs text-muted-foreground">
-            {assignment.status === 'sent'
-              ? t('creatorDashboard.briefingSent', {
-                  defaultValue: 'Die ausführlichen Briefing-Unterlagen haben wir dir per E-Mail geschickt.',
-                })
-              : t('creatorDashboard.briefingPending', {
-                  defaultValue: 'Die ausführlichen Briefing-Unterlagen bekommst du per E-Mail, sobald sie fertig sind.',
-                })}
-          </p>
+              sie noch. Ohne Unterlagen (hasBriefingFiles) kein Hinweis — sonst
+              wartete der Creator auf eine Mail, die nie kommt. */}
+          {assignment.hasBriefingFiles && (
+            <p className="text-xs text-muted-foreground">
+              {assignment.status === 'sent'
+                ? t('creatorDashboard.briefingSent', {
+                    defaultValue: 'Die ausführlichen Briefing-Unterlagen haben wir dir per E-Mail geschickt.',
+                  })
+                : t('creatorDashboard.briefingPending', {
+                    defaultValue: 'Die ausführlichen Briefing-Unterlagen bekommst du per E-Mail, sobald sie fertig sind.',
+                  })}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -392,9 +423,12 @@ function AnswerDeadline({ deadline }: { deadline: string }) {
   const remaining = useCountdown(deadline)
   if (!remaining) return null
 
-  const units = {
+  const units: RemainingUnits = {
+    day: t('brandDashboard.unitDay', { defaultValue: 'Tag' }),
     days: t('brandDashboard.unitDays', { defaultValue: 'Tage' }),
+    hour: t('brandDashboard.unitHour', { defaultValue: 'Std' }),
     hours: t('brandDashboard.unitHours', { defaultValue: 'Std' }),
+    minute: t('brandDashboard.unitMinute', { defaultValue: 'Min' }),
     minutes: t('brandDashboard.unitMinutes', { defaultValue: 'Min' }),
   }
   const urgent = !remaining.expired && remaining.totalMs < 12 * 60 * 60 * 1000
@@ -419,19 +453,42 @@ function PayoutHint({ assignment }: { assignment: CreatorAssignment }) {
   const localePath = useLocalePath()
 
   if (isPaidOut(assignment)) {
+    // Ohne Datum (Altfall, von Hand vermerkt) die Variante ohne „am …".
+    const paidAt = assignment.payout?.paidAt ? formatDate(assignment.payout.paidAt) : ''
+    const manual = assignment.payout?.status === 'manual'
+    const text = manual
+      ? paidAt
+        ? t('creatorDashboard.payoutManualHint', { date: paidAt, defaultValue: 'Deine Vergütung wurde am {{date}} überwiesen.' })
+        : t('creatorDashboard.payoutManualHintNoDate', { defaultValue: 'Deine Vergütung wurde überwiesen.' })
+      : paidAt
+        ? t('creatorDashboard.payoutPaidHint', {
+            date: paidAt,
+            defaultValue: 'Deine Vergütung wurde am {{date}} auf dein Stripe-Konto ausgezahlt.',
+          })
+        : t('creatorDashboard.payoutPaidHintNoDate', { defaultValue: 'Deine Vergütung wurde auf dein Stripe-Konto ausgezahlt.' })
     return (
       <div className="flex items-start gap-2 text-green-800">
         <Wallet className="h-5 w-5 shrink-0 mt-0.5" />
+        <p>{text}</p>
+      </div>
+    )
+  }
+
+  // Die Auszahlung ist bei Stripe gescheitert (meist: Auszahlungskonto
+  // fehlt oder ist unvollständig). Wir kümmern uns, aber das Konto soll der
+  // Creator selbst prüfen.
+  if (assignment.payout?.status === 'failed') {
+    return (
+      <div className="flex items-start gap-2 text-destructive">
+        <Wallet className="h-5 w-5 shrink-0 mt-0.5" />
         <p>
-          {assignment.payout?.status === 'manual'
-            ? t('creatorDashboard.payoutManualHint', {
-                date: assignment.payout.paidAt ? formatDate(assignment.payout.paidAt) : '',
-                defaultValue: 'Deine Vergütung wurde am {{date}} überwiesen.',
-              })
-            : t('creatorDashboard.payoutPaidHint', {
-                date: assignment.payout?.paidAt ? formatDate(assignment.payout.paidAt) : '',
-                defaultValue: 'Deine Vergütung wurde am {{date}} auf dein Stripe-Konto ausgezahlt.',
-              })}
+          {t('creatorDashboard.payoutFailedHint', {
+            defaultValue:
+              'Die Auszahlung ist fehlgeschlagen – wir kümmern uns darum. Prüfe bitte dein Auszahlungskonto in den Einstellungen.',
+          })}{' '}
+          <Link href={localePath('/settings#payout')} className="underline hover:no-underline">
+            {t('creatorDashboard.payoutSettingsLink', { defaultValue: 'Auszahlungskonto prüfen' })}
+          </Link>
         </p>
       </div>
     )
