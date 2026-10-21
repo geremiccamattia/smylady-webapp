@@ -67,6 +67,9 @@ export type DeliverablePlatform = (typeof DELIVERABLE_PLATFORMS)[number]
 export const AUDIENCE_GENDERS = ['all', 'female', 'male', 'diverse'] as const
 export type AudienceGender = (typeof AUDIENCE_GENDERS)[number]
 
+/** Obergrenze für das Eventbild im Auftrag — dieselbe wie im Backend (Multer-Limit). */
+export const EVENT_IMAGE_MAX_BYTES = 10 * 1024 * 1024
+
 export interface BrandOrderDeliverable {
   type: DeliverableType
   quantity: number
@@ -158,6 +161,14 @@ export interface BrandOrder {
   /** Nur gesetzt, wenn der Ort aus der Adresssuche kam; Freitext hat keine. */
   eventCoordinates: { lat: number; lng: number } | null
   eventDescription: string
+  /**
+   * Das Eventbild, das die Brand im Entwurf hochgeladen hat (POST
+   * /brand-orders/:id/event-image). Pflicht zum Einreichen; wird beim
+   * Annehmen des Angebots zum Bild des Events. Leer, solange keines da ist.
+   */
+  eventImageUrl: string
+  eventImageThumbnailUrl: string
+  eventImageFileName: string
   deliverables: BrandOrderDeliverable[]
   audienceAgeFrom: number | null
   audienceAgeTo: number | null
@@ -283,6 +294,9 @@ export function mapBrandOrder(raw: any): BrandOrder {
     eventLocation: str(raw?.eventDetails?.locationName),
     eventCoordinates: coordinatesOrNull(raw?.eventDetails?.coordinates),
     eventDescription: str(raw?.eventDetails?.description),
+    eventImageUrl: str(raw?.eventImage?.url),
+    eventImageThumbnailUrl: str(raw?.eventImage?.thumbnailUrl),
+    eventImageFileName: str(raw?.eventImage?.fileName),
     deliverables: deliverables.map((entry) => ({
       type: (str(entry?.type) || 'other') as DeliverableType,
       quantity: num(entry?.quantity) || 1,
@@ -369,6 +383,26 @@ export const brandService = {
   },
 
   /**
+   * Lädt das Eventbild zum Entwurf hoch (Feldname 'image', höchstens
+   * EVENT_IMAGE_MAX_BYTES). Ein zweiter Upload ersetzt das erste Bild. Nur im
+   * Status 'draft'; sonst 409. Ein unlesbares Bild kommt als 400 zurück.
+   */
+  async uploadOrderImage(id: string, file: File): Promise<BrandOrder> {
+    const form = new FormData()
+    form.append('image', file)
+    const response = await apiClient.post(`/brand-orders/${id}/event-image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return mapBrandOrder(unwrap(response))
+  },
+
+  /** Entfernt das Eventbild vom Entwurf. Nur im Status 'draft'; sonst 409. */
+  async removeOrderImage(id: string): Promise<BrandOrder> {
+    const response = await apiClient.delete(`/brand-orders/${id}/event-image`)
+    return mapBrandOrder(unwrap(response))
+  },
+
+  /**
    * Einreichen. Ein unvollständiger Entwurf bekommt 400 mit der Liste der
    * fehlenden Felder in data.missing — siehe readMissingFields().
    */
@@ -426,7 +460,8 @@ export function readBrandError(error: unknown, fallback: string): string {
 /**
  * Die fehlenden Felder aus der 400-Antwort von POST /brand-orders/:id/submit
  * (data.missing: 'goal' | 'budget' | 'eventName' | 'eventDate' |
- * 'eventDateInPast' | 'deliverables'). Leer, wenn es keine solche Liste gibt.
+ * 'eventDateInPast' | 'eventImage' | 'deliverables'). Leer, wenn es keine
+ * solche Liste gibt.
  */
 export function readMissingFields(error: unknown): string[] {
   if (!axios.isAxiosError(error)) return []

@@ -555,6 +555,26 @@ function OrderDetail() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
+          {/* Das Eventbild aus dem Entwurf — es wird beim Annehmen des
+              Angebots zum Bild des Events. Im Entwurf ohne Bild ein Hinweis,
+              weil das Einreichen daran scheitert. */}
+          {order.eventImageUrl ? (
+            <Field label={t('brandDashboard.fieldEventImage', { defaultValue: 'Eventbild' })}>
+              <img
+                src={resolveImageUrl(order.eventImageUrl)}
+                alt={order.eventName || order.title}
+                className="w-full max-w-md aspect-video object-cover rounded-md border mt-1"
+              />
+            </Field>
+          ) : (
+            order.status === 'draft' && (
+              <Field label={t('brandDashboard.fieldEventImage', { defaultValue: 'Eventbild' })}>
+                <p className="text-muted-foreground">
+                  {t('brandDashboard.noEventImageYet', { defaultValue: 'Noch kein Eventbild. Zum Einreichen brauchen wir eines.' })}
+                </p>
+              </Field>
+            )
+          )}
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label={t('brandDashboard.fieldEventName', { defaultValue: 'Name des Events' })}>{order.eventName}</Field>
             <Field label={t('brandDashboard.fieldEventDate', { defaultValue: 'Beginn' })}>

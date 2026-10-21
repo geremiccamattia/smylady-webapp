@@ -80,6 +80,7 @@ export function useBrandLabels() {
       eventDateInPast: t('brandDashboard.missingEventDateInPast', {
         defaultValue: 'Das Event liegt in der Vergangenheit',
       }),
+      eventImage: t('brandDashboard.missingEventImage', { defaultValue: 'ein Eventbild' }),
       deliverables: t('brandDashboard.missingDeliverables', { defaultValue: 'mindestens ein gewünschter Inhalt' }),
     })[code] ?? code
 

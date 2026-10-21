@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CalendarDays, Check, Clapperboard, FileText, Plus, Target, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, Clapperboard, FileText, ImagePlus, Plus, Target, Trash2, Users, X } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,7 @@ import {
   brandService,
   DELIVERABLE_PLATFORMS,
   DELIVERABLE_TYPES,
+  EVENT_IMAGE_MAX_BYTES,
   readBrandError,
   readMissingFields,
   type AudienceGender,
@@ -38,6 +39,7 @@ import {
   type DeliverableType,
 } from '@/services/brand'
 import { BrandGate, LoadingBars, useBrandLabels } from '@/components/brand/brandShared'
+import { resolveImageUrl } from '@/lib/utils'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 
 const SELECT_CLASS =
@@ -88,6 +90,11 @@ function joinIso(date: string, time: string): string | undefined {
  *
  * Zwei Wege zum Abschluss: „Als Entwurf speichern" (nur anlegen/ändern) und
  * „Einreichen" (anlegen/ändern, dann POST /:id/submit).
+ *
+ * Das Eventbild geht als Datei getrennt vom JSON des Entwurfs hoch (POST
+ * /:id/event-image), nach dem Anlegen bzw. Ändern und vor dem Einreichen.
+ * Pflicht zum Einreichen — wie bei einem Veranstalter, der ein Event anlegt.
+ * Vorher nahm das Backend ersatzweise das Logo aus dem Brand-Profil.
  */
 export default function BrandOrderForm() {
   return (
@@ -130,6 +137,14 @@ function OrderForm() {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const locationSearchRef = useRef<HTMLDivElement>(null)
   const [eventDescription, setEventDescription] = useState('')
+  // Das Eventbild: eine neu gewählte Datei (imageFile, Vorschau als Objekt-
+  // URL) oder das Bild, das schon am Entwurf hängt (existingImageUrl). Hat
+  // die Brand das gespeicherte Bild entfernt, merkt imageRemoved das bis zum
+  // Speichern — erst dann geht DELETE /:id/event-image raus.
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState('')
+  const [existingImageUrl, setExistingImageUrl] = useState('')
+  const [imageRemoved, setImageRemoved] = useState(false)
   const [deliverables, setDeliverables] = useState<DeliverableRow[]>([emptyDeliverable()])
   const [ageFrom, setAgeFrom] = useState('')
   const [ageTo, setAgeTo] = useState('')
@@ -165,6 +180,10 @@ function OrderForm() {
     setEventLocation(order.eventLocation)
     setEventCoordinates(order.eventCoordinates)
     setEventDescription(order.eventDescription)
+    setExistingImageUrl(order.eventImageUrl)
+    setImagePreview(order.eventImageUrl)
+    setImageFile(null)
+    setImageRemoved(false)
     setDeliverables(
       order.deliverables.length > 0
         ? order.deliverables.map((entry) => ({
@@ -242,6 +261,43 @@ function OrderForm() {
       description: readBrandError(error, fallback),
     })
 
+  // Objekt-URLs der Vorschau wieder freigeben — beim Wechsel und beim
+  // Verlassen der Seite.
+  useEffect(() => {
+    if (!imagePreview.startsWith('blob:')) return
+    return () => URL.revokeObjectURL(imagePreview)
+  }, [imagePreview])
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    // Zurücksetzen, damit dieselbe Datei nach „Entfernen" erneut wählbar ist.
+    event.target.value = ''
+    if (!file) return
+    // Dieselben Grenzen wie das Backend (Typ im Service, Größe als
+    // Multer-Limit), nur früher: Ein 10-MB-Upload, der am Ende mit 413
+    // scheitert, ist für die Brand nicht nachvollziehbar.
+    if (!file.type.startsWith('image/')) {
+      fail(null, t('brandDashboard.validateEventImageType', { defaultValue: 'Bitte wähle eine Bilddatei (JPG, PNG oder WebP).' }))
+      return
+    }
+    if (file.size > EVENT_IMAGE_MAX_BYTES) {
+      fail(null, t('brandDashboard.validateEventImageSize', { defaultValue: 'Das Eventbild darf höchstens 10 MB groß sein.' }))
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+    setImageRemoved(false)
+  }
+
+  const removeImage = () => {
+    setImageFile(null)
+    setImagePreview('')
+    if (existingImageUrl) setImageRemoved(true)
+  }
+
+  /** Ein Bild ist da: neu gewählt oder gespeichert und nicht entfernt. */
+  const hasImage = Boolean(imageFile) || (Boolean(existingImageUrl) && !imageRemoved)
+
   /**
    * Prüft die Eingaben und baut den Request.
    *
@@ -299,6 +355,11 @@ function OrderForm() {
       return problem(
         t('brandDashboard.validateEventPast', { defaultValue: 'Das Event liegt in der Vergangenheit. Bitte prüfe das Datum.' }),
       )
+    }
+    // Das Eventbild ist Pflicht zum Einreichen (Backend: 'eventImage' in
+    // data.missing). Im Entwurf darf es noch fehlen.
+    if (submit && !hasImage) {
+      return problem(t('brandDashboard.validateEventImage', { defaultValue: 'Bitte lade ein Eventbild hoch.' }))
     }
 
     const rows = deliverables.map((row) => ({
@@ -371,19 +432,46 @@ function OrderForm() {
     // (mit Fehlerhinweis), statt im Formular zu bleiben, wo der nächste Klick
     // einen zweiten Entwurf anlegen würde.
     mutationFn: async ({ payload, submit }: { payload: BrandOrderPayload; submit: boolean }) => {
-      const saved = editId
+      let saved = editId
         ? await brandService.updateOrder(editId, payload)
         : await brandService.createOrder(payload)
-      if (!submit) return { order: saved, submitError: null as unknown }
+      // Das Bild erst nach dem JSON: Beim Anlegen gibt es die Auftrags-ID
+      // vorher nicht. Scheitert der Upload, bleibt der Entwurf gespeichert
+      // und das Einreichen unterbleibt — ohne Bild wiese das Backend es
+      // ohnehin ab.
       try {
-        return { order: await brandService.submitOrder(saved.id), submitError: null as unknown }
+        if (imageFile) {
+          saved = await brandService.uploadOrderImage(saved.id, imageFile)
+        } else if (imageRemoved && existingImageUrl) {
+          saved = await brandService.removeOrderImage(saved.id)
+        }
       } catch (error) {
-        return { order: saved, submitError: error }
+        return { order: saved, submitError: null as unknown, imageError: error }
+      }
+      if (!submit) return { order: saved, submitError: null as unknown, imageError: null as unknown }
+      try {
+        return { order: await brandService.submitOrder(saved.id), submitError: null as unknown, imageError: null as unknown }
+      } catch (error) {
+        return { order: saved, submitError: error, imageError: null as unknown }
       }
     },
-    onSuccess: ({ order, submitError }, variables) => {
+    onSuccess: ({ order, submitError, imageError }, variables) => {
       queryClient.invalidateQueries({ queryKey: BRAND_ORDERS_QUERY_KEY })
       queryClient.setQueryData(['brand', 'order', order.id], order)
+      if (imageError) {
+        // Der Entwurf existiert, nur das Bild fehlt: zurück in den Entwurf,
+        // damit die Brand es dort noch einmal wählt — nicht auf die
+        // Auftragsseite, wo es keinen Upload gibt.
+        fail(
+          imageError,
+          t('brandDashboard.eventImageUploadFailedDraftSaved', {
+            defaultValue:
+              'Der Entwurf ist gespeichert, aber das Eventbild konnte nicht hochgeladen werden. Bitte versuche es im Entwurf noch einmal.',
+          }),
+        )
+        router.push(localePath(`/brand/orders/${order.id}/edit`))
+        return
+      }
       const missing = submitError ? readMissingFields(submitError) : []
       if (missing.length > 0) {
         // Das Backend hat den Entwurf als unvollständig abgewiesen (400 mit
@@ -654,6 +742,53 @@ function OrderForm() {
                 onChange={(e) => setEventDescription(e.target.value)}
                 maxLength={2000}
               />
+            </div>
+            {/* Eventbild — wie beim Anlegen eines Events (CreateEvent),
+                nur eines: Es wird beim Annehmen des Angebots zum Bild des
+                Events. */}
+            <div className="space-y-2">
+              <Label htmlFor="eventImage">{t('brandDashboard.fieldEventImage', { defaultValue: 'Eventbild' })} *</Label>
+              {imagePreview ? (
+                <div className="relative w-full max-w-md aspect-video rounded-lg overflow-hidden border">
+                  <img src={resolveImageUrl(imagePreview)} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full"
+                    title={t('brandDashboard.removeEventImage', { defaultValue: 'Bild entfernen' })}
+                    aria-label={t('brandDashboard.removeEventImage', { defaultValue: 'Bild entfernen' })}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="eventImage"
+                  className="flex flex-col items-center justify-center w-full max-w-md aspect-video rounded-lg border-2 border-dashed border-muted-foreground/25 cursor-pointer hover:bg-muted/40 transition-colors"
+                >
+                  <ImagePlus className="h-10 w-10 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">
+                    {t('brandDashboard.chooseEventImage', { defaultValue: 'Bild auswählen' })}
+                  </span>
+                </label>
+              )}
+              <input
+                id="eventImage"
+                type="file"
+                accept="image/*,image/heic,image/heif"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+              {imagePreview && (
+                <label htmlFor="eventImage" className="inline-block text-sm text-primary cursor-pointer hover:underline">
+                  {t('brandDashboard.replaceEventImage', { defaultValue: 'Bild ersetzen' })}
+                </label>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {t('brandDashboard.fieldEventImageHint', {
+                  defaultValue: 'Pflicht zum Einreichen. Ideales Format 16:9 (z. B. 1920 × 1080 px), JPG, PNG oder WebP, höchstens 10 MB.',
+                })}
+              </p>
             </div>
           </CardContent>
         </Card>
