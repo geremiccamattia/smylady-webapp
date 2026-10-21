@@ -400,7 +400,7 @@
     "hintSubmitted": "We have received your order. We review it and look for matching creators.",
     "hintInReview": "We are reviewing your order and putting creators together. You will receive an offer shortly.",
     "hintOfferSent": "Our offer is ready. Check the price and the proposed creators and confirm if it fits.",
-    "hintConfirmed": "Offer accepted. Your event has been created, the creators have been informed and will accept or decline.",
+    "hintConfirmed": "Offer accepted. Your event has been created, the creators have been informed and will accept or decline. From now on, cancelling is only possible through us so we can inform the creators personally.",
     "hintCompleted": "This order is completed.",
     "hintCancelled": "This order has been cancelled.",
     "campaignSection": "Campaign",
