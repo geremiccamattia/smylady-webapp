@@ -24,6 +24,16 @@ export interface AccountBalance {
 
 export type AccountStatus = 'active' | 'incomplete' | 'restricted' | 'not connected'
 
+/** Ein Prüffehler, wie Stripe ihn in requirements.errors liefert. */
+export interface StripeRequirementError {
+  /** z.B. "verification_failed_keyed_identity" */
+  code: string
+  /** Rohtext von Stripe, englisch. */
+  reason: string
+  /** Betroffenes Feld, z.B. "individual.address.city" */
+  requirement: string
+}
+
 export interface ConnectedAccount {
   accountId?: string
   connectedAccountId?: string
@@ -31,6 +41,19 @@ export interface ConnectedAccount {
   email?: string
   isAccountActive?: boolean
   accountStatus: AccountStatus
+  /*
+   * Warum das Konto (noch) nicht freigeschaltet ist. Alle optional: Ein
+   * älteres Backend liefert sie nicht, dann bleibt die Karte wie bisher.
+   */
+  chargesEnabled?: boolean
+  payoutsEnabled?: boolean
+  detailsSubmitted?: boolean
+  /** z.B. "requirements.past_due"; null, wenn Stripe keinen Grund nennt. */
+  disabledReason?: string | null
+  /** Feldnamen, wie Stripe sie liefert, z.B. "individual.address.city". */
+  currentlyDue?: string[]
+  pastDue?: string[]
+  requirementErrors?: StripeRequirementError[]
 }
 
 export interface AccountLinkResponse {
