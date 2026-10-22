@@ -47,8 +47,8 @@ export function resolveImageUrl(url?: string | { url?: string } | null): string 
     return undefined
   }
 
-  // Already a full URL - return as-is
-  if (/^https?:\/\//i.test(url) || url.startsWith('data:')) {
+  // Already a full URL - return as-is (blob: = local preview from URL.createObjectURL)
+  if (/^https?:\/\//i.test(url) || url.startsWith('data:') || url.startsWith('blob:')) {
     return url
   }
 
