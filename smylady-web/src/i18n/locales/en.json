@@ -732,6 +732,51 @@
     "durationMinutes": "{{count}} minutes",
     "durationHint": "Buyers can optionally tell you when they plan to arrive when buying a ticket. You'll see this in the guest list."
   },
+  "stripeRequirements": {
+    "title": "Stripe still needs the following from you",
+    "verificationFailedKeyedIdentity": "Stripe could not verify your details. They must match your official ID exactly. Alternatively, you can upload an identity document.",
+    "fields": {
+      "external_account": "Bank account (IBAN)",
+      "individual": {
+        "first_name": "First name",
+        "last_name": "Last name",
+        "email": "Email address",
+        "phone": "Phone number",
+        "address": {
+          "line1": "Street and house number",
+          "city": "City",
+          "postal_code": "Postal code",
+          "state": "State"
+        },
+        "verification": {
+          "document": "Identity document"
+        },
+        "dob": {
+          "day": "Date of birth",
+          "month": "Date of birth",
+          "year": "Date of birth"
+        }
+      },
+      "business_profile": {
+        "mcc": "Industry",
+        "url": "Website"
+      },
+      "person": {
+        "verification": {
+          "document": "Identity document"
+        }
+      },
+      "company": {
+        "address": {
+          "state": "State"
+        }
+      },
+      "tos_acceptance": {
+        "date": "Acceptance of the Stripe terms",
+        "ip": "Acceptance of the Stripe terms"
+      }
+    }
+  },
   "ticket": {
     "eventLink": "Event Link",
     "joinNow": "Join now"

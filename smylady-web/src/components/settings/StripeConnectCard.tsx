@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { navigateToExternalUrl, STRIPE_HOSTS } from '@/lib/navigation'
+import { StripeRequirements } from '@/components/settings/StripeRequirements'
 
 function StripeConnectCardContent() {
   const { t } = useTranslation()
@@ -376,6 +377,9 @@ function StripeConnectCardContent() {
                     defaultValue: 'Bitte schließe die Stripe-Einrichtung ab, um Zahlungen zu erhalten.',
                   })}
             </p>
+            {/* Warum nicht freigeschaltet: offene Punkte und Prüffehler von Stripe.
+                Ohne solche Angaben (oder bei älterem Backend) erscheint nichts. */}
+            <StripeRequirements account={connectedAccount} />
             <Button onClick={handleConnect} disabled={isConnecting}>
               {isConnecting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {t('settings.stripe.completeSetupBtn', { defaultValue: 'Einrichtung fortsetzen' })}
