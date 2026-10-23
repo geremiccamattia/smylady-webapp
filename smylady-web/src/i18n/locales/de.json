@@ -744,6 +744,51 @@
     "durationMinutes": "{{count}} Minuten",
     "durationHint": "Käufer können beim Ticketkauf freiwillig angeben, wann sie ungefähr kommen. Du siehst die Angaben in der Gästeliste."
   },
+  "stripeRequirements": {
+    "title": "Das braucht Stripe noch von dir",
+    "verificationFailedKeyedIdentity": "Stripe konnte deine Angaben nicht überprüfen. Sie müssen genau mit deinem amtlichen Ausweis übereinstimmen. Alternativ kannst du ein Ausweisdokument hochladen.",
+    "fields": {
+      "external_account": "Bankverbindung (IBAN)",
+      "individual": {
+        "first_name": "Vorname",
+        "last_name": "Nachname",
+        "email": "E-Mail-Adresse",
+        "phone": "Telefonnummer",
+        "address": {
+          "line1": "Straße und Hausnummer",
+          "city": "Ort",
+          "postal_code": "Postleitzahl",
+          "state": "Bundesland"
+        },
+        "verification": {
+          "document": "Ausweisdokument"
+        },
+        "dob": {
+          "day": "Geburtsdatum",
+          "month": "Geburtsdatum",
+          "year": "Geburtsdatum"
+        }
+      },
+      "business_profile": {
+        "mcc": "Branche",
+        "url": "Website"
+      },
+      "person": {
+        "verification": {
+          "document": "Ausweisdokument"
+        }
+      },
+      "company": {
+        "address": {
+          "state": "Bundesland"
+        }
+      },
+      "tos_acceptance": {
+        "date": "Zustimmung zu den Stripe-Bedingungen",
+        "ip": "Zustimmung zu den Stripe-Bedingungen"
+      }
+    }
+  },
   "ticket": {
     "eventLink": "Event-Link",
     "joinNow": "Jetzt teilnehmen"
