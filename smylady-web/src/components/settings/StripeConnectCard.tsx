@@ -17,6 +17,7 @@ import {
 } from '@/hooks/useStripe'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCreatorProfile } from '@/hooks/useCreatorProfile'
+import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { formatPrice } from '@/lib/utils'
 import {
   CreditCard,
@@ -52,15 +53,18 @@ function StripeConnectCardContent() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
 
-  // Veranstalter (Ticketerlöse) und aktive Creator (Vergütung aus
-  // Brand-Aufträgen) verbinden dasselbe Stripe-Konto; die Texte
-  // unterscheiden sich. Creator ist keine Rolle im Token, sondern ein
-  // aktives Creator-Profil.
+  // Veranstalter (Ticketerlöse), aktive Brands (Ticketerlöse aus ihren
+  // Events, Pflicht vor dem ersten Auftrag) und aktive Creator (Vergütung aus
+  // Brand-Aufträgen) verbinden dasselbe Stripe-Konto; Brands bekommen die
+  // Texte der Veranstalter. Creator und Brand sind keine Rollen im Token,
+  // sondern aktive Profile.
   const isOrganizer = user?.role === 'organizer'
   const { standing: creatorStanding } = useCreatorProfile()
+  const { standing: brandStanding } = useBrandProfile()
   const isCreator = creatorStanding === 'active'
-  const visible = Boolean(isOrganizer || isCreator)
-  const variant: 'organizer' | 'creator' = isOrganizer ? 'organizer' : 'creator'
+  const isBrand = brandStanding === 'active'
+  const visible = Boolean(isOrganizer || isBrand || isCreator)
+  const variant: 'organizer' | 'creator' = isOrganizer || isBrand ? 'organizer' : 'creator'
 
   // Fetch connected account status
   const {

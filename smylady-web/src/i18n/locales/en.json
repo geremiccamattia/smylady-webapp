@@ -777,6 +777,12 @@
       }
     }
   },
+  "payoutAccount": {
+    "title": "Connect your Stripe payout account first",
+    "brandDesc": "Before you can create an order, connect your Stripe account. Ticket revenue from your events is paid out through it. Setup takes a few minutes.",
+    "creatorDesc": "Before you can accept, connect your Stripe account. We pay out your fee through it after the event. Setup takes a few minutes.",
+    "connect": "Connect payout account"
+  },
   "ticket": {
     "eventLink": "Event Link",
     "joinNow": "Join now"
