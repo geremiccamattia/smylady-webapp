@@ -31,6 +31,8 @@ import {
 import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, isEventOver } from '@/lib/utils'
 import { formatRemaining, useCountdown, type RemainingUnits } from '@/lib/deadline'
 import { LoadingBars } from '@/components/brand/brandShared'
+import { PayoutAccountRequired } from '@/components/settings/PayoutAccountRequired'
+import { usePayoutAccountStatus } from '@/hooks/useStripe'
 import {
   CreatorGate,
   PastEventBadge,
@@ -102,8 +104,18 @@ function AssignmentDetail() {
       // Die bekannten 409-Fälle bekommen eine Übersetzung; alles andere
       // zeigt den Text des Backends.
       const conflict = readCreatorConflict(error)
+      // Konto inzwischen eingeschränkt: Stand neu laden, dann zeigt die Seite
+      // den Hinweis mit dem Weg in die Einstellungen.
+      if (conflict === 'payoutAccount') {
+        queryClient.invalidateQueries({ queryKey: ['connected-account'] })
+      }
       const description =
-        conflict === 'expired'
+        conflict === 'payoutAccount'
+          ? t('payoutAccount.creatorDesc', {
+              defaultValue:
+                'Bevor du zusagen kannst, verbinde dein Stripe-Konto. Darüber zahlen wir dir die Vergütung nach dem Event aus. Die Einrichtung dauert ein paar Minuten.',
+            })
+          : conflict === 'expired'
           ? t('creatorDashboard.conflictExpired', { defaultValue: 'Die Antwortfrist für diese Anfrage ist abgelaufen.' })
           : conflict === 'answered'
             ? t('creatorDashboard.conflictAnswered', { defaultValue: 'Für diese Anfrage liegt bereits eine Antwort vor.' })
@@ -117,6 +129,10 @@ function AssignmentDetail() {
       })
     },
   })
+
+  // Zusagen nur mit aktivem Stripe-Auszahlungskonto (das Backend prüft live
+  // nach). Nur abfragen, solange es etwas zu beantworten gibt.
+  const payout = usePayoutAccountStatus(query.data?.response === 'pending')
 
   // Die Antwortfrist läuft live mit: Verstreicht sie, während die Seite
   // offen ist, sperren die Knöpfe, statt in einen 409 zu laufen.
@@ -159,6 +175,8 @@ function AssignmentDetail() {
   const cancelled = assignment.orderStatus === 'cancelled' || withdrawn
   const pending = assignment.response === 'pending' && !cancelled
   const canAnswer = pending && !eventPast && !overdue
+  // Absagen geht immer, zusagen erst mit aktivem Auszahlungskonto.
+  const payoutMissing = canAnswer && payout.known && !payout.ready
   const booked = assignment.phase === 'booked' && assignment.response === 'accepted' && !cancelled
 
   return (
@@ -225,12 +243,13 @@ function AssignmentDetail() {
                           defaultValue: 'Sieh dir Event und Briefing an und gib uns Bescheid. Deine Antwort ist verbindlich.',
                         })}
               </p>
+              {payoutMissing && <PayoutAccountRequired role="creator" />}
               <div className="flex gap-3">
                 <Button
                   variant="gradient"
                   className="gap-2 flex-1"
                   loading={respond.isPending}
-                  disabled={!canAnswer}
+                  disabled={!canAnswer || !payout.ready}
                   onClick={() => setConfirm('accept')}
                 >
                   <Check className="h-4 w-4" />

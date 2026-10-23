@@ -122,6 +122,23 @@ export const useGetConnectedAccount = (enabled: boolean = true) => {
 }
 
 /**
+ * Ist das Stripe-Auszahlungskonto des Nutzers voll aktiv?
+ *
+ * Brand und Creator brauchen es, bevor sie Aufträge anlegen bzw. zusagen
+ * (das Backend prüft dasselbe noch einmal live). `ready` ist erst nach dem
+ * Laden bekannt; ein Fehler (z. B. 403, weil das Konto Connect nicht nutzen
+ * darf) zählt als „nicht aktiv".
+ */
+export const usePayoutAccountStatus = (enabled: boolean = true) => {
+  const query = useGetConnectedAccount(enabled)
+  return {
+    ready: query.isSuccess && query.data?.accountStatus === 'active',
+    isLoading: enabled && query.isLoading,
+    known: query.isSuccess || query.isError,
+  }
+}
+
+/**
  * Hook to get Stripe dashboard link for organizers
  */
 export const useGetStripeDashboardLink = () => {

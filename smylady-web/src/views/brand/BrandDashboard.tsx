@@ -12,6 +12,8 @@ import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { brandService, type BrandOrder } from '@/services/brand'
 import { formatDate, formatPrice, resolveImageUrl } from '@/lib/utils'
 import { BrandGate, LoadingBars, OrderStatusBadge, PaymentStatusBadge, ProfileStatusBadge } from '@/components/brand/brandShared'
+import { PayoutAccountRequired } from '@/components/settings/PayoutAccountRequired'
+import { usePayoutAccountStatus } from '@/hooks/useStripe'
 
 export const BRAND_ORDERS_QUERY_KEY = ['brand', 'orders'] as const
 
@@ -44,6 +46,9 @@ function DashboardContent() {
     enabled: Boolean(user) && standing === 'active',
     retry: false,
   })
+  // Neue Aufträge erst mit aktivem Stripe-Auszahlungskonto — gleich hier
+  // sagen, nicht erst nach dem Klick auf „Neuer Auftrag".
+  const payout = usePayoutAccountStatus(standing === 'active')
 
   if (!profile) return null
 
@@ -72,6 +77,8 @@ function DashboardContent() {
           </Button>
         </Link>
       </div>
+
+      {payout.known && !payout.ready && <PayoutAccountRequired role="brand" />}
 
       {/* Profil */}
       <Card>

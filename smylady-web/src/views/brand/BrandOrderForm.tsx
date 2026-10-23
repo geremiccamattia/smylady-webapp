@@ -40,6 +40,8 @@ import {
   type DeliverableType,
 } from '@/services/brand'
 import { BrandGate, LoadingBars, useBrandLabels } from '@/components/brand/brandShared'
+import { PayoutAccountRequired } from '@/components/settings/PayoutAccountRequired'
+import { usePayoutAccountStatus } from '@/hooks/useStripe'
 import { resolveImageUrl } from '@/lib/utils'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 
@@ -116,6 +118,9 @@ function OrderForm() {
   const labels = useBrandLabels()
   const params = useParams<{ id?: string }>()
   const editId = params?.id
+  // Ohne aktives Stripe-Auszahlungskonto kein neuer Auftrag (das Backend
+  // lehnt Anlegen und Einreichen ebenso ab). Entwürfe bleiben bearbeitbar.
+  const payout = usePayoutAccountStatus()
 
   const [title, setTitle] = useState('')
   const [goal, setGoal] = useState('')
@@ -531,7 +536,7 @@ function OrderForm() {
     if (buildPayload(true)) setConfirmSubmit(true)
   }
 
-  if (editId && existing.isLoading) {
+  if ((editId && existing.isLoading) || (!editId && payout.isLoading)) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -573,6 +578,24 @@ function OrderForm() {
     )
   }
 
+  if (!editId && payout.known && !payout.ready) {
+    return (
+      <>
+        <div>
+          <Link
+            href={localePath('/brand')}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t('common.back', { defaultValue: 'Zurück' })}
+          </Link>
+          <h1 className="text-3xl font-bold">{t('brandDashboard.newOrder', { defaultValue: 'Neuer Auftrag' })}</h1>
+        </div>
+        <PayoutAccountRequired role="brand" />
+      </>
+    )
+  }
+
   const updateRow = (index: number, patch: Partial<DeliverableRow>) =>
     setDeliverables((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)))
 
@@ -602,6 +625,9 @@ function OrderForm() {
           })}
         </p>
       </div>
+
+      {/* Entwurf von vor der Regel: speichern geht, einreichen erst mit Konto. */}
+      {editId && payout.known && !payout.ready && <PayoutAccountRequired role="brand" />}
 
       <form
         // Enter in einem Textfeld löst nichts aus. Vorher reichte es den

@@ -789,6 +789,12 @@
       }
     }
   },
+  "payoutAccount": {
+    "title": "Erst Auszahlungskonto bei Stripe verbinden",
+    "brandDesc": "Bevor du einen Auftrag anlegen kannst, verbinde dein Stripe-Konto. Darüber laufen die Ticketerlöse aus deinen Events. Die Einrichtung dauert ein paar Minuten.",
+    "creatorDesc": "Bevor du zusagen kannst, verbinde dein Stripe-Konto. Darüber zahlen wir dir die Vergütung nach dem Event aus. Die Einrichtung dauert ein paar Minuten.",
+    "connect": "Auszahlungskonto verbinden"
+  },
   "ticket": {
     "eventLink": "Event-Link",
     "joinNow": "Jetzt teilnehmen"

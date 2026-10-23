@@ -313,11 +313,13 @@ export function isCreatorConflict(error: unknown): boolean {
  * in creator-assignment.service.ts) — so bekommt die Meldung eine Übersetzung.
  * 'unknown', wenn der Text keinem bekannten Fall entspricht.
  */
-export type CreatorConflictKind = 'expired' | 'answered' | 'withdrawn' | 'unknown'
+export type CreatorConflictKind = 'expired' | 'answered' | 'withdrawn' | 'payoutAccount' | 'unknown'
 
 export function readCreatorConflict(error: unknown): CreatorConflictKind {
   if (!isCreatorConflict(error)) return 'unknown'
   const message = readCreatorError(error, '').toLowerCase()
+  // CREATOR_PAYOUT_ACCOUNT_REQUIRED (src/constants/payout-account.ts im Backend)
+  if (message.includes('auszahlungskonto')) return 'payoutAccount'
   if (message.includes('abgelaufen')) return 'expired'
   if (message.includes('bereits') && message.includes('antwort')) return 'answered'
   if (message.includes('zurückgezogen')) return 'withdrawn'
