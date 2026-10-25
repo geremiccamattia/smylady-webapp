@@ -40,6 +40,7 @@ import { EVENT_FORM_CATEGORIES } from '@/lib/constants'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
+import { buildEventTimes } from '@/lib/eventTimes'
 import { SlotDurationField } from '@/components/events/SlotDurationField'
 import {
   buildSchedule,
@@ -577,36 +578,15 @@ function CreateEventContent() {
     try {
       const eventFormData = new FormData()
 
-      // Build event date/time like mobile app
-      const eventDate = new Date(formData.eventDate + 'T00:00:00')
-      const [startHours, startMinutes] = formData.eventStartTime.split(':').map(Number)
-      const eventStartTime = new Date(eventDate)
-      eventStartTime.setHours(startHours, startMinutes, 0, 0)
-
-      let eventEndTime = new Date(eventDate)
-      if (formData.eventEndTime) {
-        const [endHours, endMinutes] = formData.eventEndTime.split(':').map(Number)
-        eventEndTime.setHours(endHours, endMinutes, 0, 0)
-        // Handle case where end time is past midnight
-        if (eventEndTime <= eventStartTime) {
-          eventEndTime.setDate(eventEndTime.getDate() + 1)
-        }
-      } else {
-        // Default end time 4 hours after start
-        eventEndTime = new Date(eventStartTime.getTime() + 4 * 60 * 60 * 1000)
-      }
-
-      // Mehrtägiges Event: Enddatum überschreibt die einfache Uhrzeit-Berechnung oben
-      if (isMultiDay && eventEndDate) {
-        const multiDayEnd = new Date(eventEndDate + 'T00:00:00')
-        if (eventEndTimeValue) {
-          const [endHours, endMinutes] = eventEndTimeValue.split(':').map(Number)
-          multiDayEnd.setHours(endHours, endMinutes, 0, 0)
-        } else {
-          multiDayEnd.setHours(23, 59, 0, 0)
-        }
-        eventEndTime = multiDayEnd
-      }
+      // Beginn und Ende in Wiener Zeit, Ende über Mitternacht am Folgetag —
+      // dieselbe Regel wie in EditEvent (lib/eventTimes.ts).
+      const eventTimes = buildEventTimes({
+        date: formData.eventDate,
+        startTime: formData.eventStartTime,
+        endTime: formData.eventEndTime,
+        endDate: isMultiDay ? eventEndDate : '',
+        endDateTime: eventEndTimeValue,
+      })
 
       // Add all form fields
       eventFormData.append('name', formData.name)
@@ -618,10 +598,10 @@ function CreateEventContent() {
         if (slotDuration) {
           eventFormData.append('slotDurationMinutes', slotDuration)
         }
-      } else {
-        eventFormData.append('eventDate', eventDate.toISOString())
-        eventFormData.append('eventStartTime', eventStartTime.toISOString())
-        eventFormData.append('eventEndTime', eventEndTime.toISOString())
+      } else if (eventTimes) {
+        eventFormData.append('eventDate', eventTimes.eventDate)
+        eventFormData.append('eventStartTime', eventTimes.eventStartTime)
+        eventFormData.append('eventEndTime', eventTimes.eventEndTime)
       }
       eventFormData.append('locationType', locationType)
       if (locationType === 'online') {
