@@ -143,6 +143,11 @@ export default function Footer() {
                   {t('footer.halloweenVienna', { defaultValue: 'Halloween in Wien' })}
                 </Link>
               </li>
+              <li>
+                <Link href={localePath('/events/weihnachtsmaerkte-wien')} className="hover:text-foreground">
+                  {t('footer.christmasMarketsVienna', { defaultValue: 'Weihnachtsmärkte in Wien' })}
+                </Link>
+              </li>
             </ul>
           </div>
 
