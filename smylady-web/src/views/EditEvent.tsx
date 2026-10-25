@@ -35,6 +35,7 @@ import { MUSIC_TYPE_VALUES, OFFERING_VALUES, toStringArray } from '@/lib/eventFi
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
 import { buildEventTimes } from '@/lib/eventTimes'
 import { SlotDurationField } from '@/components/events/SlotDurationField'
+import { slotLimitError } from '@/lib/eventSlots'
 import {
   addDays,
   buildSchedule,
@@ -963,7 +964,8 @@ export default function EditEvent() {
       (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) ||
       (singleDaySlots && slotDuration)
     ) {
-      const scheduleError = validateSchedule(schedule)
+      // Wie im Backend: erst der schedule selbst, dann die Slots daraus.
+      const scheduleError = validateSchedule(schedule) ?? slotLimitError(schedule, slotDuration)
       if (scheduleError) {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
         return

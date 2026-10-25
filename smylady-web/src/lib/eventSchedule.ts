@@ -20,10 +20,20 @@ import type { ApiEventScheduleEntry, EventScheduleEntry } from '@/types'
  * nicht gewandelt — das Backend rechnet die Wanduhrzeit selbst um.
  */
 
-export const MAX_SCHEDULE_ENTRIES = 60
+/*
+ * Grenzen des Schedules — dieselben Werte wie im Backend
+ * (smylady-backend, src/modules/event/event-schedule.ts). Das Backend setzt
+ * sie mit 400 durch; hier stehen sie nur, um vorher zu melden. Beim Ändern
+ * beide Stellen anpassen.
+ *
+ * - Öffnungstage: ein Jahr.
+ * - Öffnungsfenster: im Schnitt zwei pro Tag (z. B. mit Mittagspause).
+ */
+export const MAX_SCHEDULE_DAYS = 366
+export const MAX_SCHEDULE_ENTRIES = 2 * MAX_SCHEDULE_DAYS
 export const VIENNA_TIME_ZONE = 'Europe/Vienna'
 
-/** Ein Zeitfenster, wie es das Formular bearbeitet. */
+/** Ein Öffnungsfenster, wie es das Formular bearbeitet. */
 export interface DailyHoursWindow {
   startTime: string
   endTime: string
@@ -42,12 +52,19 @@ export interface DailyHoursDay {
  */
 export type DailyHoursState = Record<string, DailyHoursDay>
 
-export type ScheduleError = 'missingTime' | 'overlap' | 'tooMany' | 'allClosed'
+/** Was validateSchedule (und slotLimitError in eventSlots.ts) melden — Grenzen mit Grenze und Ist-Wert. */
+export type ScheduleError =
+  | { code: 'missingTime' | 'overlap' | 'allClosed' }
+  | { code: 'tooManyDays' | 'tooManyWindows' | 'tooManySlots'; max: number; actual: number }
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const MINUTES_PER_DAY = 24 * 60
-/** Schutz vor Endlosschleifen bei vertippten Jahreszahlen. */
-const MAX_LISTED_DAYS = 366
+/**
+ * Schutz vor Endlosschleifen bei vertippten Jahreszahlen. Bewusst über
+ * MAX_SCHEDULE_DAYS: Ein Zeitraum knapp darüber soll den Editor noch zeigen
+ * und mit der Zahl gemeldet werden, statt dass der Editor still verschwindet.
+ */
+const MAX_LISTED_DAYS = 2 * MAX_SCHEDULE_DAYS
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
 const TIME = /^\d{1,2}:\d{2}$/
@@ -207,7 +224,7 @@ function toWallClockEntry(
  * Jeder gelesene schedule geht zuerst hierdurch — gleich, aus welchem Service
  * das Event kam. Ergebnis ist durchgehend Wanduhrzeit in Europe/Vienna.
  *
- * Einträge, aus denen sich kein gültiges Zeitfenster machen lässt (fehlendes
+ * Einträge, aus denen sich kein gültiges Öffnungsfenster machen lässt (fehlendes
  * oder kaputtes Feld, Ende nicht nach Beginn), fallen einzeln weg. Ein
  * kaputter Eintrag kostet so eine Zeile Öffnungszeiten, nie die ganze Seite.
  */
@@ -268,15 +285,26 @@ function sortByStart(entries: EventScheduleEntry[]): EventScheduleEntry[] {
     .map(({ entry }) => entry)
 }
 
-/** Dieselben Regeln, die das Backend mit 400 durchsetzt — vorher melden statt danach. */
+/**
+ * Dieselben Regeln, die das Backend mit 400 durchsetzt — vorher melden statt
+ * danach. Reihenfolge wie resolveSchedule im Backend. Die Grenze für die Slots
+ * prüft slotLimitError (eventSlots.ts).
+ */
 export function validateSchedule(entries: EventScheduleEntry[]): ScheduleError | null {
-  if (entries.length === 0) return 'allClosed'
-  if (entries.some(e => !TIME.test(e.startTime) || !TIME.test(e.endTime))) return 'missingTime'
-  if (entries.length > MAX_SCHEDULE_ENTRIES) return 'tooMany'
+  if (entries.length === 0) return { code: 'allClosed' }
+  if (entries.length > MAX_SCHEDULE_ENTRIES) {
+    return { code: 'tooManyWindows', max: MAX_SCHEDULE_ENTRIES, actual: entries.length }
+  }
+  if (entries.some(e => !TIME.test(e.startTime) || !TIME.test(e.endTime))) return { code: 'missingTime' }
+
+  const openingDays = new Set(entries.map(e => e.date)).size
+  if (openingDays > MAX_SCHEDULE_DAYS) {
+    return { code: 'tooManyDays', max: MAX_SCHEDULE_DAYS, actual: openingDays }
+  }
 
   const sorted = sortByStart(entries)
   for (let i = 1; i < sorted.length; i++) {
-    if (windowRange(sorted[i])[0] < windowRange(sorted[i - 1])[1]) return 'overlap'
+    if (windowRange(sorted[i])[0] < windowRange(sorted[i - 1])[1]) return { code: 'overlap' }
   }
   return null
 }

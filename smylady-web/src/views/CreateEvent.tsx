@@ -42,6 +42,7 @@ import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
 import { buildEventTimes } from '@/lib/eventTimes'
 import { SlotDurationField } from '@/components/events/SlotDurationField'
+import { slotLimitError } from '@/lib/eventSlots'
 import {
   buildSchedule,
   isDailyHoursEdited,
@@ -566,7 +567,8 @@ function CreateEventContent() {
       (showDailyHours && (isDailyHoursEdited(scheduleDays, dailyHours) || slotDuration)) ||
       (singleDaySlots && slotDuration)
     ) {
-      const scheduleError = validateSchedule(schedule)
+      // Wie im Backend: erst der schedule selbst, dann die Slots daraus.
+      const scheduleError = validateSchedule(schedule) ?? slotLimitError(schedule, slotDuration)
       if (scheduleError) {
         toast({ variant: 'destructive', title: t('common.error'), description: scheduleErrorMessage(scheduleError, t) })
         return
