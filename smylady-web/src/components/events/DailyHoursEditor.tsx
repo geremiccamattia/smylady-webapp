@@ -12,7 +12,6 @@ import {
   isDailyHoursEdited,
   isForcedNextDay,
   scheduleBounds,
-  MAX_SCHEDULE_ENTRIES,
   type DailyHoursDay,
   type DailyHoursState,
   type DailyHoursWindow,
@@ -22,21 +21,35 @@ import {
 /** Mehr als zwei Fenster je Tag braucht kein bisher bekanntes Format. */
 const MAX_WINDOWS_PER_DAY = 2
 
-/** Meldung zu validateSchedule — dieselbe in CreateEvent und EditEvent. */
+/** Meldung zu validateSchedule und slotLimitError — dieselbe in CreateEvent und EditEvent. */
 export function scheduleErrorMessage(error: ScheduleError, t: TFunction): string {
-  switch (error) {
+  switch (error.code) {
     case 'missingTime':
       return t('dailyHours.errorMissingTime', {
         defaultValue: 'Bitte gib bei jedem geöffneten Tag Beginn und Ende an.',
       })
     case 'overlap':
       return t('dailyHours.errorOverlap', {
-        defaultValue: 'Zwei Zeitfenster überschneiden sich. Bitte prüfe die Öffnungszeiten.',
+        defaultValue: 'Zwei Öffnungsfenster überschneiden sich. Bitte prüfe die Öffnungszeiten.',
       })
-    case 'tooMany':
-      return t('dailyHours.errorTooMany', {
-        defaultValue: 'Es sind höchstens {{max}} Zeitfenster möglich.',
-        max: MAX_SCHEDULE_ENTRIES,
+    case 'tooManyDays':
+      return t('dailyHours.errorTooManyDays', {
+        defaultValue: 'Öffnungszeiten sind für höchstens {{max}} Öffnungstage möglich, eingetragen sind {{actual}}.',
+        max: error.max,
+        actual: error.actual,
+      })
+    case 'tooManyWindows':
+      return t('dailyHours.errorTooManyWindows', {
+        defaultValue: 'Es sind höchstens {{max}} Öffnungsfenster möglich, eingetragen sind {{actual}}.',
+        max: error.max,
+        actual: error.actual,
+      })
+    case 'tooManySlots':
+      return t('dailyHours.errorTooManySlots', {
+        defaultValue:
+          'Mit dieser Dauer ergeben sich {{actual}} buchbare Zeitfenster, möglich sind höchstens {{max}}. Bitte wähle längere Zeitfenster.',
+        max: error.max,
+        actual: error.actual,
       })
     case 'allClosed':
       return t('dailyHours.errorAllClosed', {
@@ -177,7 +190,7 @@ export function DailyHoursEditor({ days, value, onChange, defaults }: DailyHours
                           onClick={() =>
                             updateDay(date, d => ({ ...d, windows: d.windows.filter((_, i) => i !== index) }))
                           }
-                          aria-label={t('dailyHours.removeWindow', { defaultValue: 'Zeitfenster entfernen' })}
+                          aria-label={t('dailyHours.removeWindow', { defaultValue: 'Öffnungsfenster entfernen' })}
                           className="p-1 text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -199,7 +212,7 @@ export function DailyHoursEditor({ days, value, onChange, defaults }: DailyHours
                   className="flex items-center gap-1 text-xs text-primary hover:underline"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  {t('dailyHours.addWindow', { defaultValue: 'Zeitfenster hinzufügen' })}
+                  {t('dailyHours.addWindow', { defaultValue: 'Öffnungsfenster hinzufügen' })}
                 </button>
               )}
             </div>

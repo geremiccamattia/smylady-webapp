@@ -1,6 +1,12 @@
 import type { TFunction } from 'i18next'
-import type { EventSlot } from '@/types'
-import { formatScheduleDay, viennaWallClock, VIENNA_TIME_ZONE } from '@/lib/eventSchedule'
+import type { EventScheduleEntry, EventSlot } from '@/types'
+import {
+  formatScheduleDay,
+  viennaWallClock,
+  viennaWallTimeToUtc,
+  VIENNA_TIME_ZONE,
+  type ScheduleError,
+} from '@/lib/eventSchedule'
 
 /*
  * Freiwillige Zeitfenster beim Ticketkauf.
@@ -15,6 +21,54 @@ import { formatScheduleDay, viennaWallClock, VIENNA_TIME_ZONE } from '@/lib/even
 export const SLOT_DURATION_OPTIONS = [15, 30, 60, 120] as const
 
 const MINUTE_MS = 60 * 1000
+
+/*
+ * Grenzen der Slots — dieselben Werte wie im Backend
+ * (smylady-backend, src/modules/event/event-slots.ts). Das Backend setzt sie
+ * mit 400 durch; hier stehen sie nur, um vorher zu melden. Beim Ändern beide
+ * Stellen anpassen.
+ */
+export const MIN_SLOT_DURATION_MINUTES = 5
+export const MAX_SLOT_DURATION_MINUTES = 24 * 60
+export const MAX_SLOTS_PER_EVENT = 5000
+
+/** Brauchbare Slotdauer in Minuten — oder null, dann gibt es keine Slots. Wie im Backend. */
+export function normalizeSlotDuration(value: unknown): number | null {
+  // '' und null werden zu 0, undefined zu NaN — beides fällt unten heraus.
+  const minutes = Number(value)
+  if (!Number.isInteger(minutes)) return null
+  if (minutes < MIN_SLOT_DURATION_MINUTES || minutes > MAX_SLOT_DURATION_MINUTES) return null
+  return minutes
+}
+
+/**
+ * Anzahl der Slots, die das Backend aus diesem schedule rechnen wird — dieselbe
+ * Regel wie countSlots dort: je Öffnungsfenster floor(Länge / Dauer), die
+ * Länge in echten Zeitpunkten. Deshalb wird die Wanduhrzeit hier wie im
+ * Backend nach Wien umgerechnet; an den Umstellungstagen ist ein Fenster
+ * 02:00–04:00 eine bzw. drei Stunden lang.
+ */
+export function countSlots(entries: EventScheduleEntry[], slotDurationMinutes: unknown): number {
+  const minutes = normalizeSlotDuration(slotDurationMinutes)
+  if (!minutes) return 0
+
+  const durationMs = minutes * MINUTE_MS
+  let count = 0
+  for (const entry of entries) {
+    const start = viennaWallTimeToUtc(entry.date, entry.startTime)
+    const end = viennaWallTimeToUtc(entry.endDate ?? entry.date, entry.endTime)
+    if (!start || !end) continue
+    const length = end.getTime() - start.getTime()
+    if (length >= durationMs) count += Math.floor(length / durationMs)
+  }
+  return count
+}
+
+/** Wie slotLimitMessage im Backend: zu viele Slots für diese Dauer, mit Grenze und Ist-Wert. */
+export function slotLimitError(entries: EventScheduleEntry[], slotDurationMinutes: unknown): ScheduleError | null {
+  const actual = countSlots(entries, slotDurationMinutes)
+  return actual > MAX_SLOTS_PER_EVENT ? { code: 'tooManySlots', max: MAX_SLOTS_PER_EVENT, actual } : null
+}
 
 /** Uhrzeit eines Zeitpunkts in Wien („18:00"), leer bei ungültigem Wert. */
 export function slotTime(value: string | null | undefined): string {
