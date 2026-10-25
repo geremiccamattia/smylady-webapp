@@ -11,6 +11,7 @@ const staticPages = [
   // Saisonale Kategorieseite. Die übrigen Kategorieseiten (business-events-wien,
   // workshops-wien, clubbing-wien, konzerte-wien) fehlen hier bislang.
   { url: '/events/halloween-wien', priority: '0.8', changefreq: 'daily' },
+  { url: '/events/weihnachtsmaerkte-wien', priority: '0.8', changefreq: 'daily' },
   // Nur die neuen URLs — /influencer-* wird per 308 weitergeleitet und gehoert
   // deshalb nicht in die Sitemap.
   { url: '/creator-events', priority: '0.7', changefreq: 'monthly' },

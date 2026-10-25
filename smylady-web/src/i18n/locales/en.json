@@ -785,6 +785,217 @@
     "creatorDesc": "Before you can accept, connect your Stripe account. We pay out your fee through it after the event. Setup takes a few minutes.",
     "connect": "Connect payout account"
   },
+  "christmasVienna": {
+    "seo": {
+      "title": "Christmas Markets in Vienna {{year}}: Opening Hours, Dates & Transport",
+      "description": "All of Vienna's Christmas markets {{year}} with dates, daily opening hours, district and public transport – plus which markets stay open after 24 December."
+    },
+    "headline": "Christmas Markets in Vienna {{year}}: all {{count}} markets at a glance",
+    "headline_one": "Christmas Markets in Vienna {{year}}: one market at a glance",
+    "headline_zero": "Christmas Markets in Vienna {{year}}",
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "country": "Austria",
+      "city": "Vienna",
+      "page": "Christmas markets"
+    },
+    "intro": {
+      "season": "From {{from}} to {{to}}, squares, palace courtyards and parks all over Vienna turn into Christmas markets – with punch, roast chestnuts and handmade crafts.",
+      "about": "Here you'll find every market with its dates, opening hours and public transport connections, sorted by location and atmosphere. The details come straight from the events on Share Your Party and update continuously.",
+      "empty": "As soon as the first Christmas markets of the season are listed, you'll find them here with dates, opening hours and public transport connections."
+    },
+    "updated": "Last updated: {{date}} · {{count}} markets",
+    "updated_one": "Last updated: {{date}} · one market",
+    "updated_zero": "Last updated: {{date}}",
+    "empty": "There are currently no Christmas markets listed in Vienna.",
+    "listAnd": "and",
+    "filter": {
+      "label": "Filter",
+      "all": "All markets"
+    },
+    "table": {
+      "heading": "All Christmas markets in Vienna at a glance",
+      "headers": {
+        "market": "Market",
+        "districtHeader": "District",
+        "period": "Dates",
+        "hours": "Opening hours",
+        "transit": "Public transport"
+      },
+      "district": "{{number}}. {{name}}",
+      "daily": "daily",
+      "otherDays": "different hours on {{count}} days",
+      "otherDays_one": "different hours on one day",
+      "hoursUnknown": "see event page"
+    },
+    "timeline": {
+      "heading": "When is which market open?",
+      "note": "Each bar runs from the first to the last opening day.",
+      "xmas": "24 December"
+    },
+    "card": {
+      "place": "Location",
+      "period": "Dates",
+      "hours": "Open",
+      "transit": "Public transport",
+      "link": "Go to event page"
+    },
+    "groups": {
+      "innenstadt": {
+        "title": "Inner City: markets in the 1st district",
+        "intro": "The markets in the centre are close together – ideal for walking from one market to the next."
+      },
+      "schloesser": {
+        "title": "Palaces & landmarks",
+        "intro": "Christmas markets against an imperial backdrop and beneath the Giant Ferris Wheel – some stay open past New Year."
+      },
+      "kunsthandwerk": {
+        "title": "Art & crafts",
+        "intro": "For anyone looking for handmade pieces and design rather than mass-produced goods."
+      },
+      "abseits": {
+        "title": "Away from the crowds",
+        "intro": "Quieter markets in the outer districts – in the park, in a university courtyard or in the greenhouses."
+      }
+    },
+    "more": {
+      "title": "More Christmas events in Vienna",
+      "intro": "These Christmas events are listed on Share Your Party and have not yet been editorially categorised."
+    },
+    "badges": {
+      "free": "Free entry",
+      "afterChristmas": "Open after 24 Dec",
+      "landmark": "Landmark",
+      "crafts": "Handicrafts",
+      "museums": "By the museums",
+      "family": "Family-friendly",
+      "curling": "Ice curling",
+      "newYearsEve": "New Year's Eve"
+    },
+    "afterChristmas": {
+      "heading": "Which markets are open after 24 December?",
+      "intro": "These markets stay open after Christmas Eve:",
+      "item": "open until {{date}}, still open on {{count}} days after 24 December",
+      "item_one": "open until {{date}}, still open on one day after 24 December",
+      "none": "According to the listed dates, all markets close on 24 December at the latest."
+    },
+    "tips": {
+      "heading": "Tips for your visit",
+      "items": [
+        {
+          "title": "Go on a weekday.",
+          "text": "At weekends and in the evenings, the markets in the city centre get crowded. A weekday afternoon is much quieter."
+        },
+        {
+          "title": "Return your mug.",
+          "text": "Punch and mulled wine usually come in a mug with a deposit. Bring it back to get your deposit refunded – or keep it as a souvenir."
+        },
+        {
+          "title": "Use public transport.",
+          "text": "Parking around the markets is scarce. The public transport connection for each market is listed in the overview table."
+        },
+        {
+          "title": "Check the hours on 24 December.",
+          "text": "Many markets close early on Christmas Eve. The exact times are on each event page."
+        }
+      ]
+    },
+    "faq": {
+      "heading": "Frequently asked questions about Vienna's Christmas markets",
+      "opening": {
+        "q": "When do the Christmas markets in Vienna open in {{year}}?",
+        "a": "The season starts on {{date}} with {{names}}. From {{lastOpening}}, all {{count}} markets are open.",
+        "a_one": "The market opens on {{date}}: {{names}}."
+      },
+      "closing": {
+        "q": "How long are the Christmas markets in Vienna open?",
+        "a": "Open the longest: {{names}}, until {{date}}. Most markets close on {{commonEnd}}."
+      },
+      "afterChristmas": {
+        "q": "Which Christmas markets are open after 24 December?",
+        "a": "Open after Christmas Eve: {{names}}.",
+        "none": "According to the listed dates, all markets close on 24 December at the latest."
+      },
+      "entry": {
+        "q": "Do you have to pay to enter Vienna's Christmas markets?",
+        "all": "No. According to the organisers, entry is free at all {{count}} markets – you only pay for what you eat, drink or buy.",
+        "all_one": "No. According to the organiser, entry is free – you only pay for what you eat, drink or buy.",
+        "some": "According to the organisers, entry is free at {{free}} of {{count}} markets. For the others, you'll find the price on the event page.",
+        "none": "The listed markets charge an entry fee. You'll find the price on each event page."
+      },
+      "transport": {
+        "q": "What's the best way to get to the Christmas markets?",
+        "a": "By public transport: most markets are right next to an underground or tram stop. The connection for each market is listed in the overview table."
+      }
+    },
+    "outro": {
+      "heading": "All Christmas events on Share Your Party",
+      "appText": "Keep all markets and your favourites with you in the Share Your Party app:",
+      "organizerText": "Are you organising a Christmas market or Christmas event in Vienna yourself?",
+      "organizerLink": "List your event for free"
+    },
+    "schema": {
+      "itemListName": "Christmas markets in Vienna {{year}}"
+    },
+    "curated": {
+      "6ad4f9444cb38af994bb48e0": {
+        "text": "Vienna's best-known Christmas market sits right in front of the illuminated City Hall, with decorated trees in the Rathauspark.",
+        "transit": "U2 Rathaus, U3 Volkstheater · Tram D, 1, 71 Rathausplatz/Burgtheater · Tram 2 Parlament"
+      },
+      "6ad6718e4cb38af994be12f4": {
+        "text": "Right by St. Stephen's Cathedral in the heart of Vienna – if you're Christmas shopping in the city centre, you'll pass by anyway.",
+        "transit": "U1, U3 Stephansplatz · Bus 1A, 2A, 3A Stephansplatz"
+      },
+      "6ad66ff34cb38af994bdf267": {
+        "text": "On one of Vienna's oldest squares, known for handicrafts and carefully chosen gift ideas – just a few minutes' walk from the Graben.",
+        "transit": "U3 Herrengasse, U2 Schottentor, U1 Stephansplatz · Bus 2A Herrengasse"
+      },
+      "6ad66e524cb38af994bdd220": {
+        "text": "The Old Viennese Christmas Market is all about tradition: handicrafts, nativity scenes and tree decorations, away from the big crowds.",
+        "transit": "U3 Herrengasse, U2 Schottentor · Tram 1, 2, 71, D Schottentor/Burgtheater · Bus 1A, 2A Freyung"
+      },
+      "6ad669964cb38af994bd7a8b": {
+        "text": "Between the Museum of Art History and the Natural History Museum – easy to combine a museum visit with punch and a Christmas stroll.",
+        "transit": "U2 Museumsquartier, U3 Volkstheater · Tram 1, 2, 71, D Burgring"
+      },
+      "6ad679e44cb38af994bea739": {
+        "text": "Right on the Ringstrasse – for a quick punch stop after work or before a concert at the Konzerthaus.",
+        "transit": "U1, U2, U4 Karlsplatz · Tram 71, D Schwarzenbergplatz · Bus 4A Schwarzenbergplatz"
+      },
+      "6ad66b7f4cb38af994bda32e": {
+        "text": "The stalls stand in the imperial courtyard in front of the baroque façade of Schönbrunn Palace – worth a trip between the holidays too.",
+        "transit": "U4 Schönbrunn · Tram 10, 60 Schloss Schönbrunn · Bus 10A Schloss Schönbrunn"
+      },
+      "6ad66d694cb38af994bdc579": {
+        "text": "In front of the Upper Belvedere right by the palace pond, with an imperial backdrop and views across the gardens.",
+        "transit": "Tram D Schloss Belvedere · U1 Hauptbahnhof · Tram 1, 18, 62, O and S-Bahn Quartier Belvedere"
+      },
+      "6ad67b6a4cb38af994bec77e": {
+        "text": "At the foot of the Giant Ferris Wheel in the Prater – according to the organiser, open until 2 a.m. on New Year's Eve.",
+        "transit": "U1, U2 Praterstern · Tram O, 5 · Bus 80A · S-Bahn Praterstern"
+      },
+      "6ad6762c4cb38af994be5bb0": {
+        "text": "The stalls line the narrow Biedermeier lanes of Spittelberg between historic houses – known for handicrafts and design.",
+        "transit": "U2 Volkstheater · Tram 49, 52 Stiftgasse · Bus 48A St.-Ulrichs-Platz"
+      },
+      "6ad673344cb38af994be2cef": {
+        "text": "In front of St. Charles's Church, artists and craft makers show their work – for anyone looking for something special.",
+        "transit": "U1, U2, U4 Karlsplatz · Tram 1, 2, 71, D Oper/Karlsplatz · Badner Bahn Karlsplatz · Bus 59A"
+      },
+      "6ad67ce94cb38af994bee44a": {
+        "text": "A Christmas market in the park in Währing, quieter and more family-oriented than in the city centre – mostly a meeting point for the neighbourhood.",
+        "transit": "Bus 10A, 37A, 40A Dänenstraße"
+      },
+      "6ad6787f4cb38af994be8e8d": {
+        "text": "In the large courtyard of the university campus, students and after-work groups meet for punch and ice curling.",
+        "transit": "Tram 5, 12, 43, 44 Lange Gasse · Bus 13A Skodagasse"
+      },
+      "6ad67e724cb38af994bf016f": {
+        "text": "The City of Vienna hosts a Christmas exhibition in the greenhouses of the Hirschstetten Flower Gardens – a quiet outing, especially for families.",
+        "transit": "Tram 25, 26 Ziegelhofstraße · Bus 22A, 95A, 95B Blumengärten Hirschstetten"
+      }
+    }
+  },
   "ticket": {
     "eventLink": "Event Link",
     "joinNow": "Join now"
@@ -1867,6 +2078,7 @@
   },
   "footer": {
     "halloweenVienna": "Halloween in Vienna",
+    "christmasMarketsVienna": "Christmas Markets in Vienna",
     "blog": "Blog",
     "copyright": "© {{year}} Share Your Party. All rights reserved.",
     "events": "Events",

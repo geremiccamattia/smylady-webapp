@@ -797,6 +797,217 @@
     "creatorDesc": "Bevor du zusagen kannst, verbinde dein Stripe-Konto. Darüber zahlen wir dir die Vergütung nach dem Event aus. Die Einrichtung dauert ein paar Minuten.",
     "connect": "Auszahlungskonto verbinden"
   },
+  "christmasVienna": {
+    "seo": {
+      "title": "Weihnachtsmärkte in Wien {{year}}: Öffnungszeiten, Termine & Öffis",
+      "description": "Alle Wiener Weihnachtsmärkte {{year}} mit Zeitraum, täglichen Öffnungszeiten, Bezirk und Öffi-Anbindung – und welche Märkte nach dem 24. Dezember noch offen haben."
+    },
+    "headline": "Weihnachtsmärkte in Wien {{year}}: alle {{count}} Märkte im Überblick",
+    "headline_one": "Weihnachtsmärkte in Wien {{year}}: ein Markt im Überblick",
+    "headline_zero": "Weihnachtsmärkte in Wien {{year}}",
+    "breadcrumb": {
+      "label": "Brotkrumen-Navigation",
+      "country": "Österreich",
+      "city": "Wien",
+      "page": "Weihnachtsmärkte"
+    },
+    "intro": {
+      "season": "Vom {{from}} bis {{to}} verwandeln sich Plätze, Schlosshöfe und Parks in ganz Wien in Weihnachtsmärkte – mit Punsch, Maroni und Kunsthandwerk.",
+      "about": "Hier findest du alle Märkte mit Zeitraum, Öffnungszeiten und Öffi-Anbindung, sortiert nach Lage und Stimmung. Die Angaben kommen direkt aus den Events auf Share Your Party und aktualisieren sich laufend.",
+      "empty": "Sobald die ersten Weihnachtsmärkte der Saison eingetragen sind, findest du sie hier mit Zeitraum, Öffnungszeiten und Öffi-Anbindung."
+    },
+    "updated": "Stand: {{date}} · {{count}} Märkte",
+    "updated_one": "Stand: {{date}} · ein Markt",
+    "updated_zero": "Stand: {{date}}",
+    "empty": "Aktuell sind keine Weihnachtsmärkte in Wien eingetragen.",
+    "listAnd": "und",
+    "filter": {
+      "label": "Filtern",
+      "all": "Alle Märkte"
+    },
+    "table": {
+      "heading": "Alle Weihnachtsmärkte in Wien auf einen Blick",
+      "headers": {
+        "market": "Markt",
+        "districtHeader": "Bezirk",
+        "period": "Zeitraum",
+        "hours": "Öffnungszeiten",
+        "transit": "Öffis"
+      },
+      "district": "{{number}}., {{name}}",
+      "daily": "täglich",
+      "otherDays": "abweichend an {{count}} Tagen",
+      "otherDays_one": "abweichend an einem Tag",
+      "hoursUnknown": "siehe Eventseite"
+    },
+    "timeline": {
+      "heading": "Wann hat welcher Markt offen?",
+      "note": "Jeder Balken reicht vom ersten bis zum letzten Öffnungstag.",
+      "xmas": "24. Dezember"
+    },
+    "card": {
+      "place": "Ort",
+      "period": "Zeitraum",
+      "hours": "Geöffnet",
+      "transit": "Öffis",
+      "link": "Zur Eventseite"
+    },
+    "groups": {
+      "innenstadt": {
+        "title": "Innere Stadt: Märkte im 1. Bezirk",
+        "intro": "Die Märkte im Zentrum liegen nah beieinander – ideal für eine Runde zu Fuß von Markt zu Markt."
+      },
+      "schloesser": {
+        "title": "Schlösser & Wahrzeichen",
+        "intro": "Weihnachtsmärkte vor imperialer Kulisse und am Riesenrad – einige davon haben bis über den Jahreswechsel offen."
+      },
+      "kunsthandwerk": {
+        "title": "Kunst & Kunsthandwerk",
+        "intro": "Für alle, die statt Massenware Handgemachtes und Design suchen."
+      },
+      "abseits": {
+        "title": "Abseits vom Trubel",
+        "intro": "Ruhigere Märkte in den Bezirken – im Grünen, im Uni-Hof oder in den Glashäusern."
+      }
+    },
+    "more": {
+      "title": "Weitere Weihnachtsevents in Wien",
+      "intro": "Diese Weihnachtsevents sind auf Share Your Party eingetragen und noch nicht redaktionell eingeordnet."
+    },
+    "badges": {
+      "free": "Eintritt frei",
+      "afterChristmas": "Nach dem 24.12. offen",
+      "landmark": "Wahrzeichen",
+      "crafts": "Kunsthandwerk",
+      "museums": "Bei den Museen",
+      "family": "Familienfreundlich",
+      "curling": "Eisstockschießen",
+      "newYearsEve": "Silvester"
+    },
+    "afterChristmas": {
+      "heading": "Welche Märkte haben nach dem 24. Dezember offen?",
+      "intro": "Diese Märkte haben auch nach dem Heiligen Abend geöffnet:",
+      "item": "geöffnet bis {{date}}, nach dem 24. Dezember noch an {{count}} Tagen",
+      "item_one": "geöffnet bis {{date}}, nach dem 24. Dezember noch an einem Tag",
+      "none": "Laut den eingetragenen Zeiträumen schließen alle Märkte spätestens am 24. Dezember."
+    },
+    "tips": {
+      "heading": "Tipps für den Besuch",
+      "items": [
+        {
+          "title": "Unter der Woche gehen.",
+          "text": "Am Wochenende und an den Abenden wird es auf den Märkten in der Innenstadt eng. An einem Nachmittag unter der Woche ist deutlich weniger los."
+        },
+        {
+          "title": "Häferl zurückbringen.",
+          "text": "Punsch und Glühwein gibt es meist im Häferl mit Pfand. Bringst du es zurück, bekommst du das Pfand wieder – oder du behältst es als Andenken."
+        },
+        {
+          "title": "Mit den Öffis anreisen.",
+          "text": "Parkplätze rund um die Märkte sind rar. Die Öffi-Anbindung jedes Markts steht in der Übersichtstabelle."
+        },
+        {
+          "title": "Zeiten am 24. Dezember prüfen.",
+          "text": "Viele Märkte schließen am Heiligen Abend früher. Die genauen Zeiten stehen auf der jeweiligen Eventseite."
+        }
+      ]
+    },
+    "faq": {
+      "heading": "Häufige Fragen zu den Weihnachtsmärkten in Wien",
+      "opening": {
+        "q": "Wann öffnen die Weihnachtsmärkte in Wien {{year}}?",
+        "a": "Die Saison beginnt am {{date}} mit {{names}}. Ab {{lastOpening}} haben alle {{count}} Märkte geöffnet.",
+        "a_one": "Der Markt öffnet am {{date}}: {{names}}."
+      },
+      "closing": {
+        "q": "Bis wann haben die Weihnachtsmärkte in Wien geöffnet?",
+        "a": "Am längsten geöffnet: {{names}}, nämlich bis {{date}}. Die meisten Märkte schließen am {{commonEnd}}."
+      },
+      "afterChristmas": {
+        "q": "Welche Weihnachtsmärkte haben nach dem 24. Dezember offen?",
+        "a": "Nach dem Heiligen Abend haben geöffnet: {{names}}.",
+        "none": "Laut den eingetragenen Zeiträumen schließen alle Märkte spätestens am 24. Dezember."
+      },
+      "entry": {
+        "q": "Kostet der Eintritt auf den Wiener Weihnachtsmärkten etwas?",
+        "all": "Nein. Bei allen {{count}} Märkten ist der Eintritt laut Veranstalter frei – bezahlt wird nur, was du isst, trinkst oder kaufst.",
+        "all_one": "Nein. Der Eintritt ist laut Veranstalter frei – bezahlt wird nur, was du isst, trinkst oder kaufst.",
+        "some": "Bei {{free}} von {{count}} Märkten ist der Eintritt laut Veranstalter frei. Für die übrigen findest du den Preis auf der Eventseite.",
+        "none": "Für die eingetragenen Märkte ist ein Eintritt angegeben. Den Preis findest du auf der jeweiligen Eventseite."
+      },
+      "transport": {
+        "q": "Wie komme ich am besten zu den Weihnachtsmärkten?",
+        "a": "Am besten mit den Öffis: Die meisten Märkte liegen an einer U-Bahn- oder Straßenbahnstation. Die Anbindung jedes Markts steht in der Übersichtstabelle."
+      }
+    },
+    "outro": {
+      "heading": "Alle Weihnachtsevents auf Share Your Party",
+      "appText": "Alle Märkte und deine Favoriten hast du in der Share Your Party App immer dabei:",
+      "organizerText": "Du veranstaltest selbst einen Weihnachtsmarkt oder ein Weihnachtsevent in Wien?",
+      "organizerLink": "Trag dein Event kostenlos ein"
+    },
+    "schema": {
+      "itemListName": "Weihnachtsmärkte in Wien {{year}}"
+    },
+    "curated": {
+      "6ad4f9444cb38af994bb48e0": {
+        "text": "Der bekannteste Christkindlmarkt Wiens liegt direkt vor dem beleuchteten Rathaus, mit geschmückten Bäumen im Rathauspark.",
+        "transit": "U2 Rathaus, U3 Volkstheater · Straßenbahn D, 1, 71 Rathausplatz/Burgtheater · Straßenbahn 2 Parlament"
+      },
+      "6ad6718e4cb38af994be12f4": {
+        "text": "Direkt am Stephansdom, mitten im Herzen Wiens – wer in der Innenstadt Weihnachtseinkäufe erledigt, kommt hier ohnehin vorbei.",
+        "transit": "U1, U3 Stephansplatz · Bus 1A, 2A, 3A Stephansplatz"
+      },
+      "6ad66ff34cb38af994bdf267": {
+        "text": "Auf einem der ältesten Plätze Wiens, bekannt für Kunsthandwerk und ausgewählte Geschenkideen – nur wenige Gehminuten vom Graben.",
+        "transit": "U3 Herrengasse, U2 Schottentor, U1 Stephansplatz · Bus 2A Herrengasse"
+      },
+      "6ad66e524cb38af994bdd220": {
+        "text": "Der Altwiener Christkindlmarkt setzt auf Tradition: Kunsthandwerk, Krippen und Christbaumschmuck, abseits vom großen Trubel.",
+        "transit": "U3 Herrengasse, U2 Schottentor · Straßenbahn 1, 2, 71, D Schottentor/Burgtheater · Bus 1A, 2A Freyung"
+      },
+      "6ad669964cb38af994bd7a8b": {
+        "text": "Zwischen Kunsthistorischem und Naturhistorischem Museum – hier lässt sich ein Museumsbesuch gut mit Punsch und Weihnachtsbummel verbinden.",
+        "transit": "U2 Museumsquartier, U3 Volkstheater · Straßenbahn 1, 2, 71, D Burgring"
+      },
+      "6ad679e44cb38af994bea739": {
+        "text": "Direkt an der Ringstraße – für einen kurzen Punschstopp nach der Arbeit oder vor dem Konzert im Konzerthaus.",
+        "transit": "U1, U2, U4 Karlsplatz · Straßenbahn 71, D Schwarzenbergplatz · Bus 4A Schwarzenbergplatz"
+      },
+      "6ad66b7f4cb38af994bda32e": {
+        "text": "Die Stände stehen im kaiserlichen Ehrenhof vor der barocken Fassade von Schloss Schönbrunn – auch zwischen den Feiertagen einen Ausflug wert.",
+        "transit": "U4 Schönbrunn · Straßenbahn 10, 60 Schloss Schönbrunn · Bus 10A Schloss Schönbrunn"
+      },
+      "6ad66d694cb38af994bdc579": {
+        "text": "Vor dem Oberen Belvedere direkt am Schlossteich, mit imperialer Kulisse und Blick über die Gärten.",
+        "transit": "Straßenbahn D Schloss Belvedere · U1 Hauptbahnhof · Straßenbahn 1, 18, 62, O und S-Bahn Quartier Belvedere"
+      },
+      "6ad67b6a4cb38af994bec77e": {
+        "text": "Zu Füßen des Riesenrads im Prater – laut Veranstalter zu Silvester sogar bis 2 Uhr früh geöffnet.",
+        "transit": "U1, U2 Praterstern · Straßenbahn O, 5 · Bus 80A · S-Bahn Praterstern"
+      },
+      "6ad6762c4cb38af994be5bb0": {
+        "text": "In den engen Biedermeiergassen am Spittelberg reihen sich die Stände zwischen den historischen Häusern – bekannt für Kunsthandwerk und Design.",
+        "transit": "U2 Volkstheater · Straßenbahn 49, 52 Stiftgasse · Bus 48A St.-Ulrichs-Platz"
+      },
+      "6ad673344cb38af994be2cef": {
+        "text": "Vor der Karlskirche zeigen Künstlerinnen, Künstler und Kunsthandwerksbetriebe ihre Arbeiten – für alle, die etwas Besonderes suchen.",
+        "transit": "U1, U2, U4 Karlsplatz · Straßenbahn 1, 2, 71, D Oper/Karlsplatz · Badner Bahn Karlsplatz · Bus 59A"
+      },
+      "6ad67ce94cb38af994bee44a": {
+        "text": "Ein Weihnachtsmarkt im Grünen in Währing, ruhiger und familiärer als in der Innenstadt – hier trifft sich vor allem die Nachbarschaft.",
+        "transit": "Bus 10A, 37A, 40A Dänenstraße"
+      },
+      "6ad6787f4cb38af994be8e8d": {
+        "text": "Im großen Hof des Uni-Campus treffen sich Studierende und Afterwork-Runden auf Punsch und Eisstockschießen.",
+        "transit": "Straßenbahn 5, 12, 43, 44 Lange Gasse · Bus 13A Skodagasse"
+      },
+      "6ad67e724cb38af994bf016f": {
+        "text": "Die Stadt Wien zeigt in den Glashäusern der Blumengärten Hirschstetten eine Weihnachtsausstellung – ein ruhiger Ausflug, besonders für Familien.",
+        "transit": "Straßenbahn 25, 26 Ziegelhofstraße · Bus 22A, 95A, 95B Blumengärten Hirschstetten"
+      }
+    }
+  },
   "ticket": {
     "eventLink": "Event-Link",
     "joinNow": "Jetzt teilnehmen"
@@ -1721,6 +1932,7 @@
   },
   "footer": {
     "halloweenVienna": "Halloween in Wien",
+    "christmasMarketsVienna": "Weihnachtsmärkte in Wien",
     "blog": "Blog",
     "copyright": "© {{year}} Share Your Party. Alle Rechte vorbehalten.",
     "events": "Events",
