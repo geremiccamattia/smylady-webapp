@@ -344,6 +344,35 @@ export function viennaWallClock(
   }
 }
 
+/** Versatz Wien gegenüber UTC zu einem Zeitpunkt, in Millisekunden. */
+function viennaOffsetMs(instant: number): number {
+  const wall = viennaWallClock(new Date(instant))
+  if (!wall) return NaN
+  const [y, m, d] = wall.date.split('-').map(Number)
+  const [h, min] = wall.time.split(':').map(Number)
+  const seconds = new Date(instant).getUTCSeconds()
+  return Date.UTC(y, m - 1, d, h, min, seconds) - Math.floor(instant / 1000) * 1000
+}
+
+/**
+ * Wiener Wanduhrzeit ("YYYY-MM-DD" + "HH:mm") → Zeitpunkt. Umkehrung von
+ * viennaWallClock, nie über die Zeitzone des Geräts.
+ *
+ * Dasselbe Verfahren wie wallTimeToUtc im Backend (utils/event-calendar.ts):
+ * zweimal den Versatz nachschlagen, damit auch die Umstellungstage stimmen.
+ * Unbrauchbare Eingaben ergeben null.
+ */
+export function viennaWallTimeToUtc(dateKey: string, time: string): Date | null {
+  if (!DATE_KEY.test(dateKey) || !TIME.test(time)) return null
+  const [y, m, d] = dateKey.split('-').map(Number)
+  const [h, min] = time.split(':').map(Number)
+  if (h > 23 || min > 59) return null
+  const naive = Date.UTC(y, m - 1, d, h, min)
+  const firstGuess = naive - viennaOffsetMs(naive)
+  const result = new Date(naive - viennaOffsetMs(firstGuess))
+  return isNaN(result.getTime()) ? null : result
+}
+
 /** Heutiger Kalendertag und Uhrzeit in Wien. */
 export function viennaNow(now: Date): { date: string; minutes: number } {
   const wall = viennaWallClock(now)

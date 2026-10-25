@@ -33,6 +33,7 @@ import { VisibilitySelector, type EventVisibility } from '@/components/events/Vi
 import { MultiSelectChips } from '@/components/events/MultiSelectChips'
 import { MUSIC_TYPE_VALUES, OFFERING_VALUES, toStringArray } from '@/lib/eventFields'
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
+import { buildEventTimes } from '@/lib/eventTimes'
 import { SlotDurationField } from '@/components/events/SlotDurationField'
 import {
   addDays,
@@ -41,10 +42,10 @@ import {
   isDailyHoursEdited,
   isForcedNextDay,
   listDays,
-  localDateKey,
   normalizeSchedule,
   scheduleBounds,
   validateSchedule,
+  viennaWallClock,
   type DailyHoursState,
 } from '@/lib/eventSchedule'
 
@@ -257,10 +258,15 @@ export default function EditEvent() {
           ? storedSchedule[0]
           : null
 
-      // Ohne schedule: Kalendertag in der Gerätezeitzone, passend zu getHours()
-      // unten. Vorher toISOString(), also der UTC-Tag — ein Event kurz nach
-      // Mitternacht Wiener Zeit stand damit auf dem Vortag.
-      const eventDate = scheduleRange?.startDate ?? (event.eventDate ? localDateKey(event.eventDate) : '')
+      /*
+       * Ohne schedule: Tag und Uhrzeiten in Wiener Zeit, wie buildEventTimes sie
+       * beim Speichern wieder umrechnet. Vorher Gerätezeitzone (getHours) — ein
+       * Gerät außerhalb Wiens hätte beim bloßen Speichern alle Zeiten verschoben.
+       * Der Tag kommt aus dem Beginn: Er ist der Tag, an dem das Event startet.
+       */
+      const startWall = viennaWallClock(event.eventStartTime || event.eventDate)
+      const endWall = viennaWallClock(event.eventEndTime)
+      const eventDate = scheduleRange?.startDate ?? startWall?.date ?? ''
 
       setFormData({
         name: event.name || '',
@@ -271,12 +277,8 @@ export default function EditEvent() {
         price: event.price?.toString() || '0',
         totalTickets: event.totalTickets?.toString() || '',
         eventDate,
-        eventStartTime: scheduleRange?.startTime ?? (event.eventStartTime
-          ? `${String(new Date(event.eventStartTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventStartTime).getMinutes()).padStart(2, '0')}`
-          : ''),
-        eventEndTime: singleEntry?.endTime ?? (event.eventEndTime
-          ? `${String(new Date(event.eventEndTime).getHours()).padStart(2, '0')}:${String(new Date(event.eventEndTime).getMinutes()).padStart(2, '0')}`
-          : ''),
+        eventStartTime: scheduleRange?.startTime ?? (event.eventStartTime ? startWall?.time ?? '' : ''),
+        eventEndTime: singleEntry?.endTime ?? endWall?.time ?? '',
         locationName: (() => {
           const existingLocation = event.locationName || ''
           const detailMatch = existingLocation.match(/\s*Top\s+(.+)$/)
@@ -328,11 +330,8 @@ export default function EditEvent() {
         )
       } else if (event.eventEndTime && isMultiDayEvent(event.eventStartTime || event.eventDate, event.eventEndTime)) {
         setIsMultiDay(true)
-        const endDate = new Date(event.eventEndTime)
-        setEventEndDate(localDateKey(endDate))
-        setEventEndTimeValue(
-          `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
-        )
+        setEventEndDate(endWall?.date ?? '')
+        setEventEndTimeValue(endWall?.time ?? '')
         setDailyHours({})
       } else {
         setIsMultiDay(false)
@@ -722,43 +721,27 @@ export default function EditEvent() {
           'Serien unterstützen keine Öffnungszeiten je Tag. Wenn du eine Serie möchtest, entferne die Öffnungszeiten über „Zurücksetzen“.',
       })
 
-  /** eventDate, eventStartTime und eventEndTime — unverändert der bisherige Weg. */
+  /**
+   * eventDate, eventStartTime und eventEndTime — in Wiener Zeit über denselben
+   * Helfer wie CreateEvent. Vorher fehlte hier der Folgetag-Schritt: Ein Ende
+   * über Mitternacht (22:00–02:00) lag am selben Tag wie der Beginn, und das
+   * Backend lehnte das Speichern mit 400 ab.
+   */
   const appendEventTimes = (
     eventFormData: FormData,
     { eventDate, eventStartTime, eventEndTime }: { eventDate: string; eventStartTime: string; eventEndTime: string },
   ) => {
-    if (eventDate) {
-      eventFormData.append('eventDate', new Date(eventDate).toISOString())
-    }
-
-    if (eventDate && eventStartTime) {
-      const [hours, minutes] = eventStartTime.split(':').map(Number)
-      const startDate = new Date(eventDate)
-      startDate.setHours(hours, minutes, 0, 0)
-      eventFormData.append('eventStartTime', startDate.toISOString())
-    }
-
-    if (isMultiDay && eventEndDate) {
-      // Mehrtägiges Event: Enddatum überschreibt die einfache Uhrzeit-Berechnung unten
-      const multiDayEnd = new Date(eventEndDate + 'T00:00:00')
-      if (eventEndTimeValue) {
-        const [hours, minutes] = eventEndTimeValue.split(':').map(Number)
-        multiDayEnd.setHours(hours, minutes, 0, 0)
-      } else {
-        multiDayEnd.setHours(23, 59, 0, 0)
-      }
-      eventFormData.append('eventEndTime', multiDayEnd.toISOString())
-    } else if (eventDate && eventEndTime) {
-      const [hours, minutes] = eventEndTime.split(':').map(Number)
-      const endDate = new Date(eventDate)
-      endDate.setHours(hours, minutes, 0, 0)
-      eventFormData.append('eventEndTime', endDate.toISOString())
-    } else if (eventDate && eventStartTime) {
-      const [hours, minutes] = eventStartTime.split(':').map(Number)
-      const fallbackEnd = new Date(eventDate)
-      fallbackEnd.setHours(hours + 4, minutes, 0, 0)
-      eventFormData.append('eventEndTime', fallbackEnd.toISOString())
-    }
+    const times = buildEventTimes({
+      date: eventDate,
+      startTime: eventStartTime,
+      endTime: eventEndTime,
+      endDate: isMultiDay ? eventEndDate : '',
+      endDateTime: eventEndTimeValue,
+    })
+    if (!times) return
+    eventFormData.append('eventDate', times.eventDate)
+    eventFormData.append('eventStartTime', times.eventStartTime)
+    eventFormData.append('eventEndTime', times.eventEndTime)
   }
 
   const buildEventFormData = () => {
