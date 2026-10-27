@@ -86,6 +86,8 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
               text: caption || '',
               media: [{ url: memoryUrl, type: memory.type === 'video' ? 'video' : 'image' }],
               visibility: 'public',
+              // Dieselben Markierungen wie die Erinnerung, in der Form von Feed und MemoryViewer.
+              mentions: captionMentions.length > 0 ? captionMentions : undefined,
             })
           }
         }
