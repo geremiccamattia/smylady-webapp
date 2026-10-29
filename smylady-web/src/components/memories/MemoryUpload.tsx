@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useRef, useMemo } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useState, useRef, useMemo, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { X, Upload, Image, Video, Loader2, Globe, Lock, Users, Share2 } from 'lucide-react'
+import axios from 'axios'
+import { X, Upload, Image, Video, Loader2, Globe, Lock, Users, Share2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { memoriesService } from '@/services/memories'
+import { memoriesService, type Memory } from '@/services/memories'
 import { apiClient } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 import MentionInput, { type MentionUser } from '@/components/mentionInput/MentionInput'
@@ -23,9 +24,34 @@ interface MemoryUploadProps {
 
 type PrivacyOption = 'public' | 'private' | 'custom'
 
+interface UploadOutcome {
+  /** Dateien, die beim Hochladen gescheitert sind, mit dem Grund. */
+  failed: { name: string; reason: string }[]
+  /** Anzahl der Dateien, die (in dieser oder einer früheren Runde) hochgeladen sind. */
+  uploadedCount: number
+  /** Medien im gerade angelegten Wall-Beitrag; 0 = keiner angelegt. */
+  wallPostMedia: number
+  /** Grund, falls der Wall-Beitrag scheiterte. */
+  wallPostError: string | null
+}
+
+/**
+ * Lesbarer Grund aus einem Fehler. Bei 429 setzt der Interceptor in
+ * services/api.ts die Meldung bereits in error.message; sonst hat die
+ * Meldung des Backends Vorrang vor dem rohen Axios-Text.
+ */
+function errorReason(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error) && error.response?.status !== 429) {
+    const message = (error.response?.data as { message?: unknown } | undefined)?.message
+    if (typeof message === 'string' && message) return message
+  }
+  return error instanceof Error && error.message ? error.message : fallback
+}
+
 export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, isPublicEvent = false }: MemoryUploadProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
@@ -37,6 +63,22 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
   const [showViewerPicker, setShowViewerPicker] = useState(false)
   const [selectedViewers, setSelectedViewers] = useState<string[]>([])
   const [shareToWall, setShareToWall] = useState(false)
+  /*
+   * Was in dieser Sitzung schon hochgeladen ist. Ein zweiter Versuch nach
+   * einem Teilfehler lädt nur die fehlenden Dateien hoch — sonst entstünden
+   * Dubletten der bereits gespeicherten Erinnerungen. Gilt nur, solange das
+   * Formular offen ist; das Backend kennt keinen Schutz gegen Dubletten.
+   */
+  const [uploaded, setUploaded] = useState<Map<File, Memory>>(() => new Map())
+  // Der Wall-Beitrag entsteht genau einmal.
+  const [wallPosted, setWallPosted] = useState(false)
+
+  // Vorschau-URLs beim Schließen freigeben.
+  const previewsRef = useRef<string[]>([])
+  useEffect(() => {
+    previewsRef.current = previews
+  }, [previews])
+  useEffect(() => () => previewsRef.current.forEach(url => URL.revokeObjectURL(url)), [])
 
   // Fetch event participants for custom privacy
   const { data: participants = [] } = useQuery({
@@ -62,40 +104,103 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
     [participants],
   )
 
-  // Upload mutation
+  /*
+   * Erst alle Dateien, dann EIN Wall-Beitrag mit allen Medien. Früher gab es
+   * einen Beitrag pro Datei; fünf POST /posts kurz hintereinander liefen in
+   * den Sekunden-Zähler des Throttlers (3/s), und ein Teil der Beiträge fehlte.
+   *
+   * Die Dateien gehen nacheinander hoch, wie bisher — parallel liefe man noch
+   * schneller in denselben Zähler. Eine gescheiterte Datei bricht nicht ab.
+   */
   const uploadMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<UploadOutcome> => {
       if (!selectedFiles.length) throw new Error('No files selected')
-      const uploadedMemories = []
+
+      const done = new Map(uploaded)
+      const failed: UploadOutcome['failed'] = []
       for (const file of selectedFiles) {
-        const memory = await memoriesService.uploadMemory(
-          ticketId,
-          file,
-          caption,
-          privacy,
-          privacy === 'custom' ? selectedViewers : undefined,
-          captionMentions
-        )
-        uploadedMemories.push(memory)
+        if (done.has(file)) continue
+        try {
+          const memory = await memoriesService.uploadMemory(
+            ticketId,
+            file,
+            caption,
+            privacy,
+            privacy === 'custom' ? selectedViewers : undefined,
+            captionMentions
+          )
+          done.set(file, memory)
+          setUploaded(new Map(done))
+        } catch (error) {
+          failed.push({ name: file.name, reason: errorReason(error, t('memories.uploadFailed')) })
+        }
       }
-      if (shareToWall && privacy === 'public') {
-        for (const memory of uploadedMemories) {
-          const memoryUrl = memory.url || memory.fileUrl
-          if (memoryUrl) {
+
+      // In der Reihenfolge der Auswahl.
+      const memories = selectedFiles.flatMap(file => done.get(file) ?? [])
+      if (memories.length === 0) {
+        throw new Error(failed[0]?.reason || t('memories.uploadFailed'))
+      }
+
+      let wallPostMedia = 0
+      let wallPostError: string | null = null
+      if (shareToWall && privacy === 'public' && !wallPosted) {
+        const media = memories.flatMap(memory => {
+          const url = memory.url || memory.fileUrl
+          return url ? [{ url, type: memory.type === 'video' ? ('video' as const) : ('image' as const) }] : []
+        })
+        if (media.length > 0) {
+          try {
             await apiClient.post('/posts', {
               text: caption || '',
-              media: [{ url: memoryUrl, type: memory.type === 'video' ? 'video' : 'image' }],
+              media,
               visibility: 'public',
               // Dieselben Markierungen wie die Erinnerung, in der Form von Feed und MemoryViewer.
               mentions: captionMentions.length > 0 ? captionMentions : undefined,
             })
+            setWallPosted(true)
+            wallPostMedia = media.length
+          } catch (error) {
+            wallPostError = errorReason(error, t('memories.wallPostFailedFallback'))
           }
         }
       }
+
+      return { failed, uploadedCount: memories.length, wallPostMedia, wallPostError }
     },
-    onSuccess: () => {
-      toast({ title: t('common.success'), description: t('memories.uploadSuccess') })
-      onSuccess()
+    onSuccess: ({ failed, uploadedCount, wallPostMedia, wallPostError }) => {
+      if (failed.length === 0 && !wallPostError) {
+        toast({ title: t('common.success'), description: t('memories.uploadSuccess') })
+        onSuccess()
+        return
+      }
+
+      // Teilerfolg: Formular bleibt offen, damit ein zweiter Versuch nur das
+      // Fehlende nachholt. Die Liste trotzdem auffrischen — die gelungenen
+      // Erinnerungen sind gespeichert. Dieselben Schlüssel wie in den
+      // onSuccess-Handlern von EventMemories und MemoryGallery.
+      queryClient.invalidateQueries({ queryKey: ['eventMemories', eventId] })
+      queryClient.invalidateQueries({ queryKey: ['memories', ticketId] })
+
+      const lines: string[] = []
+      if (failed.length > 0) {
+        lines.push(
+          t('memories.partialUploadFailed', {
+            failed: failed.length,
+            total: failed.length + uploadedCount,
+            names: failed.map(f => f.name).join(', '),
+            reason: failed[0].reason,
+          }),
+        )
+      }
+      if (wallPostMedia > 0 && failed.length > 0) {
+        lines.push(t('memories.wallPostPartial', { count: wallPostMedia }))
+      }
+      if (wallPostError) {
+        lines.push(t('memories.wallPostFailed', { reason: wallPostError }))
+      }
+      lines.push(t('memories.retryOnlyMissing'))
+      toast({ title: t('common.error'), description: lines.join(' '), variant: 'destructive' })
     },
     onError: (error: Error) => {
       toast({
@@ -118,14 +223,16 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
     })
 
     setSelectedFiles(prev => [...prev, ...validFiles])
+    // Synchron und in derselben Reihenfolge wie die Dateien. FileReader lieferte
+    // asynchron, die Vorschauen konnten dabei die Reihenfolge tauschen — und
+    // Entfernen per Index traf dann eine andere Datei als angezeigt.
+    setPreviews(prev => [...prev, ...validFiles.map(file => URL.createObjectURL(file))])
+  }
 
-    validFiles.forEach(file => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviews(prev => [...prev, reader.result as string])
-      }
-      reader.readAsDataURL(file)
-    })
+  const removeFile = (index: number) => {
+    URL.revokeObjectURL(previews[index])
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setPreviews(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -204,16 +311,24 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
                     ) : (
                       <img src={preview} alt="" className="w-full h-full object-cover rounded-lg" />
                     )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedFiles(prev => prev.filter((_, i) => i !== index))
-                        setPreviews(prev => prev.filter((_, i) => i !== index))
-                      }}
-                      className="absolute top-1 right-1 bg-black/50 rounded-full p-0.5 text-white"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+                    {/* Schon hochgeladen: nicht mehr entfernbar, ein zweiter Versuch überspringt sie. */}
+                    {selectedFiles[index] && uploaded.has(selectedFiles[index]) ? (
+                      <span
+                        title={t('memories.alreadyUploaded')}
+                        className="absolute top-1 right-1 bg-green-600 rounded-full p-0.5 text-white"
+                      >
+                        <Check className="w-3 h-3" />
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        disabled={uploadMutation.isPending}
+                        className="absolute top-1 right-1 bg-black/50 rounded-full p-0.5 text-white"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
                 <div
@@ -374,8 +489,14 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
             </div>
           )}
 
-          {/* Share to wall */}
-          {isPublicEvent && privacy === 'public' && (
+          {/* Share to wall — nach dem ersten Beitrag nicht mehr, sonst entstünde ein zweiter. */}
+          {isPublicEvent && privacy === 'public' && wallPosted && (
+            <p className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+              <Check className="w-4 h-4" />
+              {t('memories.wallPostDone')}
+            </p>
+          )}
+          {isPublicEvent && privacy === 'public' && !wallPosted && (
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <input
                 type="checkbox"

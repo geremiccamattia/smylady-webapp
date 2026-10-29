@@ -1,8 +1,34 @@
 'use client'
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import i18next from 'i18next'
 import { CONFIG, STORAGE_KEYS } from '@/lib/constants'
 import { replaceWithPath } from '@/lib/navigation'
+
+/**
+ * Lesbare Meldung für eine 429 des ThrottlerGuard.
+ *
+ * Das Backend schickt (ab fix/429-sichtbar-machen) `code: 'RATE_LIMITED'`,
+ * `message` und `retryAfter` in Sekunden. `message` ist nur deutsch — auf
+ * Englisch wird deshalb aus `retryAfter` übersetzt. Die alte Antwort
+ * („ThrottlerException: Too Many Requests") wird nie angezeigt.
+ */
+function rateLimitMessage(data: unknown): string {
+  const body = (data ?? {}) as { code?: unknown; message?: unknown; retryAfter?: unknown }
+  const english = i18next.language?.startsWith('en')
+  if (body.code === 'RATE_LIMITED' && typeof body.message === 'string' && body.message && !english) {
+    return body.message
+  }
+  const retryAfter = typeof body.retryAfter === 'number' && body.retryAfter > 0 ? Math.ceil(body.retryAfter) : null
+  return retryAfter
+    ? i18next.t('common.rateLimitedWait', {
+        count: retryAfter,
+        defaultValue: `Zu viele Anfragen in kurzer Zeit. Bitte warte ${retryAfter} Sekunden und versuche es erneut.`,
+      })
+    : i18next.t('common.rateLimited', {
+        defaultValue: 'Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.',
+      })
+}
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -31,6 +57,12 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Zentral für alle Aufrufer: Die meisten Stellen zeigen error.message an,
+    // und das wäre sonst der rohe Axios-Text „Request failed with status code 429".
+    // Status, Antwort und Sentry-Filter (instrumentation-client.ts) bleiben unberührt.
+    if (error.response?.status === 429) {
+      error.message = rateLimitMessage(error.response.data)
+    }
     if (error.response?.status === 401) {
       // War auf der fehlgeschlagenen Anfrage überhaupt ein Bearer-Token dabei?
       // Guest-Nebenanfragen (z.B. auf /explore, ohne eingeloggten User) laufen
