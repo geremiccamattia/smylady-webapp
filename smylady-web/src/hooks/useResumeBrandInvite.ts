@@ -4,7 +4,12 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { claimBrandInviteResume, readPendingBrandInvite } from '@/lib/pendingBrandInvite'
+import { useBrandProfile } from '@/hooks/useBrandProfile'
+import {
+  claimBrandInviteResume,
+  clearPendingBrandInvite,
+  readPendingBrandInvite,
+} from '@/lib/pendingBrandInvite'
 
 /**
  * Diese Seiten laufen nicht unter: /interests ist der letzte Schritt der
@@ -23,20 +28,32 @@ const NOT_ON = /^\/(brand\/invite|interests|creator\/apply)(\/|$)/
  * Einladungsseite liest ihn aus dem Speicher.
  *
  * Pro Browser-Sitzung nur einmal, sonst käme niemand mehr von der Einladung weg.
+ *
+ * Wer schon zu einer Brand gehört (etwa nach der Annahme im Banner), kann keine
+ * Einladung mehr annehmen: Der Eintrag fällt weg, die Rückkehr unterbleibt.
  */
 export function useResumeBrandInvite() {
   const { user, isLoading } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const localePath = useLocalePath()
+  const { profile, standing, isError } = useBrandProfile()
+  const belongsToBrand = Boolean(profile)
+  // Scheitert die Abfrage, bleibt es beim Rücksprung: Die Einladungsseite meldet das Nötige.
+  const standingKnown = standing !== undefined || isError
 
   useEffect(() => {
     if (isLoading || !user) return
     if (NOT_ON.test(pathname.replace(/^\/en(?=\/|$)/, ''))) return
-    if (!readPendingBrandInvite() || !claimBrandInviteResume()) return
+    if (!standingKnown || !readPendingBrandInvite()) return
+    if (belongsToBrand) {
+      clearPendingBrandInvite()
+      return
+    }
+    if (!claimBrandInviteResume()) return
 
     router.replace(localePath('/brand/invite'))
     // localePath wechselt bei jedem Render die Referenz; es hängt am pathname.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isLoading, pathname, router])
+  }, [user, isLoading, pathname, router, standingKnown, belongsToBrand])
 }

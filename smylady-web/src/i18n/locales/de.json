@@ -857,6 +857,23 @@
     "registerBlocked": "Du gehörst bereits zu einer Brand. Ein Konto kann nur zu einer Brand gehören.",
     "goToTeam": "Zum Team"
   },
+  "brandInviteInbox": {
+    "bannerLabel": "Offene Brand-Einladungen",
+    "settingsTitle": "Brand-Einladungen",
+    "invited": "{{company}} hat dich eingeladen (von {{inviter}})",
+    "invitedByBrand": "{{company}} hat dich eingeladen",
+    "accept": "Annehmen",
+    "decline": "Ablehnen",
+    "declineConfirm": "Einladung wirklich ablehnen?",
+    "declineKeep": "Behalten",
+    "dismiss": "Ausblenden",
+    "acceptedToast": "Willkommen im Team von {{company}}.",
+    "declinedToast": "Einladung abgelehnt.",
+    "invalid": "Diese Einladung ist nicht mehr gültig.",
+    "conflict": "Diese Einladung kann mit deinem Konto nicht angenommen werden.",
+    "acceptFailed": "Die Einladung konnte nicht angenommen werden.",
+    "declineFailed": "Die Einladung konnte nicht abgelehnt werden."
+  },
   "brandInvite": {
     "title": "Einladung ins Team von {{company}}",
     "description": "Diese Einladung gilt für die Adresse {{email}}.",

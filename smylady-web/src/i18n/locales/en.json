@@ -844,6 +844,23 @@
     "registerBlocked": "You already belong to a brand. An account can only belong to one brand.",
     "goToTeam": "Go to team"
   },
+  "brandInviteInbox": {
+    "bannerLabel": "Open brand invitations",
+    "settingsTitle": "Brand invitations",
+    "invited": "{{company}} invited you (from {{inviter}})",
+    "invitedByBrand": "{{company}} invited you",
+    "accept": "Accept",
+    "decline": "Decline",
+    "declineConfirm": "Really decline this invitation?",
+    "declineKeep": "Keep",
+    "dismiss": "Hide",
+    "acceptedToast": "Welcome to the {{company}} team.",
+    "declinedToast": "Invitation declined.",
+    "invalid": "This invitation is no longer valid.",
+    "conflict": "This invitation cannot be accepted with your account.",
+    "acceptFailed": "The invitation could not be accepted.",
+    "declineFailed": "The invitation could not be declined."
+  },
   "brandInvite": {
     "title": "Invitation to join the {{company}} team",
     "description": "This invitation is for the address {{email}}.",

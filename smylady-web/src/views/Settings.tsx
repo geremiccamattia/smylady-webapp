@@ -17,6 +17,7 @@ import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal'
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal'
 import { TutorialsCard } from '@/components/settings/TutorialsCard'
 import { BrandCard } from '@/components/settings/BrandCard'
+import { BrandInvitationsCard } from '@/components/settings/BrandInvitationsCard'
 import { CreatorCard } from '@/components/settings/CreatorCard'
 import {
   MapPin,
@@ -290,6 +291,10 @@ function SettingsContent() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Offene Brand-Einladungen, auch wenn der Banner ausgeblendet ist.
+          Rendert sich selbst weg, wenn keine offen ist. */}
+      <BrandInvitationsCard />
 
       {/* Brand-Bereich: Dashboard und Brand-Profil. Rendert sich selbst weg,
           wenn das Konto keine Brand ist — siehe BrandCard. */}

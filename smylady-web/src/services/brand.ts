@@ -94,6 +94,14 @@ export interface AcceptedInvitation {
   role: BrandMembershipRole
 }
 
+/** Offene Einladung an die bestätigte Adresse des Kontos, ohne Token. */
+export interface MyBrandInvitation {
+  id: string
+  companyName: string
+  invitedByName: string
+  expiresAt: string
+}
+
 /**
  * Was PATCH /brands/me entgegennimmt. Die optionalen Felder kennen drei
  * Zustände: Wert, weggelassen (unverändert) und null (leeren) — undefined
@@ -502,6 +510,25 @@ function mapInvitationSent(raw: any): BrandInvitationSent {
   return { ...mapInvitation(raw), mailSent: raw?.mailSent !== false }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapMyInvitation(raw: any): MyBrandInvitation {
+  return {
+    id: str(raw?.id),
+    companyName: str(raw?.companyName),
+    invitedByName: str(raw?.invitedByName),
+    expiresAt: str(raw?.expiresAt),
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapAcceptedInvitation(data: any): AcceptedInvitation {
+  return {
+    brandId: idOf(data?.brandId),
+    companyName: str(data?.companyName),
+    role: data?.role === 'owner' ? 'owner' : 'member',
+  }
+}
+
 /** Die Angebotsfrist ist verstrichen (das System storniert in Kürze). */
 export function isOfferExpired(order: Pick<BrandOrder, 'offerExpiresAt'>, now: Date = new Date()): boolean {
   if (!order.offerExpiresAt) return false
@@ -675,12 +702,27 @@ export const brandService = {
   /** 403: falsches Konto (Meldung nennt die maskierte Adresse), 404: ungültig, 409: nicht möglich. */
   async acceptInvitation(token: string): Promise<AcceptedInvitation> {
     const response = await apiClient.post(`/brands/invitations/${encodeURIComponent(token)}/accept`)
-    const data = unwrap(response) ?? {}
-    return {
-      brandId: idOf(data.brandId),
-      companyName: str(data.companyName),
-      role: data.role === 'owner' ? 'owner' : 'member',
-    }
+    return mapAcceptedInvitation(unwrap(response))
+  },
+
+  /**
+   * Offene Einladungen an die Adresse des Kontos. Leer ohne bestätigte Adresse
+   * und für Konten, die schon zu einer Brand gehören.
+   */
+  async getMyInvitations(): Promise<MyBrandInvitation[]> {
+    const response = await apiClient.get('/brands/invitations/mine')
+    const data = unwrap(response)
+    return Array.isArray(data) ? data.map(mapMyInvitation) : []
+  },
+
+  /** 404: nicht mehr gültig, 409: mit diesem Konto nicht möglich, 429: gedrosselt. */
+  async acceptMyInvitation(id: string): Promise<AcceptedInvitation> {
+    const response = await apiClient.post(`/brands/invitations/${encodeURIComponent(id)}/accept-mine`)
+    return mapAcceptedInvitation(unwrap(response))
+  },
+
+  async declineMyInvitation(id: string): Promise<void> {
+    await apiClient.post(`/brands/invitations/${encodeURIComponent(id)}/decline-mine`)
   },
 
   async removeMember(userId: string): Promise<void> {
