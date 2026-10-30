@@ -724,7 +724,7 @@ export default function Login() {
             <div className="relative group rounded-2xl overflow-hidden shadow-lg">
               <img
                 src="/partypics/party-3.jpeg"
-                alt="Disco Nacht"
+                alt="Weihnachtsmarkt bei Nacht"
                 className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -744,7 +744,7 @@ export default function Login() {
             <div className="relative group rounded-2xl overflow-hidden shadow-lg">
               <img
                 src="/partypics/party-5.jpeg"
-                alt="Event Genuss"
+                alt="Festival Publikum"
                 className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
