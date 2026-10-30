@@ -30,6 +30,7 @@ import {
   DELIVERABLE_PLATFORMS,
   DELIVERABLE_TYPES,
   EVENT_IMAGE_MAX_BYTES,
+  isPayoutAccountError,
   isRateLimited,
   readBrandError,
   readMissingFields,
@@ -39,7 +40,8 @@ import {
   type DeliverablePlatform,
   type DeliverableType,
 } from '@/services/brand'
-import { BrandGate, LoadingBars, useBrandLabels } from '@/components/brand/brandShared'
+import { BrandGate, LoadingBars, OwnerOnlyHint, useBrandLabels } from '@/components/brand/brandShared'
+import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { PayoutAccountRequired } from '@/components/settings/PayoutAccountRequired'
 import { usePayoutAccountStatus } from '@/hooks/useStripe'
 import { resolveImageUrl } from '@/lib/utils'
@@ -118,9 +120,13 @@ function OrderForm() {
   const labels = useBrandLabels()
   const params = useParams<{ id?: string }>()
   const editId = params?.id
+  const { isOwner } = useBrandProfile()
   // Ohne aktives Stripe-Auszahlungskonto kein neuer Auftrag (das Backend
   // lehnt Anlegen und Einreichen ebenso ab). Entwürfe bleiben bearbeitbar.
-  const payout = usePayoutAccountStatus()
+  // Gefragt ist das Konto des INHABERS. Für ein Mitglied lässt es sich hier
+  // nicht prüfen: Sein eigenes Konto zählt nicht, deshalb keine Sperre,
+  // sondern die Meldung beim Speichern.
+  const payout = usePayoutAccountStatus(isOwner)
 
   const [title, setTitle] = useState('')
   const [goal, setGoal] = useState('')
@@ -519,8 +525,21 @@ function OrderForm() {
       }
       router.push(localePath(`/brand/orders/${order.id}`))
     },
-    onError: (error: unknown) =>
-      fail(error, t('brandDashboard.orderSaveFailed', { defaultValue: 'Der Auftrag konnte nicht gespeichert werden.' })),
+    onError: (error: unknown) => {
+      // Die Meldung des Backends sagt „dein Auszahlungskonto" — für ein
+      // Mitglied stimmt das nicht, es fehlt das Konto des Inhabers.
+      if (!isOwner && isPayoutAccountError(error)) {
+        toast({
+          variant: 'destructive',
+          title: t('common.error', { defaultValue: 'Fehler' }),
+          description: t('brandTeam.ownerPayoutMissing', {
+            defaultValue: 'Der Inhaber muss zuerst ein Auszahlungskonto verbinden. Erst dann lassen sich Aufträge anlegen.',
+          }),
+        })
+        return
+      }
+      fail(error, t('brandDashboard.orderSaveFailed', { defaultValue: 'Der Auftrag konnte nicht gespeichert werden.' }))
+    },
   })
 
   const handle = (submit: boolean) => {
@@ -1032,15 +1051,25 @@ function OrderForm() {
           <Button type="button" variant="outline" className="flex-1" disabled={save.isPending} onClick={() => handle(false)}>
             {t('brandDashboard.saveDraft', { defaultValue: 'Als Entwurf speichern' })}
           </Button>
-          <Button type="button" variant="gradient" className="flex-1" loading={save.isPending} onClick={askToSubmit}>
-            {t('brandDashboard.submitOrder', { defaultValue: 'Einreichen' })}
-          </Button>
+          {isOwner && (
+            <Button type="button" variant="gradient" className="flex-1" loading={save.isPending} onClick={askToSubmit}>
+              {t('brandDashboard.submitOrder', { defaultValue: 'Einreichen' })}
+            </Button>
+          )}
         </div>
-        <p className="text-xs text-muted-foreground text-center">
-          {t('brandDashboard.submitHint', {
-            defaultValue: 'Nach dem Einreichen prüfen wir den Auftrag, schlagen Creator vor und schicken dir ein Angebot. Änderungen sind dann nur noch über uns möglich.',
-          })}
-        </p>
+        {isOwner ? (
+          <p className="text-xs text-muted-foreground text-center">
+            {t('brandDashboard.submitHint', {
+              defaultValue: 'Nach dem Einreichen prüfen wir den Auftrag, schlagen Creator vor und schicken dir ein Angebot. Änderungen sind dann nur noch über uns möglich.',
+            })}
+          </p>
+        ) : (
+          <OwnerOnlyHint
+            text={t('brandTeam.draftHintMember', {
+              defaultValue: 'Du kannst den Entwurf speichern. Einreichen muss ihn der Inhaber der Brand.',
+            })}
+          />
+        )}
       </form>
 
       {/* Gleiche Rückfrage wie auf der Detailseite (BrandOrderDetail). */}

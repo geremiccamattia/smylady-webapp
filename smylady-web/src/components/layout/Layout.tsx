@@ -3,8 +3,11 @@
 import Header from './Header'
 import Footer from './Footer'
 import MobileNav from './MobileNav'
+import { useResumeBrandInvite } from '@/hooks/useResumeBrandInvite'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  useResumeBrandInvite()
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />

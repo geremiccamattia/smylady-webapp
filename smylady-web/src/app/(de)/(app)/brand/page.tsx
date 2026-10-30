@@ -9,7 +9,7 @@ import BrandDashboard from '@/views/brand/BrandDashboard'
 
 export const metadata: Metadata = {
   title: 'Brand-Dashboard',
-  description: 'Deine Aufträge an Creator auf einen Blick.',
+  description: 'Die Aufträge deiner Brand auf einen Blick.',
   robots: { index: false, follow: false },
   alternates: localeAlternates('/brand', 'de'),
 }

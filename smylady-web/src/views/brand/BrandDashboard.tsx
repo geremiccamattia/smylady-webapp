@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { Building2, CalendarDays, ChevronRight, Pencil, Plus, Tag } from 'lucide-react'
+import { Building2, CalendarDays, ChevronRight, Pencil, Plus, Tag, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
@@ -38,7 +38,7 @@ function DashboardContent() {
   const { t } = useTranslation()
   const localePath = useLocalePath()
   const { user } = useAuth()
-  const { profile, standing } = useBrandProfile()
+  const { profile, standing, isOwner } = useBrandProfile()
 
   const ordersQuery = useQuery<BrandOrder[]>({
     queryKey: BRAND_ORDERS_QUERY_KEY,
@@ -47,8 +47,9 @@ function DashboardContent() {
     retry: false,
   })
   // Neue Aufträge erst mit aktivem Stripe-Auszahlungskonto — gleich hier
-  // sagen, nicht erst nach dem Klick auf „Neuer Auftrag".
-  const payout = usePayoutAccountStatus(standing === 'active')
+  // sagen, nicht erst nach dem Klick auf „Neuer Auftrag". Nur für den Inhaber:
+  // Das Backend prüft sein Konto, auch wenn ein Mitglied den Auftrag anlegt.
+  const payout = usePayoutAccountStatus(standing === 'active' && isOwner)
 
   if (!profile) return null
 
@@ -67,15 +68,23 @@ function DashboardContent() {
         <div>
           <h1 className="text-3xl font-bold">{t('brandDashboard.title', { defaultValue: 'Brand-Dashboard' })}</h1>
           <p className="text-muted-foreground">
-            {t('brandDashboard.subtitle', { defaultValue: 'Deine Aufträge an Creator auf einen Blick.' })}
+            {t('brandDashboard.subtitle', { defaultValue: 'Die Aufträge deiner Brand auf einen Blick.' })}
           </p>
         </div>
-        <Link href={localePath('/brand/orders/new')}>
-          <Button variant="gradient" className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('brandDashboard.newOrder', { defaultValue: 'Neuer Auftrag' })}
-          </Button>
-        </Link>
+        <div className="flex gap-2 flex-wrap justify-end">
+          <Link href={localePath('/brand/team')}>
+            <Button variant="outline" className="gap-2">
+              <Users className="h-4 w-4" />
+              {t('brandTeam.title', { defaultValue: 'Team' })}
+            </Button>
+          </Link>
+          <Link href={localePath('/brand/orders/new')}>
+            <Button variant="gradient" className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t('brandDashboard.newOrder', { defaultValue: 'Neuer Auftrag' })}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {payout.known && !payout.ready && <PayoutAccountRequired role="brand" />}
@@ -111,12 +120,14 @@ function DashboardContent() {
                 {[profile.industry, profile.contactName].filter(Boolean).join(' · ')}
               </div>
             </div>
-            <Link href={localePath('/brand/profile')}>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Pencil className="h-4 w-4" />
-                {t('brandDashboard.editProfile', { defaultValue: 'Profil bearbeiten' })}
-              </Button>
-            </Link>
+            {isOwner && (
+              <Link href={localePath('/brand/profile')}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-4 w-4" />
+                  {t('brandDashboard.editProfile', { defaultValue: 'Profil bearbeiten' })}
+                </Button>
+              </Link>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -128,7 +139,11 @@ function DashboardContent() {
           <Card className="border-purple-200 bg-purple-50/50 hover:bg-purple-50 transition-colors">
             <CardContent className="p-4 text-sm flex items-center gap-3">
               <span className="flex-1">
-                {needsAttention[0].status === 'awaiting_payment'
+                {!isOwner
+                  ? t('brandTeam.offerHintMember', {
+                      defaultValue: 'Angebot oder Zahlung offen. Annehmen und bezahlen kann nur der Inhaber der Brand.',
+                    })
+                  : needsAttention[0].status === 'awaiting_payment'
                   ? t('brandDashboard.paymentHint', {
                       defaultValue: 'Für einen Auftrag ist die Zahlung noch offen. Schliesse sie ab, um die Creator zu buchen.',
                     })
@@ -147,10 +162,14 @@ function DashboardContent() {
         <Card className="border-purple-200 bg-purple-50/50">
           <CardContent className="p-4 text-sm space-y-2">
             <p>
-              {t('brandDashboard.offerHint', {
-                count: needsAttention.length,
-                defaultValue: 'Für {{count}} Aufträge liegen Angebote vor oder Zahlungen sind offen. Sieh sie dir an.',
-              })}
+              {isOwner
+                ? t('brandDashboard.offerHint', {
+                    count: needsAttention.length,
+                    defaultValue: 'Für {{count}} Aufträge liegen Angebote vor oder Zahlungen sind offen. Sieh sie dir an.',
+                  })
+                : t('brandTeam.offerHintMember', {
+                    defaultValue: 'Angebot oder Zahlung offen. Annehmen und bezahlen kann nur der Inhaber der Brand.',
+                  })}
             </p>
             <ul className="space-y-1">
               {needsAttention.map((order) => (
@@ -185,7 +204,7 @@ function DashboardContent() {
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground mb-4">
                 {t('brandDashboard.ordersLoadFailed', {
-                  defaultValue: 'Deine Aufträge lassen sich gerade nicht laden.',
+                  defaultValue: 'Die Aufträge lassen sich gerade nicht laden.',
                 })}
               </p>
               <Button variant="outline" onClick={() => ordersQuery.refetch()}>

@@ -41,8 +41,11 @@ import {
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useLocalePath } from '@/hooks/useLocalePath'
+import { useBrandProfile } from '@/hooks/useBrandProfile'
 
 export default function Profile() {
+  // isBrand ist auch für Mitglieder wahr; das Profil ändert aber nur der Inhaber.
+  const { role: brandRole } = useBrandProfile()
   const { t } = useTranslation()
   const localePath = useLocalePath()
   const { user, logout, updateUser } = useAuth()
@@ -279,7 +282,7 @@ export default function Profile() {
 
               {/* Firmendaten liegen im Brand-Profil, nicht hier — sonst sucht
                   eine Brand Website und Ansprechperson vergeblich im Formular. */}
-              {user?.isBrand && (
+              {brandRole === 'owner' && (
                 <p className="text-sm text-muted-foreground -mt-3 mb-6">
                   {t('profile.brandProfileHint', {
                     defaultValue: 'Firmendaten wie Website, Branche und Ansprechperson änderst du im Brand-Profil.',
@@ -550,8 +553,8 @@ export default function Profile() {
                     <Edit className="h-4 w-4 mr-2" />
                     {t('profile.editProfile', { defaultValue: 'Profil bearbeiten' })}
                   </Button>
-                  {/* Brands pflegen ihre Firmendaten unter /brand/profile. */}
-                  {user?.isBrand && (
+                  {/* Brands pflegen ihre Firmendaten unter /brand/profile — nur der Inhaber. */}
+                  {brandRole === 'owner' && (
                     <Button variant="outline" asChild>
                       <Link href={localePath('/brand/profile')}>
                         <Building2 className="h-4 w-4 mr-2" />

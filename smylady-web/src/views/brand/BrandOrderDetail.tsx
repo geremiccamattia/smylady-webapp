@@ -57,7 +57,8 @@ import { eventsService } from '@/services/events'
 import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, getInitials, resolveImageUrl } from '@/lib/utils'
 import { formatRemaining, useCountdown, type RemainingUnits } from '@/lib/deadline'
 import { navigateToExternalUrl, STRIPE_HOSTS } from '@/lib/navigation'
-import { BrandGate, LoadingBars, OrderStatusBadge, PaymentStatusBadge, useBrandLabels } from '@/components/brand/brandShared'
+import { BrandGate, LoadingBars, OrderStatusBadge, OwnerOnlyHint, PaymentStatusBadge, useBrandLabels } from '@/components/brand/brandShared'
+import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 
@@ -96,6 +97,10 @@ const PAYMENT_POLL_MS = 3000
  *
  * Verwerfen, Zurückziehen, Ablehnen und Abbrechen sind dieselbe Stornierung
  * (POST /:id/cancel) mit freiwilligem Grund — endgültig, deshalb mit Rückfrage.
+ *
+ * Ein Mitglied liest mit und bearbeitet Entwürfe. Einreichen, Bezahlen,
+ * Stornieren und die Sichtbarkeit bleiben dem Inhaber; das Backend weist sie
+ * mit 403 ab, die Meldung zeigt fail().
  */
 export default function BrandOrderDetail() {
   return (
@@ -127,6 +132,7 @@ function OrderDetail() {
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const labels = useBrandLabels()
+  const { isOwner } = useBrandProfile()
   // Die Creator-Karten zeigen Enum-Werte des Creator-Profils (Plattform,
   // Follower-Bereich, Kategorie); die Beschriftung kommt aus dem Creator-Bereich.
   const creatorLabels = useCreatorLabels()
@@ -197,7 +203,8 @@ function OrderDetail() {
     !pollsExhausted
   const provisioningPolling =
     order?.status === 'confirmed' && order.provisioning !== null && order.provisioning !== 'done' && !pollsExhausted
-  const syncPolling = Boolean(id) && (paymentPolling || provisioningPolling)
+  // checkout/sync ist Sache des Inhabers; ein Mitglied bekäme nur 403.
+  const syncPolling = Boolean(id) && isOwner && (paymentPolling || provisioningPolling)
 
   useEffect(() => {
     if (!syncPolling) return
@@ -419,12 +426,13 @@ function OrderDetail() {
   // Checkout — nicht, solange Geld unterwegs ist, nicht nach der Frist, und
   // nicht, während die Seite nach der Rückkehr aus dem Checkout noch auf die
   // Bestätigung wartet (sonst startet jemand eine zweite Zahlung).
-  const canPay =
+  const payable =
     !offerExpired &&
     !paymentPolling &&
     order.offerPrice !== null &&
     (order.status === 'offer_sent' ||
       (order.status === 'awaiting_payment' && payment?.status !== 'processing'))
+  const canPay = payable && isOwner
   // Welcher Text auf dem Bezahlknopf steht, hängt am Zahlungsstand: Ein
   // gescheiterter Versuch heisst „erneut", ein offener Checkout „fortsetzen".
   const payLabel =
@@ -439,7 +447,7 @@ function OrderDetail() {
   // es nur über uns.
   const offerLike = order.status === 'offer_sent' || order.status === 'awaiting_payment'
   const checkoutLike = order.status === 'awaiting_payment'
-  const canCancel = CANCELLABLE.includes(order.status) && !paymentProcessing && !paymentPolling
+  const canCancel = isOwner && CANCELLABLE.includes(order.status) && !paymentProcessing && !paymentPolling
   const cancelLabel =
     order.status === 'draft'
       ? t('brandDashboard.cancelDraft', { defaultValue: 'Entwurf verwerfen' })
@@ -525,10 +533,12 @@ function OrderDetail() {
                   {t('common.edit', { defaultValue: 'Bearbeiten' })}
                 </Button>
               </Link>
-              <Button variant="gradient" className="gap-2" loading={submit.isPending} onClick={() => setConfirmSubmit(true)}>
-                <Send className="h-4 w-4" />
-                {t('brandDashboard.submitOrder', { defaultValue: 'Einreichen' })}
-              </Button>
+              {isOwner && (
+                <Button variant="gradient" className="gap-2" loading={submit.isPending} onClick={() => setConfirmSubmit(true)}>
+                  <Send className="h-4 w-4" />
+                  {t('brandDashboard.submitOrder', { defaultValue: 'Einreichen' })}
+                </Button>
+              )}
               {cancelButton}
             </div>
           ) : (
@@ -546,7 +556,14 @@ function OrderDetail() {
         pollsExhausted={pollsExhausted}
         checking={checkPayment.isPending}
         onCheckPayment={() => checkPayment.mutate()}
+        isOwner={isOwner}
       />
+
+      {/* Ein Satz für das Mitglied dort, wo der Inhaber einen Knopf hätte. Beim
+          Entwurf sagt das schon der Statushinweis. */}
+      {!isOwner && order.status !== 'draft' && (payable || (CANCELLABLE.includes(order.status) && !paymentProcessing)) && (
+        <OwnerOnlyHint />
+      )}
 
       {/* Angebot und Zahlung */}
       {order.offerPrice !== null && (
@@ -603,7 +620,7 @@ function OrderDetail() {
                 <p>
                   {t('brandDashboard.paymentProcessingHint', {
                     defaultValue:
-                      'Deine Zahlung wird verarbeitet. Bei Überweisung oder Lastschrift dauert das ein paar Tage; wir bestätigen, sobald das Geld eingegangen ist.',
+                      'Die Zahlung wird verarbeitet. Bei Überweisung oder Lastschrift dauert das ein paar Tage; wir bestätigen, sobald das Geld eingegangen ist.',
                   })}
                 </p>
               </div>
@@ -640,7 +657,7 @@ function OrderDetail() {
             <p className="text-sm text-muted-foreground">
               {t('brandDashboard.eventVisibilityDesc', {
                 defaultValue:
-                  'Standardmäßig sehen nur die eingeladenen Creator das Event. Du kannst es auch öffentlich machen, dann erscheint es nach unserer Freigabe in der Eventsuche.',
+                  'Standardmäßig sehen nur die eingeladenen Creator das Event. Der Inhaber kann es auch öffentlich machen, dann erscheint es nach unserer Freigabe in der Eventsuche.',
               })}
             </p>
             {eventQuery.isError && (
@@ -660,7 +677,7 @@ function OrderDetail() {
                 variant={currentVisibility === 'selected' ? 'default' : 'outline'}
                 size="sm"
                 className="gap-2"
-                disabled={busy || eventUnknown}
+                disabled={busy || eventUnknown || !isOwner}
                 onClick={() => currentVisibility !== 'selected' && visibility.mutate('selected')}
               >
                 <Lock className="h-4 w-4" />
@@ -670,7 +687,7 @@ function OrderDetail() {
                 variant={currentVisibility === 'public' ? 'default' : 'outline'}
                 size="sm"
                 className="gap-2"
-                disabled={busy || eventUnknown}
+                disabled={busy || eventUnknown || !isOwner}
                 onClick={() => currentVisibility !== 'public' && visibility.mutate('public')}
               >
                 <Globe className="h-4 w-4" />
@@ -684,6 +701,7 @@ function OrderDetail() {
                 </Button>
               </Link>
             </div>
+            {!isOwner && <OwnerOnlyHint />}
             {currentVisibility === 'public' && event && !eventApproved && (
               <p className="text-xs text-muted-foreground">
                 {t('brandDashboard.visibilityPublicPending', {
@@ -724,7 +742,7 @@ function OrderDetail() {
                     defaultValue: 'Diese Creator sind verbindlich für dein Event gebucht.',
                   })
                 : t('brandDashboard.acceptedCreatorsDesc', {
-                    defaultValue: 'Diese Creator haben für dein Event zugesagt. Mit deiner Zahlung sind sie verbindlich gebucht.',
+                    defaultValue: 'Diese Creator haben für das Event zugesagt. Mit der Zahlung sind sie verbindlich gebucht.',
                   })}
             </p>
             {order.proposedCreators.map((creator) => (
@@ -1122,6 +1140,7 @@ function StatusHint({
   pollsExhausted,
   checking,
   onCheckPayment,
+  isOwner,
 }: {
   order: BrandOrder
   returnState: 'success' | 'cancelled' | null
@@ -1129,6 +1148,7 @@ function StatusHint({
   pollsExhausted: boolean
   checking: boolean
   onCheckPayment: () => void
+  isOwner: boolean
 }) {
   const { t } = useTranslation()
   const { cancellation, responses, payment } = order
@@ -1139,8 +1159,8 @@ function StatusHint({
   const cancelledText =
     cancellation?.by === 'brand'
       ? cancelledAt
-        ? t('brandDashboard.hintCancelledByBrandAt', { date: cancelledAt, defaultValue: 'Du hast diesen Auftrag am {{date}} storniert.' })
-        : t('brandDashboard.hintCancelledByBrand', { defaultValue: 'Du hast diesen Auftrag storniert.' })
+        ? t('brandDashboard.hintCancelledByBrandAt', { date: cancelledAt, defaultValue: 'Die Brand hat diesen Auftrag am {{date}} storniert.' })
+        : t('brandDashboard.hintCancelledByBrand', { defaultValue: 'Die Brand hat diesen Auftrag storniert.' })
       : cancellation?.by === 'system'
         ? t('brandDashboard.hintCancelledExpired', {
             defaultValue:
@@ -1154,7 +1174,7 @@ function StatusHint({
   const cancelledPaidText =
     payment?.status === 'paid'
       ? t('brandDashboard.hintCancelledPaidRefundPending', {
-          defaultValue: 'Deine Zahlung ist eingegangen; die Rückerstattung folgt, wir melden uns.',
+          defaultValue: 'Die Zahlung ist eingegangen; die Rückerstattung folgt, wir melden uns.',
         })
       : ''
 
@@ -1164,15 +1184,15 @@ function StatusHint({
   const offerSentText =
     payment?.status === 'failed'
       ? t('brandDashboard.hintAwaitingFailed', {
-          defaultValue: 'Die Zahlung ist fehlgeschlagen. Bitte versuche es erneut – das Angebot gilt weiterhin bis zur Frist.',
+          defaultValue: 'Die Zahlung ist fehlgeschlagen. Der Inhaber kann es erneut versuchen – das Angebot gilt weiterhin bis zur Frist.',
         })
       : payment?.status === 'expired'
         ? t('brandDashboard.hintOfferSentExpiredCheckout', {
-            defaultValue: 'Die Zahlungsseite ist abgelaufen. Du kannst die Zahlung neu starten, solange das Angebot gilt.',
+            defaultValue: 'Die Zahlungsseite ist abgelaufen. Der Inhaber kann die Zahlung neu starten, solange das Angebot gilt.',
           })
         : t('brandDashboard.hintOfferSent', {
             defaultValue:
-              'Unser Angebot liegt vor: Die Creator unten haben für dein Event zugesagt. Nimm das Angebot an und bezahle, dann sind sie verbindlich gebucht und dein Event ist angelegt.',
+              'Unser Angebot liegt vor: Die Creator unten haben für das Event zugesagt. Sobald der Inhaber es annimmt und bezahlt, sind sie verbindlich gebucht und das Event ist angelegt.',
           })
 
   // Zahlung: Was gerade los ist, hängt am Zahlungsstand, nicht nur am Status.
@@ -1183,11 +1203,11 @@ function StatusHint({
     payment?.status === 'processing'
       ? t('brandDashboard.hintAwaitingProcessing', {
           defaultValue:
-            'Deine Zahlung wird verarbeitet. Sobald das Geld eingegangen ist, sind die Creator verbindlich gebucht und dein Event ist angelegt – wir melden uns.',
+            'Die Zahlung wird verarbeitet. Sobald das Geld eingegangen ist, sind die Creator verbindlich gebucht und das Event ist angelegt – wir melden uns.',
         })
       : payment?.status === 'failed'
         ? t('brandDashboard.hintAwaitingFailed', {
-            defaultValue: 'Die Zahlung ist fehlgeschlagen. Bitte versuche es erneut – das Angebot gilt weiterhin bis zur Frist.',
+            defaultValue: 'Die Zahlung ist fehlgeschlagen. Der Inhaber kann es erneut versuchen – das Angebot gilt weiterhin bis zur Frist.',
           })
         : awaitingUnconfirmed
           ? t('brandDashboard.hintAwaitingUnconfirmed', {
@@ -1198,7 +1218,7 @@ function StatusHint({
                 defaultValue: 'Danke! Wir warten auf die Bestätigung von Stripe – das dauert meist nur Sekunden.',
               })
             : t('brandDashboard.hintAwaitingPending', {
-                defaultValue: 'Die Zahlung ist noch offen. Schliesse sie ab, um die Creator verbindlich zu buchen.',
+                defaultValue: 'Die Zahlung ist noch offen. Erst mit ihrem Abschluss sind die Creator verbindlich gebucht.',
               })
 
   // Bestätigt: Event und Buchung entstehen nach der Zahlung. Scheitert das
@@ -1227,22 +1247,23 @@ function StatusHint({
 
   // Der Knopf zum Nachprüfen, wenn das automatische Nachfragen aufgegeben hat.
   const showCheckPayment =
-    (order.status === 'awaiting_payment' && awaitingUnconfirmed) ||
-    (order.status === 'confirmed' && provisioningOpen && pollsExhausted)
+    isOwner &&
+    ((order.status === 'awaiting_payment' && awaitingUnconfirmed) ||
+      (order.status === 'confirmed' && provisioningOpen && pollsExhausted))
 
   const text = {
     draft: t('brandDashboard.hintDraft', {
-      defaultValue: 'Dieser Auftrag ist ein Entwurf. Nur du siehst ihn. Reiche ihn ein, wenn alles passt.',
+      defaultValue: 'Dieser Auftrag ist ein Entwurf. Alle Personen der Brand sehen ihn, einreichen kann ihn nur der Inhaber.',
     }),
     submitted: t('brandDashboard.hintSubmitted', {
-      defaultValue: 'Dein Auftrag ist bei uns eingegangen. Wir prüfen ihn und suchen passende Creator.',
+      defaultValue: 'Der Auftrag ist bei uns eingegangen. Wir prüfen ihn und suchen passende Creator.',
     }),
     in_review: t('brandDashboard.hintInReview', {
-      defaultValue: 'Wir prüfen deinen Auftrag gerade und stellen Creator zusammen. Du bekommst in Kürze ein Angebot.',
+      defaultValue: 'Wir prüfen den Auftrag gerade und stellen Creator zusammen. Das Angebot folgt in Kürze.',
     }),
     creators_requested: t('brandDashboard.hintCreatorsRequested', {
       defaultValue:
-        'Wir fragen gerade passende Creator nach ihrer Verfügbarkeit. Sobald Zusagen vorliegen, bekommst du ein Angebot – nur mit Creatorn, die wirklich dabei sind.',
+        'Wir fragen gerade passende Creator nach ihrer Verfügbarkeit. Sobald Zusagen vorliegen, folgt ein Angebot – nur mit Creatorn, die wirklich dabei sind.',
     }),
     offer_sent: offerSentText,
     awaiting_payment: awaitingText,

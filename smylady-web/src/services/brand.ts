@@ -1,7 +1,7 @@
 'use client'
 
 import axios from 'axios'
-import { apiClient } from './api'
+import { apiClient, publicClient } from './api'
 
 /**
  * Brand-Seite des Brand-Creator-Systems: eigenes Profil und eigene Aufträge.
@@ -14,6 +14,11 @@ import { apiClient } from './api'
  *
  * Wichtig: 403 darf NICHT wie 401 behandelt werden. Der Response-Interceptor
  * in api.ts meldet nur bei 401 ab — ein 403 fällt dort unberührt durch.
+ *
+ * Eine Brand kann mehrere Personen haben: Inhaber (owner) und Mitglieder
+ * (member). GET /brands/me liefert das Profil der Brand für beide, die Rolle
+ * steht in membership.role. Das Backend setzt die Rechte durch; die Seiten
+ * zeigen sie nur an.
  */
 
 // ───────────────────────────────────────────────────────────────
@@ -22,9 +27,13 @@ import { apiClient } from './api'
 
 export type BrandProfileStatus = 'pending' | 'active' | 'paused' | 'rejected' | 'suspended'
 
+export type BrandMembershipRole = 'owner' | 'member'
+
 export interface BrandProfile {
   id: string
   status: BrandProfileStatus
+  /** Rolle des angemeldeten Kontos in dieser Brand. */
+  membershipRole: BrandMembershipRole
   companyName: string
   contactName: string
   contactEmail: string
@@ -37,6 +46,52 @@ export interface BrandProfile {
   otherLink: string
   description: string
   createdAt: string
+}
+
+export interface BrandTeamMember {
+  userId: string
+  name: string
+  email: string
+  profileImage: string
+  profileImageThumbnailUrl: string
+  role: BrandMembershipRole
+  joinedAt: string
+}
+
+export type BrandInvitationStatus = 'pending' | 'expired'
+
+export interface BrandInvitation {
+  id: string
+  email: string
+  status: BrandInvitationStatus
+  expiresAt: string
+  lastSentAt: string
+}
+
+/** Antwort von Einladen und Erneut senden: Die Einladung steht, die Mail vielleicht nicht. */
+export interface BrandInvitationSent extends BrandInvitation {
+  mailSent: boolean
+}
+
+export interface BrandTeam {
+  members: BrandTeamMember[]
+  invitations: BrandInvitation[]
+}
+
+export type InvitationState = 'valid' | 'expired' | 'used' | 'revoked' | 'unknown'
+const INVITATION_STATES: readonly string[] = ['valid', 'expired', 'used', 'revoked', 'unknown']
+
+/** Vorschau ohne Login. Bei jedem ungültigen Zustand sind beide Angaben null. */
+export interface InvitationPreview {
+  state: InvitationState
+  companyName: string | null
+  maskedEmail: string | null
+}
+
+export interface AcceptedInvitation {
+  brandId: string
+  companyName: string
+  role: BrandMembershipRole
 }
 
 /**
@@ -283,6 +338,8 @@ export function mapBrandProfile(raw: any): BrandProfile {
   return {
     id: str(raw?._id || raw?.id),
     status: (raw?.status || 'pending') as BrandProfileStatus,
+    // Antworten ohne das Feld (PATCH /brands/me) stammen vom Inhaber.
+    membershipRole: raw?.membership?.role === 'member' ? 'member' : 'owner',
     companyName: str(raw?.companyName),
     contactName: str(raw?.contactPerson?.name),
     contactEmail: str(raw?.contactPerson?.email),
@@ -415,6 +472,36 @@ function mapPayment(raw: any): BrandOrderPayment | null {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapTeamMember(raw: any): BrandTeamMember {
+  return {
+    userId: idOf(raw?.userId),
+    name: str(raw?.name),
+    email: str(raw?.email),
+    profileImage: str(raw?.profileImage),
+    profileImageThumbnailUrl: str(raw?.profileImageThumbnailUrl),
+    role: raw?.role === 'owner' ? 'owner' : 'member',
+    joinedAt: str(raw?.joinedAt),
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapInvitation(raw: any): BrandInvitation {
+  return {
+    id: str(raw?.id || raw?._id),
+    email: str(raw?.email),
+    status: raw?.status === 'expired' ? 'expired' : 'pending',
+    expiresAt: str(raw?.expiresAt),
+    lastSentAt: str(raw?.lastSentAt),
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapInvitationSent(raw: any): BrandInvitationSent {
+  // Nur ein ausdrückliches false heisst „Mail nicht raus".
+  return { ...mapInvitation(raw), mailSent: raw?.mailSent !== false }
+}
+
 /** Die Angebotsfrist ist verstrichen (das System storniert in Kürze). */
 export function isOfferExpired(order: Pick<BrandOrder, 'offerExpiresAt'>, now: Date = new Date()): boolean {
   if (!order.offerExpiresAt) return false
@@ -542,6 +629,81 @@ export const brandService = {
       approvalPending: Boolean(data.approvalPending),
     }
   },
+
+  // ── Team ───────────────────────────────────────────────────────────
+
+  /** Mitglieder und offene Einladungen der eigenen Brand. */
+  async getTeam(): Promise<BrandTeam> {
+    const response = await apiClient.get('/brands/me/team')
+    const data = unwrap(response) ?? {}
+    return {
+      members: Array.isArray(data.members) ? data.members.map(mapTeamMember) : [],
+      invitations: Array.isArray(data.invitations) ? data.invitations.map(mapInvitation) : [],
+    }
+  },
+
+  /** 409 mit Meldung (schon Mitglied, schon eingeladen, …), 429 bei zu vielen Mails. */
+  async inviteMember(email: string): Promise<BrandInvitationSent> {
+    const response = await apiClient.post('/brands/me/invitations', { email })
+    return mapInvitationSent(unwrap(response))
+  },
+
+  async revokeInvitation(id: string): Promise<void> {
+    await apiClient.delete(`/brands/me/invitations/${encodeURIComponent(id)}`)
+  },
+
+  async resendInvitation(id: string): Promise<BrandInvitationSent> {
+    const response = await apiClient.post(`/brands/me/invitations/${encodeURIComponent(id)}/resend`)
+    return mapInvitationSent(unwrap(response))
+  },
+
+  /**
+   * Vorschau einer Einladung. Ohne Login erreichbar, deshalb über publicClient:
+   * Der Token im Link ist der Nachweis, und ein abgelaufener Login darf hier
+   * nicht in die Abmelde-Logik laufen. Antwortet immer mit 200 und einem state.
+   */
+  async previewInvitation(token: string): Promise<InvitationPreview> {
+    const response = await publicClient.get(`/brands/invitations/${encodeURIComponent(token)}`)
+    const data = unwrap(response) ?? {}
+    return {
+      state: INVITATION_STATES.includes(data.state) ? (data.state as InvitationState) : 'unknown',
+      companyName: data.companyName ? str(data.companyName) : null,
+      maskedEmail: data.maskedEmail ? str(data.maskedEmail) : null,
+    }
+  },
+
+  /** 403: falsches Konto (Meldung nennt die maskierte Adresse), 404: ungültig, 409: nicht möglich. */
+  async acceptInvitation(token: string): Promise<AcceptedInvitation> {
+    const response = await apiClient.post(`/brands/invitations/${encodeURIComponent(token)}/accept`)
+    const data = unwrap(response) ?? {}
+    return {
+      brandId: idOf(data.brandId),
+      companyName: str(data.companyName),
+      role: data.role === 'owner' ? 'owner' : 'member',
+    }
+  },
+
+  async removeMember(userId: string): Promise<void> {
+    await apiClient.delete(`/brands/me/members/${encodeURIComponent(userId)}`)
+  },
+
+  /** 409, wenn der Inhaber austreten will: Er muss die Brand zuerst übertragen. */
+  async leaveBrand(): Promise<void> {
+    await apiClient.post('/brands/me/leave')
+  },
+
+  /**
+   * Inhaberschaft übertragen. Das Passwort bleibt weg, wenn nichts eingegeben
+   * ist: Konten aus Google- oder Apple-Login prüft das Backend ohne Passwort.
+   */
+  async transferOwnership(userId: string, password?: string): Promise<{ ownerUserId: string }> {
+    const response = await apiClient.post('/brands/me/transfer-ownership', {
+      userId,
+      ...(password ? { password } : {}),
+    })
+    const data = unwrap(response) ?? {}
+    return { ownerUserId: idOf(data.ownerUserId) }
+  },
 }
 
 /** 404 von GET /brands/me: Dieses Konto hat kein Brand-Profil. */
@@ -563,6 +725,38 @@ export function readBrandError(error: unknown, fallback: string): string {
     return message || data?.msg || fallback
   }
   return fallback
+}
+
+/**
+ * Fehlermeldung der Team-Routen.
+ *
+ * Es gibt zwei Arten von 429: Die Drossel (code 'RATE_LIMITED', früher der
+ * Rohtext „ThrottlerException") bekommt die vorhandene „zu viele Versuche"-
+ * Meldung. Die fachlichen Grenzen („gerade erst verschickt", „zu viele
+ * Einladungen") haben einen eigenen Text und zeigen den.
+ */
+export function readBrandTeamError(error: unknown, fallback: string, rateLimited: string): string {
+  if (isRateLimited(error) && axios.isAxiosError(error)) {
+    const data = error.response?.data as { code?: unknown; message?: unknown } | undefined
+    const throttled =
+      data?.code === 'RATE_LIMITED' || typeof data?.message !== 'string' || /throttler/i.test(data.message)
+    if (throttled) return rateLimited
+  }
+  return readBrandError(error, fallback)
+}
+
+/** HTTP-Status eines Fehlers aus apiClient, sonst undefined. */
+export function brandErrorStatus(error: unknown): number | undefined {
+  return axios.isAxiosError(error) ? error.response?.status : undefined
+}
+
+/**
+ * Das Backend verlangt beim Anlegen und Einreichen das Auszahlungskonto des
+ * INHABERS, auch wenn ein Mitglied den Auftrag anlegt. Die Meldung ist auf den
+ * Inhaber zugeschnitten („Verbinde zuerst dein …") und wird am Wort erkannt.
+ */
+export function isPayoutAccountError(error: unknown): boolean {
+  return /auszahlungskonto/i.test(readBrandError(error, ''))
 }
 
 /**

@@ -26,7 +26,7 @@ export function BrandCard() {
   const { t } = useTranslation()
   const localePath = useLocalePath()
   const { user } = useAuth()
-  const { standing } = useBrandProfile()
+  const { profile, role, standing } = useBrandProfile()
 
   const isBrand = Boolean(user?.isBrand) || standing === 'pending' || standing === 'active'
   if (!isBrand) return null
@@ -46,12 +46,23 @@ export function BrandCard() {
             <ChevronRight className="h-4 w-4" />
           </Link>
         </Button>
-        <Button variant="ghost" className="w-full justify-between" asChild>
-          <Link href={localePath('/brand/profile')}>
-            {t('brandDashboard.editBrandProfile', { defaultValue: 'Brand-Profil bearbeiten' })}
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </Button>
+        {profile && (
+          <Button variant="ghost" className="w-full justify-between" asChild>
+            <Link href={localePath('/brand/team')}>
+              {t('brandTeam.title', { defaultValue: 'Team' })}
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        )}
+        {/* Das Profil ändert nur der Inhaber. */}
+        {role === 'owner' && (
+          <Button variant="ghost" className="w-full justify-between" asChild>
+            <Link href={localePath('/brand/profile')}>
+              {t('brandDashboard.editBrandProfile', { defaultValue: 'Brand-Profil bearbeiten' })}
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

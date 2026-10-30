@@ -102,6 +102,9 @@ apiClient.interceptors.response.use(
         // Konto nicht anmelden könnte. Mit Schrägstrich, damit /settings,
         // /stories und /subscribers nicht mitmatchen.
         '/s/',
+        // Die Vorschau einer Brand-Einladung braucht keinen Login. Nur dieser
+        // Pfad: /brand und /brand/team bleiben geschützt.
+        '/brand/invite',
       ]
       // Locale-Prefix abschneiden, sonst gilt /en/explore nicht als public und ein 401
       // einer Nebenanfrage wirft den Besucher von einer öffentlichen Seite auf /login.

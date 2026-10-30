@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +9,8 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { authService } from '@/services/auth'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLocalePath } from '@/hooks/useLocalePath'
+import { brandErrorStatus, readBrandError } from '@/services/brand'
 import { Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,8 +23,11 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { logout } = useAuth()
+  const localePath = useLocalePath()
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
+  // 409 vom Lösch-Endpunkt: Ein Inhaber mit Team muss die Brand erst übertragen.
+  const [blockedBy, setBlockedBy] = useState('')
 
   const CONFIRM_PHRASE = t('settings.deleteConfirmPhrase')
 
@@ -46,6 +52,10 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
       // Logout and redirect
       logout()
     } catch (error: unknown) {
+      if (brandErrorStatus(error) === 409) {
+        setBlockedBy(readBrandError(error, t('errors.general')))
+        return
+      }
       const errorMessage = error instanceof Error ? error.message : t('errors.general')
       toast({
         variant: 'destructive',
@@ -60,6 +70,7 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
   const handleClose = () => {
     setConfirmText('')
     setLoading(false)
+    setBlockedBy('')
     onClose()
   }
 
@@ -108,6 +119,15 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
               className="uppercase"
             />
           </div>
+
+          {blockedBy && (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm space-y-1" role="alert">
+              <p>{blockedBy}</p>
+              <Link href={localePath('/brand/team')} onClick={handleClose} className="text-primary hover:underline">
+                {t('brandTeam.goToTeam', { defaultValue: 'Zum Team' })}
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2">

@@ -40,7 +40,7 @@ export default function Header() {
   // in Prüfung bzw. freigeschaltet (GET /brands/me, 404 = keins, gecacht).
   // Eine frisch registrierte Brand hat isBrand noch nicht im gespeicherten
   // Nutzerobjekt und fand den Bereich sonst nur über die Adresszeile.
-  const { standing: brandStanding } = useBrandProfile()
+  const { standing: brandStanding, profile: brandProfile, role: brandRole } = useBrandProfile()
   const isBrand = Boolean(user?.isBrand) || brandStanding === 'pending' || brandStanding === 'active'
 
   // Fetch unread notification count
@@ -352,17 +352,30 @@ export default function Header() {
                         {t('brandDashboard.title', { defaultValue: 'Brand-Dashboard' })}
                       </span>
                     </Link>
-                    {/* Firmendaten liegen im Brand-Profil, nicht im allgemeinen Profil. */}
-                    <Link
-                      href={localePath('/brand/profile')}
-                      onClick={closeSidebar}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
-                    >
-                      <Pencil className="h-6 w-6 shrink-0 text-primary" />
-                      <span className="text-sm font-medium">
-                        {t('brandDashboard.editBrandProfile', { defaultValue: 'Brand-Profil bearbeiten' })}
-                      </span>
-                    </Link>
+                    {/* Firmendaten liegen im Brand-Profil, nicht im allgemeinen
+                        Profil. Das Team sehen alle, das Profil ändert nur der Inhaber. */}
+                    {brandProfile && (
+                      <Link
+                        href={localePath('/brand/team')}
+                        onClick={closeSidebar}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                      >
+                        <Users className="h-6 w-6 shrink-0 text-primary" />
+                        <span className="text-sm font-medium">{t('brandTeam.title', { defaultValue: 'Team' })}</span>
+                      </Link>
+                    )}
+                    {brandRole === 'owner' && (
+                      <Link
+                        href={localePath('/brand/profile')}
+                        onClick={closeSidebar}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                      >
+                        <Pencil className="h-6 w-6 shrink-0 text-primary" />
+                        <span className="text-sm font-medium">
+                          {t('brandDashboard.editBrandProfile', { defaultValue: 'Brand-Profil bearbeiten' })}
+                        </span>
+                      </Link>
+                    )}
                   </div>
                 )}
 

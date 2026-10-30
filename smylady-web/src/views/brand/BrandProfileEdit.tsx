@@ -17,7 +17,7 @@ import { BRAND_PROFILE_QUERY_KEY, useBrandProfile } from '@/hooks/useBrandProfil
 import { brandService, readBrandError, type BrandProfile } from '@/services/brand'
 import { isValidEmail } from '@/lib/utils'
 import { BRAND_INDUSTRY_OPTIONS } from '@/views/auth/BrandRegister'
-import { BrandGate, ProfileStatusBadge } from '@/components/brand/brandShared'
+import { BrandGate, LoadingBars, ProfileStatusBadge } from '@/components/brand/brandShared'
 
 /** Obergrenze von PATCH /brands/me für `description`. */
 const DESCRIPTION_MAX_LENGTH = 1000
@@ -43,15 +43,37 @@ function optionalOrNull(value: string): string | null {
  * Auch für eine Brand in Prüfung erreichbar: Wer sich vertippt hat, soll das
  * korrigieren können, bevor wir freischalten. Nur die Felder aus
  * UpdateBrandProfileDto — Status und Review-Spuren setzt allein das Backend.
+ *
+ * Das Profil ändert nur der Inhaber. Ein Mitglied, das über einen alten Link
+ * hierher kommt, geht mit einem Hinweis zurück aufs Dashboard.
  */
 export default function BrandProfileEdit() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <BrandGate allow={['active', 'pending', 'blocked']}>
-        <ProfileForm />
+        <OwnerOnly />
       </BrandGate>
     </div>
   )
+}
+
+function OwnerOnly() {
+  const { t } = useTranslation()
+  const { toast } = useToast()
+  const router = useRouter()
+  const localePath = useLocalePath()
+  const { role } = useBrandProfile()
+  const member = role === 'member'
+
+  useEffect(() => {
+    if (!member) return
+    toast({ description: t('brandTeam.ownerOnly', { defaultValue: 'Das kann nur der Inhaber der Brand.' }) })
+    router.replace(localePath('/brand'))
+    // Einmal beim Erkennen der Rolle; toast und localePath wechseln die Referenz.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member])
+
+  return member ? <LoadingBars /> : <ProfileForm />
 }
 
 function ProfileForm() {

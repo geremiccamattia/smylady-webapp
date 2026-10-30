@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
+import { BRAND_PROFILE_QUERY_KEY, useBrandProfile } from '@/hooks/useBrandProfile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -66,6 +68,9 @@ export default function BrandRegister() {
   const localePath = useLocalePath()
   const { login, isAuthenticated, isLoading: authLoading } = useAuth()
   const fingerprint = useFingerprint()
+  const queryClient = useQueryClient()
+  // Ein Konto gehört zu höchstens einer Brand: Mitgliedern kein zweites Profil anbieten.
+  const { role: brandRole } = useBrandProfile()
 
   /*
    * `null`, bis der AuthContext fertig geladen hat.
@@ -279,6 +284,8 @@ export default function BrandRegister() {
         website: optional(website),
         socialLinks: hasSocialLinks ? socialLinks : undefined,
       })
+      // Die Anfrage von oben hat „kein Profil" gecacht; das stimmt jetzt nicht mehr.
+      await queryClient.invalidateQueries({ queryKey: BRAND_PROFILE_QUERY_KEY })
       setStep('done')
     } catch (error: any) {
       const status = error?.response?.status
@@ -521,7 +528,22 @@ export default function BrandRegister() {
             </form>
           )}
 
-          {step === 'brand-profile' && (
+          {step === 'brand-profile' && brandRole === 'member' && (
+            <div className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {t('brandTeam.registerBlocked', {
+                  defaultValue: 'Du gehörst bereits zu einer Brand. Ein Konto kann nur zu einer Brand gehören.',
+                })}
+              </p>
+              <Button variant="outline" asChild>
+                <Link href={localePath('/brand')}>
+                  {t('brandDashboard.backToDashboard', { defaultValue: 'Zurück zum Dashboard' })}
+                </Link>
+              </Button>
+            </div>
+          )}
+
+          {step === 'brand-profile' && brandRole !== 'member' && (
             <form onSubmit={handleBrandProfile} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="companyName">

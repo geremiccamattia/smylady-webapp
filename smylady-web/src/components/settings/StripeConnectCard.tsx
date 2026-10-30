@@ -57,7 +57,9 @@ function StripeConnectCardContent() {
   // Events, Pflicht vor dem ersten Auftrag) und aktive Creator (Vergütung aus
   // Brand-Aufträgen) verbinden dasselbe Stripe-Konto; Brands bekommen die
   // Texte der Veranstalter. Creator und Brand sind keine Rollen im Token,
-  // sondern aktive Profile.
+  // sondern aktive Profile. Mitglieder einer aktiven Brand zählen mit: GET
+  // /brands/me liefert ihnen dasselbe Profil, und das Backend lässt sie
+  // verbinden — wer Inhaber werden soll, braucht ein eigenes Konto.
   const isOrganizer = user?.role === 'organizer'
   const { standing: creatorStanding } = useCreatorProfile()
   const { standing: brandStanding } = useBrandProfile()

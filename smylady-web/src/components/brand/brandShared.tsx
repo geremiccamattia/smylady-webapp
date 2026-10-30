@@ -205,6 +205,17 @@ export function LoadingBars() {
   )
 }
 
+/** Steht dort, wo ein Mitglied eine Inhaber-Aktion nicht sieht oder nicht nutzen kann. */
+export function OwnerOnlyHint({ text }: { text?: string }) {
+  const { t } = useTranslation()
+  return (
+    <p className="flex items-start gap-2 text-sm text-muted-foreground">
+      <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+      <span>{text ?? t('brandTeam.ownerOnly', { defaultValue: 'Das kann nur der Inhaber der Brand.' })}</span>
+    </p>
+  )
+}
+
 // ───────────────────────────────────────────────────────────────
 // Zugangsprüfung
 // ───────────────────────────────────────────────────────────────
@@ -235,7 +246,7 @@ export function BrandGate({
 }) {
   const { t } = useTranslation()
   const localePath = useLocalePath()
-  const { standing, isError, refetch } = useBrandProfile()
+  const { standing, role, isError, refetch } = useBrandProfile()
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
@@ -270,7 +281,7 @@ export function BrandGate({
             icon={<XCircle className="h-8 w-8 text-white" />}
             title={t('common.error', { defaultValue: 'Fehler' })}
             description={t('brandDashboard.loadFailed', {
-              defaultValue: 'Dein Brand-Profil lässt sich gerade nicht laden. Bitte versuche es später erneut.',
+              defaultValue: 'Das Brand-Profil lässt sich gerade nicht laden. Bitte versuche es später erneut.',
             })}
             action={
               <Button variant="outline" onClick={() => refetch()}>
@@ -325,17 +336,25 @@ export function BrandGate({
         <CardContent className="p-6">
           <StatusPanel
             icon={<Clock className="h-8 w-8 text-white" />}
-            title={t('brandDashboard.pendingTitle', { defaultValue: 'Dein Profil wird geprüft.' })}
+            title={t('brandDashboard.pendingTitle', { defaultValue: 'Das Brand-Profil wird geprüft.' })}
             description={t('brandDashboard.pendingDesc', {
               defaultValue:
-                'Wir sehen uns deine Angaben an und schalten dich zeitnah frei. Danach kannst du hier Aufträge anlegen.',
+                'Wir sehen uns die Angaben an und schalten die Brand zeitnah frei. Danach lassen sich hier Aufträge anlegen.',
             })}
             action={
-              <Link href={localePath('/brand/profile')}>
-                <Button variant="outline">
-                  {t('brandDashboard.editProfile', { defaultValue: 'Profil bearbeiten' })}
-                </Button>
-              </Link>
+              <div className="flex gap-2 justify-center flex-wrap">
+                {/* Das Profil ändert nur der Inhaber; das Team sehen alle. */}
+                {role === 'owner' && (
+                  <Link href={localePath('/brand/profile')}>
+                    <Button variant="outline">
+                      {t('brandDashboard.editProfile', { defaultValue: 'Profil bearbeiten' })}
+                    </Button>
+                  </Link>
+                )}
+                <Link href={localePath('/brand/team')}>
+                  <Button variant="outline">{t('brandTeam.title', { defaultValue: 'Team' })}</Button>
+                </Link>
+              </div>
             }
           />
         </CardContent>
@@ -348,7 +367,7 @@ export function BrandGate({
       <CardContent className="p-6">
         <StatusPanel
           icon={<Lock className="h-8 w-8 text-white" />}
-          title={t('brandDashboard.blockedTitle', { defaultValue: 'Dein Brand-Profil ist derzeit nicht aktiv.' })}
+          title={t('brandDashboard.blockedTitle', { defaultValue: 'Das Brand-Profil ist derzeit nicht aktiv.' })}
           description={t('brandDashboard.blockedDesc', {
             defaultValue: 'Aufträge sind im Moment nicht möglich. Bei Fragen melde dich bei office@shareyourparty.de.',
           })}
