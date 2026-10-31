@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast'
 import { authService } from '@/services/auth'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
-import { brandErrorStatus, readBrandError } from '@/services/brand'
+import { useBrandProfile } from '@/hooks/useBrandProfile'
+import { brandErrorStatus, readBrandTeamError } from '@/services/brand'
 import { Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -26,8 +27,11 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
   const localePath = useLocalePath()
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   // 409 vom Lösch-Endpunkt: Ein Inhaber mit Team muss die Brand erst übertragen.
-  const [blockedBy, setBlockedBy] = useState('')
+  // Die Meldung nennt die Inhaberschaft nur in diesem Fall, nicht bei offenen Aufträgen.
+  const [showTeamLink, setShowTeamLink] = useState(false)
+  const { role } = useBrandProfile()
 
   const CONFIRM_PHRASE = t('settings.deleteConfirmPhrase')
 
@@ -42,6 +46,8 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
     }
 
     setLoading(true)
+    setDeleteError(null)
+    setShowTeamLink(false)
     try {
       await authService.deleteAccount()
       toast({
@@ -52,16 +58,9 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
       // Logout and redirect
       logout()
     } catch (error: unknown) {
-      if (brandErrorStatus(error) === 409) {
-        setBlockedBy(readBrandError(error, t('errors.general')))
-        return
-      }
-      const errorMessage = error instanceof Error ? error.message : t('errors.general')
-      toast({
-        variant: 'destructive',
-        title: t('common.error'),
-        description: errorMessage,
-      })
+      const errorMessage = readBrandTeamError(error, t('errors.general'), t('common.rateLimited'))
+      setDeleteError(errorMessage)
+      setShowTeamLink(brandErrorStatus(error) === 409 && /inhaberschaft/i.test(errorMessage))
     } finally {
       setLoading(false)
     }
@@ -70,7 +69,8 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
   const handleClose = () => {
     setConfirmText('')
     setLoading(false)
-    setBlockedBy('')
+    setDeleteError(null)
+    setShowTeamLink(false)
     onClose()
   }
 
@@ -100,6 +100,13 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
                 <li>{t('settings.deleteInfo2')}</li>
                 <li>{t('settings.deleteInfo3')}</li>
                 <li>{t('settings.deleteInfo4')}</li>
+                {role === 'owner' && (
+                  <li>
+                    {t('settings.deleteInfoBrand', {
+                      defaultValue: 'Deine Brand wird gelöscht. Das geht nur, wenn kein Team besteht und keine Aufträge offen oder bezahlt sind.',
+                    })}
+                  </li>
+                )}
                 <li>{t('settings.deleteInfo5')}</li>
               </ul>
             </div>
@@ -107,7 +114,8 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
 
           <div className="space-y-2">
             <Label htmlFor="confirmText">
-              {t('settings.typePhrase')} <span className="font-bold text-destructive">{CONFIRM_PHRASE}</span> {t('settings.toConfirm')}
+              {t('settings.typePhrase')} <span className="font-bold text-destructive">{CONFIRM_PHRASE}</span>{' '}
+              {t('settings.toConfirm', { defaultValue: 'zum Bestätigen' })}
             </Label>
             <Input
               id="confirmText"
@@ -120,13 +128,16 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
             />
           </div>
 
-          {blockedBy && (
-            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm space-y-1" role="alert">
-              <p>{blockedBy}</p>
-              <Link href={localePath('/brand/team')} onClick={handleClose} className="text-primary hover:underline">
-                {t('brandTeam.goToTeam', { defaultValue: 'Zum Team' })}
-              </Link>
+          {deleteError && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm" role="alert">
+              {deleteError}
             </div>
+          )}
+
+          {showTeamLink && (
+            <Link href={localePath('/brand/team')} onClick={handleClose} className="text-sm text-primary hover:underline">
+              {t('brandTeam.goToTeam', { defaultValue: 'Zum Team' })}
+            </Link>
           )}
         </div>
 
