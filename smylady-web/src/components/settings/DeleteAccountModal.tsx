@@ -15,6 +15,8 @@ import { brandErrorStatus, readBrandTeamError } from '@/services/brand'
 import { Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+const SUPPORT_MAILTO = `mailto:office@shareyourparty.de?subject=${encodeURIComponent('Konto löschen')}`
+
 interface DeleteAccountModalProps {
   open: boolean
   onClose: () => void
@@ -31,6 +33,8 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
   // 409 vom Lösch-Endpunkt: Ein Inhaber mit Team muss die Brand erst übertragen.
   // Die Meldung nennt die Inhaberschaft nur in diesem Fall, nicht bei offenen Aufträgen.
   const [showTeamLink, setShowTeamLink] = useState(false)
+  // Jeder andere 409, etwa offene Aufträge: Hier hilft nur der Support weiter.
+  const [showSupportLink, setShowSupportLink] = useState(false)
   const { role } = useBrandProfile()
 
   const CONFIRM_PHRASE = t('settings.deleteConfirmPhrase')
@@ -48,6 +52,7 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
     setLoading(true)
     setDeleteError(null)
     setShowTeamLink(false)
+    setShowSupportLink(false)
     try {
       await authService.deleteAccount()
       toast({
@@ -60,7 +65,10 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
     } catch (error: unknown) {
       const errorMessage = readBrandTeamError(error, t('errors.general'), t('common.rateLimited'))
       setDeleteError(errorMessage)
-      setShowTeamLink(brandErrorStatus(error) === 409 && /inhaberschaft/i.test(errorMessage))
+      const conflict = brandErrorStatus(error) === 409
+      const teamRule = conflict && /inhaberschaft/i.test(errorMessage)
+      setShowTeamLink(teamRule)
+      setShowSupportLink(conflict && !teamRule)
     } finally {
       setLoading(false)
     }
@@ -71,6 +79,7 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
     setLoading(false)
     setDeleteError(null)
     setShowTeamLink(false)
+    setShowSupportLink(false)
     onClose()
   }
 
@@ -138,6 +147,12 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
             <Link href={localePath('/brand/team')} onClick={handleClose} className="text-sm text-primary hover:underline">
               {t('brandTeam.goToTeam', { defaultValue: 'Zum Team' })}
             </Link>
+          )}
+
+          {showSupportLink && (
+            <a href={SUPPORT_MAILTO} className="text-sm text-primary hover:underline">
+              {t('settings.contactSupport', { defaultValue: 'Support kontaktieren' })}
+            </a>
           )}
         </div>
 
