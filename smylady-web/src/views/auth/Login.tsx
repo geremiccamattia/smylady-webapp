@@ -1239,7 +1239,7 @@ export default function Login() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              {t('footer.copyright')}
+              {t('footer.copyright', { year: new Date().getFullYear() })}
             </p>
           </div>
         </div>
