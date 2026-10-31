@@ -1547,6 +1547,7 @@
     "newEmailMustDiffer": "Die neue E-Mail muss sich von der aktuellen unterscheiden",
     "newEmailPlaceholder": "neue@email.de",
     "sameEmail": "E-Mail ist identisch",
+    "orWriteTo": "Oder schreibe uns an",
     "toConfirm": "zum Bestätigen",
     "typePhrase": "Tippe",
     "typeToConfirm": "Tippe LÖSCHEN um zu bestätigen",

@@ -15,7 +15,8 @@ import { brandErrorStatus, readBrandTeamError } from '@/services/brand'
 import { Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-const SUPPORT_MAILTO = `mailto:office@shareyourparty.de?subject=${encodeURIComponent('Konto löschen')}`
+const SUPPORT_EMAIL = 'office@shareyourparty.de'
+const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Konto löschen')}`
 
 interface DeleteAccountModalProps {
   open: boolean
@@ -150,9 +151,16 @@ export function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
           )}
 
           {showSupportLink && (
-            <a href={SUPPORT_MAILTO} className="text-sm text-primary hover:underline">
-              {t('settings.contactSupport', { defaultValue: 'Support kontaktieren' })}
-            </a>
+            <div className="space-y-1">
+              <a href={SUPPORT_MAILTO} className="text-sm text-primary hover:underline">
+                {t('settings.contactSupport', { defaultValue: 'Support kontaktieren' })}
+              </a>
+              {/* Der mailto:-Link tut ohne Standard-Mailprogramm nichts. */}
+              <p className="text-xs text-muted-foreground">
+                {t('settings.orWriteTo', { defaultValue: 'Oder schreibe uns an' })}{' '}
+                <span className="select-all">{SUPPORT_EMAIL}</span>
+              </p>
+            </div>
           )}
         </div>
 

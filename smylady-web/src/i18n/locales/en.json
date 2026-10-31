@@ -1585,6 +1585,7 @@
     "newEmailMustDiffer": "New email must be different from current",
     "newEmailPlaceholder": "new@email.com",
     "sameEmail": "Email is identical",
+    "orWriteTo": "Or write to us at",
     "toConfirm": "to confirm",
     "typePhrase": "Type",
     "typeToConfirm": "Type DELETE to confirm",
