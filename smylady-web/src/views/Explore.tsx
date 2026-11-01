@@ -793,12 +793,23 @@ function ExploreContent() {
     )
   }
 
+  // Ort für die Überschrift: erster Teil der Standortbeschreibung („Berlin, Deutschland" → „Berlin").
+  // Bei GPS-Standorten steht dort nur „Aktueller Standort (lat, lng)" — dann „in deiner Nähe".
+  const weekCity =
+    selectedLocation &&
+    selectedLocation.place_id !== 'current' &&
+    !/\d+\.\d+/.test(selectedLocation.description)
+      ? selectedLocation.description.split(',')[0].trim()
+      : ''
+
   return (
     <div className="space-y-8 pb-32 md:pb-0">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">
-          {t('explore.weekTitle', { defaultValue: 'Diese Woche in Wien' })}
+          {weekCity
+            ? t('explore.weekTitle', { city: weekCity, defaultValue: 'Diese Woche in {{city}}' })
+            : t('explore.weekTitleNearby', { defaultValue: 'Diese Woche in deiner Nähe' })}
         </h1>
         {!isLoading && (
           <p className="text-muted-foreground mt-1">
