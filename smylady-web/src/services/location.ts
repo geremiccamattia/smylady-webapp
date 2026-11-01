@@ -5,6 +5,7 @@
 const STORAGE_KEYS = {
   LIVE_LOCATION_ENABLED: 'syp_live_location_enabled',
   MANUAL_LOCATION: 'syp_manual_location',
+  MANUAL_LOCATIONS: 'syp_manual_locations',
   TICKETMASTER_ENABLED: 'syp_ticketmaster_enabled',
 }
 
@@ -65,6 +66,52 @@ export const getManualLocation = (): {
 } | null => {
   const location = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.MANUAL_LOCATION) : null
   return location ? JSON.parse(location) : null
+}
+
+export interface SavedLocation {
+  place_id: string
+  lat: number
+  lng: number
+  description: string
+}
+
+/**
+ * Mehrere Standorte für die Explore-Seite speichern. Der erste wird zusätzlich
+ * als einzelner manueller Standort abgelegt — Seiten mit nur einem Standort
+ * (Community-Events, Ticketmaster-Service) lesen weiter diesen.
+ */
+export const saveManualLocations = (locations: SavedLocation[]): void => {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEYS.MANUAL_LOCATIONS, JSON.stringify(locations))
+  if (locations[0]) {
+    const { lat, lng, description } = locations[0]
+    saveManualLocation({ lat, lng, description })
+  }
+}
+
+/**
+ * Gespeicherte Standortliste der Explore-Seite, oder null, wenn keine da ist.
+ */
+export const getManualLocations = (): SavedLocation[] | null => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.MANUAL_LOCATIONS)
+    const list = raw ? JSON.parse(raw) : null
+    if (!Array.isArray(list)) return null
+    const valid = list.filter((l) => l && typeof l.lat === 'number' && typeof l.lng === 'number')
+    return valid.length > 0 ? valid : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Gespeicherte Standorte (einzeln und Liste) entfernen.
+ */
+export const clearManualLocations = (): void => {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(STORAGE_KEYS.MANUAL_LOCATIONS)
+  localStorage.removeItem(STORAGE_KEYS.MANUAL_LOCATION)
 }
 
 /**

@@ -1981,6 +1981,8 @@
     "viewProfile": "Profil ansehen",
     "weekTitle": "Diese Woche in {{city}}",
     "weekTitleNearby": "Diese Woche in deiner Nähe",
+    "nearYouShort": "deiner Nähe",
+    "and": "&",
     "withAttendees": "mit Teilnehmern",
     "yourVibes": "Deine Vibes"
   },
@@ -2123,7 +2125,11 @@
     "popularLocations": "Beliebte Standorte",
     "searchPlaceholder": "Stadt suchen...",
     "searchResults": "Suchergebnisse",
-    "selectLocation": "Standort auswählen"
+    "selectLocation": "Standort auswählen",
+    "selectLocations": "Standorte wählen",
+    "multiHint": "Wähle eine oder mehrere Städte (bis zu {{max}}).",
+    "maxReached": "Du kannst höchstens {{max}} Standorte auswählen.",
+    "remove": "Entfernen"
   },
   "manageGuests": {
     "active": "Aktiv",
