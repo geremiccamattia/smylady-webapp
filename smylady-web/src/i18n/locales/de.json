@@ -1979,7 +1979,8 @@
     "tryOtherSearch": "Versuche einen anderen Suchbegriff.",
     "viewAll": "Alle anzeigen",
     "viewProfile": "Profil ansehen",
-    "weekTitle": "Diese Woche in Wien",
+    "weekTitle": "Diese Woche in {{city}}",
+    "weekTitleNearby": "Diese Woche in deiner Nähe",
     "withAttendees": "mit Teilnehmern",
     "yourVibes": "Deine Vibes"
   },
