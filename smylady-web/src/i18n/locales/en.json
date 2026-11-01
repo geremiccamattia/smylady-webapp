@@ -1546,7 +1546,8 @@
     "tryOtherSearch": "Try a different search term.",
     "viewAll": "Show all",
     "viewProfile": "View profile",
-    "weekTitle": "This Week in Vienna",
+    "weekTitle": "This Week in {{city}}",
+    "weekTitleNearby": "This Week Near You",
     "withAttendees": "with attendees",
     "yourVibes": "Your Vibes"
   },
