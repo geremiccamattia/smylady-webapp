@@ -15,13 +15,14 @@ import { RaffleEventCard } from '@/components/RaffleEventCard'
 import { RafflePromoBanner } from '@/components/RafflePromoBanner'
 import {
   getManualLocation,
+  getManualLocations,
   getCurrentLocation,
   isLiveLocationEnabled,
 } from '@/services/location'
 import Link from 'next/link'
 import ScrollSignupPrompt from '@/components/ScrollSignupPrompt'
 import EventCard from '@/components/events/EventCard'
-import LocationModal, { LocationResult } from '@/components/LocationModal'
+import LocationModal, { LocationResult, MAX_LOCATIONS } from '@/components/LocationModal'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -74,6 +75,31 @@ const FALLBACK_LOCATION: LocationResult = {
  * noch in den Vortag — Filter und Chip lagen dort einen Tag daneben.
  */
 
+/**
+ * Ergebnislisten mehrerer Standorte zusammenführen. Überlappen sich die Radien
+ * (z. B. Frankfurt und Mainz), käme dasselbe Event sonst doppelt vor.
+ */
+function mergeById<T extends { _id?: string; id?: string }>(lists: T[][]): T[] {
+  const seen = new Set<string>()
+  const merged: T[] = []
+  for (const list of lists) {
+    for (const item of list || []) {
+      const id = item._id || item.id
+      if (id) {
+        if (seen.has(id)) continue
+        seen.add(id)
+      }
+      merged.push(item)
+    }
+  }
+  return merged
+}
+
+/** GPS-Standorte tragen nur Koordinaten in der Beschreibung, keinen Ortsnamen. */
+function isGpsLocation(location: LocationResult): boolean {
+  return location.place_id === 'current' || /\d+\.\d+/.test(location.description)
+}
+
 /** Ein Wert aus <input type="date"> als lokales Datum. */
 function parseInputDate(value: string): Date {
   return new Date(`${value}T00:00:00`)
@@ -108,7 +134,8 @@ function ExploreContent() {
   const showTicketmaster = true
 
   // Location state
-  const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null)
+  // Mehrere Standorte möglich (z. B. Berlin und Wien) — jede Abfrage läuft pro Standort
+  const [selectedLocations, setSelectedLocations] = useState<LocationResult[]>([])
   const [locationModalOpen, setLocationModalOpen] = useState(false)
   const [radius, setRadius] = useState('50')
   const [locationLoaded, setLocationLoaded] = useState(false)
@@ -131,15 +158,21 @@ function ExploreContent() {
   useEffect(() => {
     const loadLocation = async () => {
       try {
-        // 1. Check for saved manual location
+        // 1. Gespeicherte Standortliste, sonst der einzelne gespeicherte Standort
+        const savedLocations = getManualLocations()
+        if (savedLocations) {
+          setSelectedLocations(savedLocations.slice(0, MAX_LOCATIONS))
+          setLocationLoaded(true)
+          return
+        }
         const savedLocation = getManualLocation()
         if (savedLocation && savedLocation.lat && savedLocation.lng) {
-          setSelectedLocation({
+          setSelectedLocations([{
             place_id: 'saved',
             description: savedLocation.description || `${savedLocation.lat.toFixed(4)}, ${savedLocation.lng.toFixed(4)}`,
             lat: savedLocation.lat,
             lng: savedLocation.lng,
-          })
+          }])
           setLocationLoaded(true)
           return
         }
@@ -153,7 +186,7 @@ function ExploreContent() {
             lat: current.latitude,
             lng: current.longitude,
           }
-          setSelectedLocation(detectedLocation)
+          setSelectedLocations([detectedLocation])
           setLocationLoaded(true)
           return
         } catch {
@@ -161,15 +194,19 @@ function ExploreContent() {
         }
 
         // 3. Fallback only when geolocation is not available
-        setSelectedLocation(FALLBACK_LOCATION)
+        setSelectedLocations([FALLBACK_LOCATION])
       } catch {
-        setSelectedLocation(FALLBACK_LOCATION)
+        setSelectedLocations([FALLBACK_LOCATION])
       } finally {
         setLocationLoaded(true)
       }
     }
     loadLocation()
   }, [])
+
+  // Koordinaten aller Standorte als stabiler Teil der Query-Keys
+  const locationsKey = selectedLocations.map((l) => `${l.lat},${l.lng}`).join('|')
+  const hasLocations = selectedLocations.length > 0
 
   // Fetch platform events with location
   const { data: events, isLoading } = useQuery({
@@ -180,33 +217,26 @@ function ExploreContent() {
       searchTrigger,
       submittedSearch,
       selectedCategory,
-      selectedLocation?.lat,
-      selectedLocation?.lng,
+      locationsKey,
       radius,
     ],
-    queryFn: () => {
+    queryFn: async () => {
       const catParam = selectedCategory === 'all' ? '' : selectedCategory
-      return isAuthenticated
-        ? eventsService.getEvents(
-            {
-              search: searchRef.current,
-              category: catParam,
-              latitude: selectedLocation?.lat?.toString() || '',
-              longitude: selectedLocation?.lng?.toString() || '',
-              radius: radius,
-            },
-            true
-          )
-        : eventsService.getPublicEvents(
-            {
-              search: searchRef.current,
-              category: catParam,
-              latitude: selectedLocation?.lat?.toString() || '',
-              longitude: selectedLocation?.lng?.toString() || '',
-              radius: radius,
-            },
-            true
-          )
+      const fetchFor = (location?: LocationResult) => {
+        const params = {
+          search: searchRef.current,
+          category: catParam,
+          latitude: location?.lat?.toString() || '',
+          longitude: location?.lng?.toString() || '',
+          radius: radius,
+        }
+        return isAuthenticated
+          ? eventsService.getEvents(params, true)
+          : eventsService.getPublicEvents(params, true)
+      }
+      if (!hasLocations) return fetchFor()
+      const lists = await Promise.all(selectedLocations.map((location) => fetchFor(location)))
+      return mergeById(lists as Event[][])
     },
     enabled: locationLoaded,
     staleTime: 0,
@@ -220,23 +250,28 @@ function ExploreContent() {
       submittedSearch,
       selectedCategory,
       showTicketmaster,
-      selectedLocation?.lat,
-      selectedLocation?.lng,
+      locationsKey,
       radius,
     ],
-    queryFn: () =>
-      ticketmasterService.getEvents(
-        {
-          search: submittedSearch,
-          category: selectedCategory,
-          latitude: selectedLocation?.lat?.toString() || '',
-          longitude: selectedLocation?.lng?.toString() || '',
-          radius: radius,
-        },
-        true,
-        false // Don't auto-detect location, we pass it explicitly
-      ),
-    enabled: showTicketmaster && locationLoaded && !!selectedLocation && !submittedSearch,
+    queryFn: async () => {
+      const lists = await Promise.all(
+        selectedLocations.map((location) =>
+          ticketmasterService.getEvents(
+            {
+              search: submittedSearch,
+              category: selectedCategory,
+              latitude: location.lat.toString(),
+              longitude: location.lng.toString(),
+              radius: radius,
+            },
+            true,
+            false // Don't auto-detect location, we pass it explicitly
+          )
+        )
+      )
+      return mergeById(lists as Event[][])
+    },
+    enabled: showTicketmaster && locationLoaded && hasLocations && !submittedSearch,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   })
@@ -270,12 +305,14 @@ function ExploreContent() {
   const latestPosts = ((latestPostsData as any)?.posts || (latestPostsData as any)?.data?.posts || []).slice(0, 10)
 
   const { data: topPicks = [] } = useQuery({
-    queryKey: ['topPicks', selectedLocation?.lat, selectedLocation?.lng],
-    queryFn: () => eventsService.getTopPicks(
-      selectedLocation?.lat || 0,
-      selectedLocation?.lng || 0,
-    ),
-    enabled: locationLoaded && !!selectedLocation,
+    queryKey: ['topPicks', locationsKey],
+    queryFn: async () => {
+      const lists = await Promise.all(
+        selectedLocations.map((location) => eventsService.getTopPicks(location.lat, location.lng))
+      )
+      return mergeById(lists as any[][])
+    },
+    enabled: locationLoaded && hasLocations,
     staleTime: 10 * 60 * 1000,
   })
 
@@ -286,25 +323,30 @@ function ExploreContent() {
   })
 
   const { data: raffleEvents } = useQuery({
-    queryKey: ['raffleEvents', selectedLocation?.lat, selectedLocation?.lng, radius],
+    queryKey: ['raffleEvents', locationsKey, radius],
     queryFn: async () => {
       // publicClient + /events/public statt apiClient + /events: /events ist
       // auth-pflichtig (401 ohne Token) — gleiches Muster wie RafflePromoBanner.tsx.
-      const response = await publicClient.get('/events/public', {
-        params: {
-          isRaffle: true,
-          upcoming: true,
-          latitude: selectedLocation?.lat,
-          longitude: selectedLocation?.lng,
-          radius,
-        },
-      })
-      const list = response.data?.data?.events || response.data?.data || []
+      const lists = await Promise.all(
+        selectedLocations.map(async (location) => {
+          const response = await publicClient.get('/events/public', {
+            params: {
+              isRaffle: true,
+              upcoming: true,
+              latitude: location.lat,
+              longitude: location.lng,
+              radius,
+            },
+          })
+          return (response.data?.data?.events || response.data?.data || []) as any[]
+        })
+      )
+      const list = mergeById(lists)
       // Der Endpoint filtert nur auf isRaffle, nicht auf den Status — ausgeloste
       // Gewinnspiele fallen deshalb hier heraus. Siehe Hinweis zum Backend im Bericht.
       return (list as any[]).filter((e) => isRaffleOpen(e))
     },
-    enabled: locationLoaded && !!selectedLocation,
+    enabled: locationLoaded && hasLocations,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -605,8 +647,8 @@ function ExploreContent() {
     setScrollToAll(prev => prev + 1)
   }
 
-  const handleLocationSelect = (location: LocationResult | null) => {
-    setSelectedLocation(location || FALLBACK_LOCATION)
+  const handleLocationsSelect = (locations: LocationResult[]) => {
+    setSelectedLocations(locations.length > 0 ? locations : [FALLBACK_LOCATION])
   }
 
   const isFilterActive = submittedSearch ||
@@ -793,14 +835,20 @@ function ExploreContent() {
     )
   }
 
-  // Ort für die Überschrift: erster Teil der Standortbeschreibung („Berlin, Deutschland" → „Berlin").
-  // Bei GPS-Standorten steht dort nur „Aktueller Standort (lat, lng)" — dann „in deiner Nähe".
-  const weekCity =
-    selectedLocation &&
-    selectedLocation.place_id !== 'current' &&
-    !/\d+\.\d+/.test(selectedLocation.description)
-      ? selectedLocation.description.split(',')[0].trim()
-      : ''
+  // Orte für Überschrift und Standortleiste: erster Teil der Beschreibung
+  // („Berlin, Deutschland" → „Berlin"). GPS-Standorte haben keinen Ortsnamen,
+  // sie erscheinen als „deiner Nähe".
+  const locationNames = selectedLocations.map((l) =>
+    isGpsLocation(l)
+      ? t('explore.nearYouShort', { defaultValue: 'deiner Nähe' })
+      : l.description.split(',')[0].trim()
+  )
+  const joinNames = (names: string[]) =>
+    names.length <= 1
+      ? names.join('')
+      : `${names.slice(0, -1).join(', ')} ${t('explore.and', { defaultValue: '&' })} ${names[names.length - 1]}`
+  const onlyGps = selectedLocations.length > 0 && selectedLocations.every(isGpsLocation)
+  const weekCity = onlyGps ? '' : joinNames(locationNames)
 
   return (
     <div className="space-y-8 pb-32 md:pb-0">
@@ -826,7 +874,11 @@ function ExploreContent() {
         >
           <MapPin className="h-4 w-4 text-primary" />
           <span className="truncate text-sm">
-            {selectedLocation?.description || t('explore.selectLocation', { defaultValue: 'Standort wählen' })}
+            {selectedLocations.length === 1
+              ? selectedLocations[0].description
+              : selectedLocations.length > 1
+                ? locationNames.join(', ')
+                : t('explore.selectLocation', { defaultValue: 'Standort wählen' })}
           </span>
         </button>
         <Select value={radius} onValueChange={setRadius}>
@@ -1302,8 +1354,10 @@ function ExploreContent() {
       <LocationModal
         open={locationModalOpen}
         onClose={() => setLocationModalOpen(false)}
-        onSelect={handleLocationSelect}
-        initialLocation={selectedLocation}
+        onSelect={() => {}}
+        multiple
+        initialLocations={selectedLocations}
+        onSelectMany={handleLocationsSelect}
       />
 
       {/* Fullscreen Memory */}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MapPin, X, Navigation, Loader2, Search } from 'lucide-react'
+import { MapPin, X, Navigation, Loader2, Search, Check } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,8 @@ import {
   setLiveLocationEnabled,
   saveManualLocation,
   getManualLocation,
+  saveManualLocations,
+  clearManualLocations,
 } from '@/services/location'
 import { useToast } from '@/hooks/use-toast'
 
@@ -29,7 +31,17 @@ interface LocationModalProps {
   onClose: () => void
   onSelect: (location: LocationResult | null) => void
   initialLocation?: LocationResult | null
+  /**
+   * Mehrfachauswahl (Explore-Seite): Städte werden per Klick an- und
+   * abgewählt, das Ergebnis kommt über onSelectMany.
+   */
+  multiple?: boolean
+  initialLocations?: LocationResult[]
+  onSelectMany?: (locations: LocationResult[]) => void
 }
+
+/** Obergrenze der Mehrfachauswahl — jede Stadt kostet eigene Abfragen (u. a. Ticketmaster). */
+export const MAX_LOCATIONS = 5
 
 // Predefined locations for quick selection
 const POPULAR_LOCATIONS: LocationResult[] = [
@@ -44,11 +56,24 @@ const POPULAR_LOCATIONS: LocationResult[] = [
   { place_id: 'graz', description: 'Graz, Österreich', lat: 47.0707, lng: 15.4395 },
 ]
 
-export function LocationModal({ open, onClose, onSelect, initialLocation }: LocationModalProps) {
+/** Gleicher Ort: gleiche place_id oder gleiche Koordinaten (gespeicherte Orte heißen sonst „saved"). */
+const isSameLocation = (a: LocationResult, b: LocationResult) =>
+  a.place_id === b.place_id || (a.lat === b.lat && a.lng === b.lng)
+
+export function LocationModal({
+  open,
+  onClose,
+  onSelect,
+  initialLocation,
+  multiple = false,
+  initialLocations,
+  onSelectMany,
+}: LocationModalProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(initialLocation || null)
+  const [selectedLocations, setSelectedLocations] = useState<LocationResult[]>(initialLocations || [])
   const [liveLocation, setLiveLocation] = useState(false)
   const [isDetecting, setIsDetecting] = useState(false)
   const [filteredLocations, setFilteredLocations] = useState(POPULAR_LOCATIONS)
@@ -57,6 +82,10 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
   useEffect(() => {
     if (open) {
       setLiveLocation(isLiveLocationEnabled())
+      if (multiple) {
+        setSelectedLocations(initialLocations || [])
+        return
+      }
       const saved = getManualLocation()
       if (saved && !initialLocation) {
         setSelectedLocation({
@@ -69,7 +98,7 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
         setSelectedLocation(initialLocation)
       }
     }
-  }, [open, initialLocation])
+  }, [open, initialLocation, initialLocations, multiple])
 
   // Filter locations based on search
   useEffect(() => {
@@ -83,6 +112,30 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
     }
   }, [searchQuery])
 
+  const showLimitToast = useCallback(() => {
+    toast({
+      variant: 'destructive',
+      title: t('location.maxReached', {
+        max: MAX_LOCATIONS,
+        defaultValue: 'Du kannst höchstens {{max}} Standorte auswählen.',
+      }),
+    })
+  }, [toast, t])
+
+  /** Ort übernehmen: im Mehrfachmodus anhängen (GPS-Ort ersetzt den alten), sonst ersetzen. */
+  const applyLocation = useCallback((location: LocationResult) => {
+    if (!multiple) {
+      setSelectedLocation(location)
+      return
+    }
+    const rest = selectedLocations.filter((l) => !isSameLocation(l, location))
+    if (rest.length >= MAX_LOCATIONS) {
+      showLimitToast()
+      return
+    }
+    setSelectedLocations([...rest, location])
+  }, [multiple, selectedLocations, showLimitToast])
+
   const handleDetectLocation = useCallback(async () => {
     setIsDetecting(true)
     try {
@@ -93,7 +146,7 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
         lat: result.latitude,
         lng: result.longitude,
       }
-      setSelectedLocation(location)
+      applyLocation(location)
       toast({
         title: t('location.detected', { defaultValue: 'Standort erkannt' }),
       })
@@ -106,7 +159,7 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
     } finally {
       setIsDetecting(false)
     }
-  }, [toast, t])
+  }, [toast, t, applyLocation])
 
   const handleLiveLocationToggle = async (enabled: boolean) => {
     if (enabled) {
@@ -119,7 +172,7 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
           lat: result.latitude,
           lng: result.longitude,
         }
-        setSelectedLocation(location)
+        applyLocation(location)
         setLiveLocationEnabled(true)
         setLiveLocation(true)
         toast({
@@ -141,6 +194,12 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
   }
 
   const handleSelect = () => {
+    if (multiple) {
+      saveManualLocations(selectedLocations)
+      onSelectMany?.(selectedLocations)
+      onClose()
+      return
+    }
     if (selectedLocation) {
       // Save as manual location
       saveManualLocation({
@@ -154,14 +213,32 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
   }
 
   const handleClear = () => {
+    if (multiple) {
+      setSelectedLocations([])
+      clearManualLocations()
+      onSelectMany?.([])
+      onClose()
+      return
+    }
     setSelectedLocation(null)
     onSelect(null)
     onClose()
   }
 
+  const isSelected = (location: LocationResult) =>
+    multiple
+      ? selectedLocations.some((l) => isSameLocation(l, location))
+      : selectedLocation?.place_id === location.place_id
+
   const handleLocationClick = (location: LocationResult) => {
-    setSelectedLocation(location)
+    if (multiple && isSelected(location)) {
+      setSelectedLocations((prev) => prev.filter((l) => !isSameLocation(l, location)))
+      return
+    }
+    applyLocation(location)
   }
+
+  const canSubmit = multiple ? selectedLocations.length > 0 : !!selectedLocation
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -169,7 +246,9 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-primary" />
-            {t('location.selectLocation', { defaultValue: 'Standort wählen' })}
+            {multiple
+              ? t('location.selectLocations', { defaultValue: 'Standorte wählen' })
+              : t('location.selectLocation', { defaultValue: 'Standort wählen' })}
           </DialogTitle>
         </DialogHeader>
 
@@ -221,16 +300,49 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
           </div>
 
           {/* Selected Location Display */}
-          {selectedLocation && (
-            <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span className="font-medium text-primary">{selectedLocation.description}</span>
+          {multiple ? (
+            selectedLocations.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {selectedLocations.map((location) => (
+                  <span
+                    key={`${location.place_id}-${location.lat}-${location.lng}`}
+                    className="inline-flex items-center gap-1 pl-3 pr-1 py-1 bg-primary/10 border border-primary/20 rounded-full text-sm font-medium text-primary"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    {location.description}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedLocations((prev) => prev.filter((l) => !isSameLocation(l, location)))
+                      }
+                      className="p-1 rounded-full hover:bg-primary/20"
+                      aria-label={t('location.remove', { defaultValue: 'Entfernen' })}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedLocation(null)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t('location.multiHint', {
+                  max: MAX_LOCATIONS,
+                  defaultValue: 'Wähle eine oder mehrere Städte (bis zu {{max}}).',
+                })}
+              </p>
+            )
+          ) : (
+            selectedLocation && (
+              <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-primary">{selectedLocation.description}</span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedLocation(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )
           )}
 
           {/* Popular Locations */}
@@ -245,14 +357,19 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
                 <button
                   key={location.place_id}
                   onClick={() => handleLocationClick(location)}
+                  aria-pressed={multiple ? isSelected(location) : undefined}
                   className={`p-3 text-left rounded-lg border transition-colors ${
-                    selectedLocation?.place_id === location.place_id
+                    isSelected(location)
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-primary/50 hover:bg-accent'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    {multiple && isSelected(location) ? (
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                    ) : (
+                      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    )}
                     <span className="text-sm truncate">{location.description}</span>
                   </div>
                 </button>
@@ -270,7 +387,7 @@ export function LocationModal({ open, onClose, onSelect, initialLocation }: Loca
             <Button variant="outline" className="flex-1" onClick={handleClear}>
               {t('common.clear', { defaultValue: 'Zurücksetzen' })}
             </Button>
-            <Button className="flex-1" onClick={handleSelect} disabled={!selectedLocation}>
+            <Button className="flex-1" onClick={handleSelect} disabled={!canSubmit}>
               {t('common.select', { defaultValue: 'Auswählen' })}
             </Button>
           </div>

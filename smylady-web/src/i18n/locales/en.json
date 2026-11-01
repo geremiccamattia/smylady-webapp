@@ -1548,6 +1548,8 @@
     "viewProfile": "View profile",
     "weekTitle": "This Week in {{city}}",
     "weekTitleNearby": "This Week Near You",
+    "nearYouShort": "your area",
+    "and": "&",
     "withAttendees": "with attendees",
     "yourVibes": "Your Vibes"
   },
@@ -1692,7 +1694,11 @@
     "popularLocations": "Popular locations",
     "searchPlaceholder": "Search city...",
     "searchResults": "Search results",
-    "selectLocation": "Select location"
+    "selectLocation": "Select location",
+    "selectLocations": "Select locations",
+    "multiHint": "Pick one or more cities (up to {{max}}).",
+    "maxReached": "You can select up to {{max}} locations.",
+    "remove": "Remove"
   },
   "manageGuests": {
     "active": "Active",
