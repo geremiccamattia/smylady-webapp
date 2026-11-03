@@ -184,6 +184,7 @@ export default function Notifications() {
     // der richtige Ort.
     const brandOrderTypes = [
       'brand_order_in_review',
+      'brand_order_creators_proposed',
       'brand_order_creators_requested',
       'brand_order_offer_sent',
       'brand_order_offer_expiring',
