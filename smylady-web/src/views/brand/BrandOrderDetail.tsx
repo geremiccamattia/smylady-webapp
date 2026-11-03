@@ -60,9 +60,11 @@ import {
   type ProposedCreatorCard,
 } from '@/services/brand'
 import { eventsService } from '@/services/events'
-import { REVIEW_REASONS, REVIEW_TEXT_MAX_LENGTH, type ReviewReason } from '@/services/review'
+import { isUploadAborted, REVIEW_REASONS, REVIEW_TEXT_MAX_LENGTH, type ReviewReason } from '@/services/review'
 import {
   EvidencePicker,
+  EvidenceUploadProgress,
+  useEvidenceUpload,
   ReviewDecisionSummary,
   ReviewReportSummary,
   ReviewResponseSummary,
@@ -192,6 +194,8 @@ function OrderDetail() {
   const [reportText, setReportText] = useState('')
   const [reportFiles, setReportFiles] = useState<File[]>([])
   const [reportFileError, setReportFileError] = useState<string | null>(null)
+  // Belege gehen bis 5 × 10 MB raus: Fortschritt zeigen, Abbruch erlauben.
+  const reportUpload = useEvidenceUpload()
   // Nach dem Klick auf „bezahlen" bleibt der Knopf im Ladezustand, bis die
   // Seite zu Stripe wechselt — sonst klickt jemand zweimal.
   const [redirecting, setRedirecting] = useState(false)
@@ -496,7 +500,8 @@ function OrderDetail() {
   // Problem melden: keine Entscheidung, sondern der Start der Prüfung.
   const reportPerformance = useMutation({
     mutationFn: ({ creatorUserId, reason, text, files }: { creatorUserId: string; reason: ReviewReason; text: string; files: File[] }) =>
-      brandService.reportCreatorPerformance(id, creatorUserId, { reason, text, files }),
+      brandService.reportCreatorPerformance(id, creatorUserId, { reason, text, files }, reportUpload.start()),
+    onSettled: () => reportUpload.finish(),
     onSuccess: (updated) => {
       applyUpdate(updated)
       setReporting(null)
@@ -509,6 +514,17 @@ function OrderDetail() {
     },
     onError: (error: unknown) => {
       queryClient.invalidateQueries({ queryKey: ['brand', 'order', id] })
+      // Selbst abgebrochen: kein Fehler. Der Dialog bleibt mit allen
+      // Eingaben offen, damit die Brand es erneut versuchen kann.
+      if (isUploadAborted(error)) {
+        toast({
+          title: t('review.uploadCancelledTitle', { defaultValue: 'Upload abgebrochen' }),
+          description: t('brandDashboard.reviewReportCancelled', {
+            defaultValue: 'Die Meldung wurde nicht gesendet. Deine Eingaben sind noch da.',
+          }),
+        })
+        return
+      }
       fail(error, t('brandDashboard.reviewFailed', { defaultValue: 'Die Rückmeldung konnte nicht gespeichert werden.' }))
     },
   })
@@ -1153,6 +1169,7 @@ function OrderDetail() {
                 {reportFileError}
               </p>
             )}
+            {reportFiles.length > 0 && <EvidenceUploadProgress progress={reportUpload.progress} onCancel={reportUpload.cancel} />}
           </div>
           <DialogFooter>
             <Button variant="outline" disabled={reportPerformance.isPending} onClick={() => setReporting(null)}>

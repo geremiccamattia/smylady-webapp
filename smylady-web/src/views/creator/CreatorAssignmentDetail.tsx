@@ -45,9 +45,11 @@ import {
   type AssignmentBrand,
   type CreatorAssignment,
 } from '@/services/creator'
-import { isReviewSettled, REVIEW_TEXT_MAX_LENGTH, type PerformanceReview } from '@/services/review'
+import { isReviewSettled, isUploadAborted, REVIEW_TEXT_MAX_LENGTH, type PerformanceReview } from '@/services/review'
 import {
   EvidencePicker,
+  EvidenceUploadProgress,
+  useEvidenceUpload,
   ReviewDecisionSummary,
   ReviewReportSummary,
   ReviewResponseSummary,
@@ -100,6 +102,8 @@ function AssignmentDetail() {
   const [responseText, setResponseText] = useState('')
   const [responseFiles, setResponseFiles] = useState<File[]>([])
   const [responseFileError, setResponseFileError] = useState<string | null>(null)
+  // Belege gehen bis 5 × 10 MB raus: Fortschritt zeigen, Abbruch erlauben.
+  const responseUpload = useEvidenceUpload()
 
   const query = useQuery<CreatorAssignment>({
     queryKey: ['creator', 'assignment', id],
@@ -162,7 +166,8 @@ function AssignmentDetail() {
   // Die Stellungnahme ist einmalig und nur innerhalb der Frist möglich; ein
   // 409 heisst: Frist um oder schon beantwortet — den echten Stand laden.
   const respondReview = useMutation({
-    mutationFn: () => creatorAreaService.respondToReview(id, { text: responseText, files: responseFiles }),
+    mutationFn: () => creatorAreaService.respondToReview(id, { text: responseText, files: responseFiles }, responseUpload.start()),
+    onSettled: () => responseUpload.finish(),
     onSuccess: (updated) => {
       queryClient.setQueryData(['creator', 'assignment', id], updated)
       queryClient.invalidateQueries({ queryKey: CREATOR_ASSIGNMENTS_QUERY_KEY })
@@ -176,6 +181,17 @@ function AssignmentDetail() {
       })
     },
     onError: (error: unknown) => {
+      // Selbst abgebrochen: kein Fehler; Text und Belege bleiben stehen.
+      if (isUploadAborted(error)) {
+        queryClient.invalidateQueries({ queryKey: ['creator', 'assignment', id] })
+        toast({
+          title: t('review.uploadCancelledTitle', { defaultValue: 'Upload abgebrochen' }),
+          description: t('creatorDashboard.reviewResponseCancelled', {
+            defaultValue: 'Deine Stellungnahme wurde nicht gesendet. Text und Belege sind noch da.',
+          }),
+        })
+        return
+      }
       if (isCreatorConflict(error)) {
         queryClient.invalidateQueries({ queryKey: ['creator', 'assignment', id] })
       }
@@ -493,6 +509,9 @@ function AssignmentDetail() {
                     <p className="text-xs text-destructive" role="alert">
                       {responseFileError}
                     </p>
+                  )}
+                  {responseFiles.length > 0 && (
+                    <EvidenceUploadProgress progress={responseUpload.progress} onCancel={responseUpload.cancel} />
                   )}
                   <p className="text-xs text-muted-foreground">
                     {t('creatorDashboard.reviewResponseOnce', { defaultValue: 'Du kannst nur einmal Stellung nehmen – die Brand sieht deine Stellungnahme ebenfalls.' })}

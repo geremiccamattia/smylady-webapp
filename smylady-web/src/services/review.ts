@@ -10,6 +10,8 @@
  * Leistung nach der Frist als bestätigt (autoConfirmed).
  */
 
+import axios, { type AxiosRequestConfig } from 'axios'
+
 export type ReviewStatus = 'pending' | 'confirmed' | 'reported' | 'responded' | 'decided'
 const REVIEW_STATUSES: readonly string[] = ['pending', 'confirmed', 'reported', 'responded', 'decided']
 
@@ -125,4 +127,33 @@ export function isReviewSettled(review: Pick<PerformanceReview, 'status'> | null
 /** Belege als FormData-Felder `evidence`, wie das Backend sie erwartet. */
 export function appendEvidence(form: FormData, files: File[] | undefined): void {
   for (const file of files ?? []) form.append('evidence', file)
+}
+
+/**
+ * Fortschritt und Abbruch für Meldung und Stellungnahme: Mit Belegen gehen
+ * bis zu 5 × 10 MB raus. `onProgress` bekommt 0–100 (gesendete Bytes),
+ * `signal` bricht die Anfrage ab (siehe isUploadAborted).
+ */
+export interface EvidenceUploadOptions {
+  onProgress?: (percent: number) => void
+  signal?: AbortSignal
+}
+
+/** axios-Konfiguration für einen multipart-Upload mit Fortschritt und Abbruch. */
+export function evidenceUploadConfig(options: EvidenceUploadOptions = {}): AxiosRequestConfig {
+  return {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    signal: options.signal,
+    onUploadProgress: options.onProgress
+      ? (event) => {
+          if (!event.total) return
+          options.onProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)))
+        }
+      : undefined,
+  }
+}
+
+/** Der Nutzer hat den Upload abgebrochen — kein Fehler, kein Fehler-Toast. */
+export function isUploadAborted(error: unknown): boolean {
+  return axios.isCancel(error) || (error instanceof Error && (error.name === 'CanceledError' || error.name === 'AbortError'))
 }

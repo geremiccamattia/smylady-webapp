@@ -2,7 +2,14 @@
 
 import axios from 'axios'
 import { apiClient, publicClient } from './api'
-import { appendEvidence, mapPerformanceReview, type PerformanceReview, type ReviewReason } from './review'
+import {
+  appendEvidence,
+  evidenceUploadConfig,
+  mapPerformanceReview,
+  type EvidenceUploadOptions,
+  type PerformanceReview,
+  type ReviewReason,
+} from './review'
 
 /**
  * Brand-Seite des Brand-Creator-Systems: eigenes Profil und eigene Aufträge.
@@ -787,6 +794,7 @@ export const brandService = {
     id: string,
     creatorUserId: string,
     payload: { reason: ReviewReason; text: string; files?: File[] },
+    upload?: EvidenceUploadOptions,
   ): Promise<BrandOrder> {
     const form = new FormData()
     form.append('reason', payload.reason)
@@ -795,7 +803,7 @@ export const brandService = {
     const response = await apiClient.post(
       `/brand-orders/${id}/creators/${encodeURIComponent(creatorUserId)}/review/report`,
       form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      evidenceUploadConfig(upload),
     )
     return mapBrandOrder(unwrap(response))
   },

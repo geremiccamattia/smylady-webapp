@@ -2,7 +2,13 @@
 
 import axios from 'axios'
 import { apiClient } from './api'
-import { appendEvidence, mapPerformanceReview, type PerformanceReview } from './review'
+import {
+  appendEvidence,
+  evidenceUploadConfig,
+  mapPerformanceReview,
+  type EvidenceUploadOptions,
+  type PerformanceReview,
+} from './review'
 
 /**
  * Stand der eigenen Creator-Bewerbung, aus `GET /influencer/my-application`.
@@ -362,13 +368,19 @@ export const creatorAreaService = {
    * Stellungnahme zur Meldung der Brand, mit Belegen (Bilder oder PDF, je
    * bis 10 MB, höchstens fünf). Einmalig und nur innerhalb der Frist (409).
    */
-  async respondToReview(id: string, payload: { text: string; files?: File[] }): Promise<CreatorAssignment> {
+  async respondToReview(
+    id: string,
+    payload: { text: string; files?: File[] },
+    upload?: EvidenceUploadOptions,
+  ): Promise<CreatorAssignment> {
     const form = new FormData()
     form.append('text', payload.text.trim())
     appendEvidence(form, payload.files)
-    const response = await apiClient.post(`/creators/me/assignments/${id}/review/response`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const response = await apiClient.post(
+      `/creators/me/assignments/${id}/review/response`,
+      form,
+      evidenceUploadConfig(upload),
+    )
     return mapCreatorAssignment(unwrapData(response))
   },
 }

@@ -1,14 +1,16 @@
 'use client'
 
-import { useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, CheckCircle2, Clock, FileText, Gavel, Image as ImageIcon, MessageSquare, Paperclip, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import { formatDateTime, formatPrice } from '@/lib/utils'
 import {
   REVIEW_EVIDENCE_MAX_BYTES,
   REVIEW_EVIDENCE_MAX_FILES,
+  type EvidenceUploadOptions,
   type PerformanceReview,
   type ReviewEvidence,
   type ReviewOutcome,
@@ -219,6 +221,60 @@ export function EvidencePicker({
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+/**
+ * Fortschritt und Abbruch eines Beleg-Uploads (Meldung, Stellungnahme).
+ * `start()` liefert die Optionen für den Service-Aufruf, `cancel()` bricht
+ * ab, `finish()` räumt nach Erfolg oder Fehler auf. `progress` ist null,
+ * solange nichts läuft.
+ */
+export function useEvidenceUpload() {
+  const [progress, setProgress] = useState<number | null>(null)
+  const controller = useRef<AbortController | null>(null)
+
+  const start = useCallback((): EvidenceUploadOptions => {
+    controller.current?.abort()
+    const next = new AbortController()
+    controller.current = next
+    setProgress(0)
+    return { signal: next.signal, onProgress: setProgress }
+  }, [])
+
+  const cancel = useCallback(() => controller.current?.abort(), [])
+
+  const finish = useCallback(() => {
+    controller.current = null
+    setProgress(null)
+  }, [])
+
+  return { progress, start, cancel, finish }
+}
+
+/**
+ * Prozentanzeige mit Abbrechen-Knopf. Ab 100 % liegt alles beim Server und
+ * wird gespeichert — ein Abbruch hielte die Meldung dann nicht mehr auf,
+ * deshalb ist der Knopf dann gesperrt.
+ */
+export function EvidenceUploadProgress({ progress, onCancel }: { progress: number | null; onCancel: () => void }) {
+  const { t } = useTranslation()
+  if (progress === null) return null
+  const sent = progress >= 100
+  return (
+    <div className="space-y-1.5 rounded-md border bg-muted/40 p-3" role="status" aria-live="polite">
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span>
+          {sent
+            ? t('review.uploadSaving', { defaultValue: 'Hochgeladen – wird gespeichert …' })
+            : t('review.uploadProgress', { percent: progress, defaultValue: 'Belege werden hochgeladen … {{percent}} %' })}
+        </span>
+        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={sent} onClick={onCancel}>
+          {t('review.uploadCancel', { defaultValue: 'Upload abbrechen' })}
+        </Button>
+      </div>
+      <Progress value={progress} className="h-2" aria-label={t('review.uploadProgressLabel', { defaultValue: 'Upload-Fortschritt' })} />
     </div>
   )
 }
