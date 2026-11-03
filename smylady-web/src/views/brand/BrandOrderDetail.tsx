@@ -6,6 +6,7 @@ import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigat
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  AlertTriangle,
   ArrowLeft,
   Ban,
   CalendarDays,
@@ -23,6 +24,7 @@ import {
   Receipt,
   RefreshCw,
   Send,
+  ShieldCheck,
   Target,
   Users,
   X,
@@ -42,6 +44,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -56,6 +59,15 @@ import {
   type ProposedCreatorCard,
 } from '@/services/brand'
 import { eventsService } from '@/services/events'
+import { REVIEW_REASONS, REVIEW_TEXT_MAX_LENGTH, type ReviewReason } from '@/services/review'
+import {
+  EvidencePicker,
+  ReviewDecisionSummary,
+  ReviewReportSummary,
+  ReviewResponseSummary,
+  ReviewStatusBadge,
+  useReviewLabels,
+} from '@/components/review/reviewShared'
 import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, getInitials, resolveImageUrl } from '@/lib/utils'
 import { formatRemaining, useCountdown, type RemainingUnits } from '@/lib/deadline'
 import { navigateToExternalUrl, STRIPE_HOSTS } from '@/lib/navigation'
@@ -158,6 +170,7 @@ function OrderDetail() {
   // Die Creator-Karten zeigen Enum-Werte des Creator-Profils (Plattform,
   // Follower-Bereich, Kategorie); die Beschriftung kommt aus dem Creator-Bereich.
   const creatorLabels = useCreatorLabels()
+  const reviewLabels = useReviewLabels()
   const { id } = useParams<{ id: string }>()
   const [confirmSubmit, setConfirmSubmit] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -168,6 +181,14 @@ function OrderDetail() {
   // Annehmen: Rückfrage mit Bestätigung (Profil geprüft, verbindlich, AGB).
   const [accepting, setAccepting] = useState<ProposedCreatorCard | null>(null)
   const [termsChecked, setTermsChecked] = useState(false)
+  // Leistungsprüfung nach dem Event: Bestätigen mit Rückfrage, Melden mit
+  // Grund, Text und Belegen.
+  const [confirmingPerformance, setConfirmingPerformance] = useState<ProposedCreatorCard | null>(null)
+  const [reporting, setReporting] = useState<ProposedCreatorCard | null>(null)
+  const [reportReason, setReportReason] = useState<ReviewReason>('no_show')
+  const [reportText, setReportText] = useState('')
+  const [reportFiles, setReportFiles] = useState<File[]>([])
+  const [reportFileError, setReportFileError] = useState<string | null>(null)
   // Nach dem Klick auf „bezahlen" bleibt der Knopf im Ladezustand, bis die
   // Seite zu Stripe wechselt — sonst klickt jemand zweimal.
   const [redirecting, setRedirecting] = useState(false)
@@ -448,6 +469,43 @@ function OrderDetail() {
     onError: (error: unknown) => fail(error, t('brandDashboard.cancelFailed', { defaultValue: 'Der Auftrag konnte nicht storniert werden.' })),
   })
 
+  // Leistung bestätigen: endgültig, die Auszahlung an den Creator ist damit frei.
+  const confirmPerformance = useMutation({
+    mutationFn: (creatorUserId: string) => brandService.confirmCreatorPerformance(id, creatorUserId),
+    onSuccess: (updated) => {
+      applyUpdate(updated)
+      toast({
+        title: t('brandDashboard.reviewConfirmedTitle', { defaultValue: 'Leistung bestätigt' }),
+        description: t('brandDashboard.reviewConfirmedDesc', { defaultValue: 'Danke! Der Creator wird ausgezahlt.' }),
+      })
+    },
+    onError: (error: unknown) => {
+      // 409: Frist abgelaufen oder schon entschieden — den echten Stand laden.
+      queryClient.invalidateQueries({ queryKey: ['brand', 'order', id] })
+      fail(error, t('brandDashboard.reviewFailed', { defaultValue: 'Die Rückmeldung konnte nicht gespeichert werden.' }))
+    },
+  })
+
+  // Problem melden: keine Entscheidung, sondern der Start der Prüfung.
+  const reportPerformance = useMutation({
+    mutationFn: ({ creatorUserId, reason, text, files }: { creatorUserId: string; reason: ReviewReason; text: string; files: File[] }) =>
+      brandService.reportCreatorPerformance(id, creatorUserId, { reason, text, files }),
+    onSuccess: (updated) => {
+      applyUpdate(updated)
+      setReporting(null)
+      toast({
+        title: t('brandDashboard.reviewReportedTitle', { defaultValue: 'Meldung eingegangen' }),
+        description: t('brandDashboard.reviewReportedDesc', {
+          defaultValue: 'Der Creator kann innerhalb von 5 Tagen Stellung nehmen. Danach entscheiden wir und melden uns bei dir.',
+        }),
+      })
+    },
+    onError: (error: unknown) => {
+      queryClient.invalidateQueries({ queryKey: ['brand', 'order', id] })
+      fail(error, t('brandDashboard.reviewFailed', { defaultValue: 'Die Rückmeldung konnte nicht gespeichert werden.' }))
+    },
+  })
+
   if (orderQuery.isLoading) {
     return (
       <Card>
@@ -483,7 +541,21 @@ function OrderDetail() {
       ? 'public'
       : 'selected'
   const eventApproved = event?.status === 'Approved'
-  const busy = submit.isPending || checkout.isPending || redirecting || visibility.isPending || cancel.isPending || decide.isPending
+  const busy =
+    submit.isPending ||
+    checkout.isPending ||
+    redirecting ||
+    visibility.isPending ||
+    cancel.isPending ||
+    decide.isPending ||
+    confirmPerformance.isPending ||
+    reportPerformance.isPending
+
+  // Leistungsprüfung: Das Backend sagt, ob die Frist läuft (reviewOpen);
+  // bestätigen oder melden darf nur der Inhaber, je Creator einmal.
+  const canReview = (creator: ProposedCreatorCard): boolean =>
+    isOwner && order.reviewOpen && !busy && creator.review?.status === 'pending'
+  const openReviews = order.proposedCreators.filter((creator) => creator.review?.status === 'pending').length
 
   // Der Creator-Vorschlag, solange die Brand ihn prüft. Entscheiden darf nur
   // der Inhaber, und jede Entscheidung ist endgültig: Ein Hin und Her
@@ -920,6 +992,33 @@ function OrderDetail() {
                     defaultValue: 'Diese Creator haben für das Event zugesagt. Mit der Zahlung sind sie verbindlich gebucht.',
                   })}
             </p>
+            {/* Nach dem Event: die Prüffrist der Brand. Ohne Rückmeldung gilt
+                die Leistung als bestätigt — das muss sie wissen. */}
+            {order.reviewOpen && openReviews > 0 && (
+              <div className="rounded-md border border-yellow-200 bg-yellow-50/60 p-3 text-sm space-y-1">
+                <div className="flex items-center gap-2 font-medium">
+                  <ShieldCheck className="h-4 w-4 text-yellow-700 shrink-0" />
+                  {t('brandDashboard.reviewOpenTitle', { defaultValue: 'Event vorbei – bitte Leistung bestätigen' })}
+                </div>
+                <p>
+                  {t('brandDashboard.reviewOpenDesc', {
+                    defaultValue:
+                      'Bestätige je Creator, dass die Leistung gepasst hat, oder melde ein Problem. Ohne Rückmeldung bis zur Frist gilt die Leistung als bestätigt und der Creator wird ausgezahlt.',
+                  })}
+                </p>
+                {order.reviewDeadlineAt && <ReviewDeadline deadlineAt={order.reviewDeadlineAt} />}
+                {!isOwner && <OwnerOnlyHint />}
+              </div>
+            )}
+            {order.reviewAutoConfirmedAt && (
+              <p className="text-xs text-muted-foreground">
+                {t('brandDashboard.reviewAutoConfirmedHint', {
+                  date: formatDate(order.reviewAutoConfirmedAt),
+                  defaultValue:
+                    'Die Prüffrist ist am {{date}} abgelaufen. Offene Leistungen gelten als bestätigt. Fragen dazu bitte an office@shareyourparty.de.',
+                })}
+              </p>
+            )}
             {order.proposedCreators.map((creator) => (
               <CreatorCardRow
                 key={creator.creatorUserId}
@@ -927,11 +1026,135 @@ function OrderDetail() {
                 creatorLabels={creatorLabels}
                 brandLabels={labels}
                 localePath={localePath}
+                actions={
+                  creator.review ? (
+                    <CreatorReviewRow
+                      creator={creator}
+                      canAct={canReview(creator)}
+                      pendingConfirm={confirmPerformance.isPending && confirmPerformance.variables === creator.creatorUserId}
+                      onConfirm={() => setConfirmingPerformance(creator)}
+                      onReport={() => {
+                        setReporting(creator)
+                        setReportReason('no_show')
+                        setReportText('')
+                        setReportFiles([])
+                        setReportFileError(null)
+                      }}
+                    />
+                  ) : undefined
+                }
               />
             ))}
           </CardContent>
         </Card>
       )}
+
+      {/* Rückfrage vor dem Bestätigen der Leistung: endgültig, gibt die Auszahlung frei. */}
+      <AlertDialog open={confirmingPerformance !== null} onOpenChange={(open) => !open && setConfirmingPerformance(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('brandDashboard.reviewConfirmTitle', {
+                name: confirmingPerformance?.name || t('brandDashboard.creatorUnnamed', { defaultValue: 'Creator' }),
+                defaultValue: 'Leistung von {{name}} bestätigen?',
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('brandDashboard.reviewConfirmDesc', {
+                defaultValue:
+                  'Du bestätigst, dass der Creator wie vereinbart geliefert hat. Damit wird seine Vergütung ausgezahlt. Das lässt sich nicht rückgängig machen.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', { defaultValue: 'Abbrechen' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmingPerformance) confirmPerformance.mutate(confirmingPerformance.creatorUserId)
+              }}
+            >
+              {t('brandDashboard.reviewConfirmAction', { defaultValue: 'Leistung bestätigen' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Problem melden: Grund, Beschreibung, Belege. Die Meldung ist keine
+          Entscheidung — der Creator nimmt Stellung, wir entscheiden. */}
+      <AlertDialog open={reporting !== null} onOpenChange={(open) => !open && !reportPerformance.isPending && setReporting(null)}>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('brandDashboard.reviewReportTitle', {
+                name: reporting?.name || t('brandDashboard.creatorUnnamed', { defaultValue: 'Creator' }),
+                defaultValue: 'Problem mit {{name}} melden',
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('brandDashboard.reviewReportDesc', {
+                defaultValue:
+                  'Beschreib, was nicht gepasst hat. Der Creator bekommt deine Meldung und kann innerhalb von 5 Tagen Stellung nehmen; danach entscheiden wir, ob seine Vergütung voll, gekürzt oder gar nicht ausgezahlt wird. Bis dahin ist die Auszahlung gesperrt.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>{t('brandDashboard.reviewReasonLabel', { defaultValue: 'Grund' })}</Label>
+              <Select value={reportReason} onValueChange={(value) => setReportReason(value as ReviewReason)} disabled={reportPerformance.isPending}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REVIEW_REASONS.map((reason) => (
+                    <SelectItem key={reason} value={reason}>
+                      {reviewLabels.reason(reason)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="review-report-text">{t('brandDashboard.reviewTextLabel', { defaultValue: 'Was ist passiert?' })}</Label>
+              <Textarea
+                id="review-report-text"
+                value={reportText}
+                maxLength={REVIEW_TEXT_MAX_LENGTH}
+                rows={5}
+                disabled={reportPerformance.isPending}
+                placeholder={t('brandDashboard.reviewTextPlaceholder', {
+                  defaultValue: 'Möglichst konkret: Was war vereinbart, was fehlte, wann ist es aufgefallen?',
+                })}
+                onChange={(event) => setReportText(event.target.value)}
+              />
+            </div>
+            <EvidencePicker
+              files={reportFiles}
+              disabled={reportPerformance.isPending}
+              onChange={(files, error) => {
+                setReportFiles(files)
+                setReportFileError(error)
+              }}
+            />
+            {reportFileError && <p className="text-xs text-destructive">{reportFileError}</p>}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reportPerformance.isPending}>{t('common.cancel', { defaultValue: 'Abbrechen' })}</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              className="gap-2"
+              loading={reportPerformance.isPending}
+              disabled={!reportText.trim() || reportPerformance.isPending}
+              onClick={() => {
+                if (!reporting) return
+                reportPerformance.mutate({ creatorUserId: reporting.creatorUserId, reason: reportReason, text: reportText, files: reportFiles })
+              }}
+            >
+              <AlertTriangle className="h-4 w-4" />
+              {t('brandDashboard.reviewReportAction', { defaultValue: 'Problem melden' })}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Rückfrage vor dem Annehmen: Die Brand bestätigt, dass sie das Profil
           geprüft hat, die Annahme verbindlich ist und die AGB gelten. Der
@@ -1234,6 +1457,102 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <div className="text-xs font-medium text-muted-foreground mb-0.5">{label}</div>
       <div>{children}</div>
+    </div>
+  )
+}
+
+/** „Noch 5 Tage 3 Std bis …" — die Prüffrist nach dem Event, laufend aktualisiert. */
+function ReviewDeadline({ deadlineAt }: { deadlineAt: string }) {
+  const { t } = useTranslation()
+  const remaining = useCountdown(deadlineAt)
+  if (!remaining) return null
+
+  const units: RemainingUnits = {
+    day: t('brandDashboard.unitDay', { defaultValue: 'Tag' }),
+    days: t('brandDashboard.unitDays', { defaultValue: 'Tage' }),
+    hour: t('brandDashboard.unitHour', { defaultValue: 'Std' }),
+    hours: t('brandDashboard.unitHours', { defaultValue: 'Std' }),
+    minute: t('brandDashboard.unitMinute', { defaultValue: 'Min' }),
+    minutes: t('brandDashboard.unitMinutes', { defaultValue: 'Min' }),
+  }
+  const urgent = !remaining.expired && remaining.totalMs < 2 * 24 * 60 * 60 * 1000
+
+  return (
+    <div className={`flex items-center gap-2 text-sm ${urgent ? 'text-orange-700' : 'text-muted-foreground'}`}>
+      <Clock className="h-4 w-4 shrink-0" />
+      {remaining.expired
+        ? t('brandDashboard.reviewDeadlinePassed', { defaultValue: 'Prüffrist abgelaufen' })
+        : t('brandDashboard.reviewDeadlineRemaining', {
+            remaining: formatRemaining(remaining, units),
+            date: formatDateTime(deadlineAt),
+            defaultValue: 'Noch {{remaining}} (bis {{date}})',
+          })}
+    </div>
+  )
+}
+
+/**
+ * Die Leistungsprüfung zu einem gebuchten Creator, unter seiner Karte:
+ * Stand, die eigene Meldung, die Stellungnahme des Creators (Fairness), die
+ * Entscheidung — und solange die Frist läuft, die beiden Knöpfe.
+ */
+function CreatorReviewRow({
+  creator,
+  canAct,
+  pendingConfirm,
+  onConfirm,
+  onReport,
+}: {
+  creator: ProposedCreatorCard
+  canAct: boolean
+  pendingConfirm: boolean
+  onConfirm: () => void
+  onReport: () => void
+}) {
+  const { t } = useTranslation()
+  const review = creator.review
+  if (!review) return null
+
+  return (
+    <div className="mt-3 border-t pt-3 space-y-2">
+      <div className="flex items-center gap-2 flex-wrap text-sm">
+        <span className="text-muted-foreground">{t('brandDashboard.reviewLabel', { defaultValue: 'Leistung' })}:</span>
+        <ReviewStatusBadge review={review} />
+        {review.status === 'confirmed' && review.confirmedAt && (
+          <span className="text-xs text-muted-foreground">
+            {review.autoConfirmed
+              ? t('brandDashboard.reviewAutoConfirmedAt', { date: formatDate(review.confirmedAt), defaultValue: 'automatisch am {{date}}' })
+              : formatDate(review.confirmedAt)}
+          </span>
+        )}
+      </div>
+      {review.status === 'pending' && canAct && (
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" className="gap-2" loading={pendingConfirm} onClick={onConfirm}>
+            <Check className="h-4 w-4" />
+            {t('brandDashboard.reviewConfirmAction', { defaultValue: 'Leistung bestätigen' })}
+          </Button>
+          <Button size="sm" variant="outline" className="gap-2 text-destructive hover:text-destructive" onClick={onReport}>
+            <AlertTriangle className="h-4 w-4" />
+            {t('brandDashboard.reviewReportAction', { defaultValue: 'Problem melden' })}
+          </Button>
+        </div>
+      )}
+      {review.status === 'reported' && (
+        <p className="text-xs text-muted-foreground">
+          {t('brandDashboard.reviewReportedHint', {
+            defaultValue: 'Deine Meldung liegt beim Creator. Sobald er Stellung genommen hat oder die Frist um ist, entscheiden wir.',
+          })}
+        </p>
+      )}
+      {review.status === 'responded' && (
+        <p className="text-xs text-muted-foreground">
+          {t('brandDashboard.reviewRespondedHint', { defaultValue: 'Der Creator hat Stellung genommen. Wir prüfen beides und entscheiden.' })}
+        </p>
+      )}
+      <ReviewReportSummary review={review} />
+      <ReviewResponseSummary review={review} />
+      <ReviewDecisionSummary review={review} audience="brand" />
     </div>
   )
 }

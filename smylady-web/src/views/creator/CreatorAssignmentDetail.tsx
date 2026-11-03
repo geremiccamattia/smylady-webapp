@@ -5,7 +5,21 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Building2, CalendarDays, Check, CheckCircle2, Clapperboard, Clock, ExternalLink, FileText, Wallet, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  Building2,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  Clapperboard,
+  Clock,
+  ExternalLink,
+  FileText,
+  Send,
+  ShieldCheck,
+  Wallet,
+  X,
+} from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +32,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import {
@@ -29,6 +45,14 @@ import {
   type AssignmentBrand,
   type CreatorAssignment,
 } from '@/services/creator'
+import { isReviewSettled, REVIEW_TEXT_MAX_LENGTH, type PerformanceReview } from '@/services/review'
+import {
+  EvidencePicker,
+  ReviewDecisionSummary,
+  ReviewReportSummary,
+  ReviewResponseSummary,
+  ReviewStatusBadge,
+} from '@/components/review/reviewShared'
 import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, isEventOver } from '@/lib/utils'
 import { formatRemaining, useCountdown, type RemainingUnits } from '@/lib/deadline'
 import { LoadingBars } from '@/components/brand/brandShared'
@@ -72,6 +96,10 @@ function AssignmentDetail() {
   const labels = useCreatorLabels()
   const { id } = useParams<{ id: string }>()
   const [confirm, setConfirm] = useState<'accept' | 'decline' | null>(null)
+  // Stellungnahme zur Meldung der Brand (Leistungsprüfung nach dem Event).
+  const [responseText, setResponseText] = useState('')
+  const [responseFiles, setResponseFiles] = useState<File[]>([])
+  const [responseFileError, setResponseFileError] = useState<string | null>(null)
 
   const query = useQuery<CreatorAssignment>({
     queryKey: ['creator', 'assignment', id],
@@ -131,6 +159,34 @@ function AssignmentDetail() {
     },
   })
 
+  // Die Stellungnahme ist einmalig und nur innerhalb der Frist möglich; ein
+  // 409 heisst: Frist um oder schon beantwortet — den echten Stand laden.
+  const respondReview = useMutation({
+    mutationFn: () => creatorAreaService.respondToReview(id, { text: responseText, files: responseFiles }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['creator', 'assignment', id], updated)
+      queryClient.invalidateQueries({ queryKey: CREATOR_ASSIGNMENTS_QUERY_KEY })
+      setResponseText('')
+      setResponseFiles([])
+      toast({
+        title: t('creatorDashboard.reviewRespondedTitle', { defaultValue: 'Stellungnahme gespeichert' }),
+        description: t('creatorDashboard.reviewRespondedDesc', {
+          defaultValue: 'Danke. Wir prüfen beide Darstellungen und melden uns mit der Entscheidung.',
+        }),
+      })
+    },
+    onError: (error: unknown) => {
+      if (isCreatorConflict(error)) {
+        queryClient.invalidateQueries({ queryKey: ['creator', 'assignment', id] })
+      }
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Fehler' }),
+        description: readCreatorError(error, t('creatorDashboard.reviewRespondFailed', { defaultValue: 'Die Stellungnahme konnte nicht gespeichert werden.' })),
+      })
+    },
+  })
+
   // Zusagen nur mit aktivem Stripe-Auszahlungskonto (das Backend prüft live
   // nach). Nur abfragen, solange es etwas zu beantworten gibt.
   const payout = usePayoutAccountStatus(query.data?.response === 'pending')
@@ -139,6 +195,11 @@ function AssignmentDetail() {
   // offen ist, sperren die Knöpfe, statt in einen 409 zu laufen.
   const deadlineRemaining = useCountdown(query.data?.responseDeadline)
   const overdue = deadlineRemaining?.expired ?? false
+  // Die Frist für die Stellungnahme ebenso — vor den frühen Rückgaben, weil
+  // ein Hook nicht bedingt laufen darf.
+  const responseDeadlineRemaining = useCountdown(
+    query.data?.review?.status === 'reported' ? query.data.review.responseDeadlineAt : undefined,
+  )
 
   if (query.isLoading) {
     return (
@@ -179,6 +240,10 @@ function AssignmentDetail() {
   // Absagen geht immer, zusagen erst mit aktivem Auszahlungskonto.
   const payoutMissing = canAnswer && payout.known && !payout.ready
   const booked = assignment.phase === 'booked' && assignment.response === 'accepted' && !cancelled
+  // Leistungsprüfung nach dem Event: gibt es erst mit der Buchung und nur,
+  // solange der Auftrag nicht storniert ist.
+  const review = booked ? assignment.review : null
+  const canRespond = review?.status === 'reported' && !(responseDeadlineRemaining?.expired ?? false)
 
   return (
     <>
@@ -282,7 +347,7 @@ function AssignmentDetail() {
                   {assignment.bookedAt ? ` (${formatDateTime(assignment.bookedAt)})` : ''}
                 </p>
               </div>
-              <PayoutHint assignment={assignment} />
+              <PayoutHint assignment={assignment} review={review} />
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -305,6 +370,125 @@ function AssignmentDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Leistungsprüfung nach dem Event: Frist der Brand, ihre Meldung, die
+          eigene Stellungnahme und unsere Entscheidung. */}
+      {review && (
+        <Card className={review.status === 'reported' ? 'border-red-200 bg-red-50/30' : undefined}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 flex-wrap">
+              <ShieldCheck className="h-5 w-5" />
+              {t('creatorDashboard.reviewTitle', { defaultValue: 'Leistungsprüfung' })}
+              <ReviewStatusBadge review={review} />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-3">
+            {review.status === 'pending' && (
+              <p className="text-muted-foreground">
+                {review.deadlineAt
+                  ? t('creatorDashboard.reviewPendingHint', {
+                      date: formatDateTime(review.deadlineAt),
+                      defaultValue:
+                        'Das Event ist vorbei. Die Brand kann bis {{date}} bestätigen, dass alles gepasst hat, oder ein Problem melden. Ohne Rückmeldung gilt deine Leistung danach als bestätigt und wird ausgezahlt.',
+                    })
+                  : t('creatorDashboard.reviewNotOpenHint', {
+                      defaultValue:
+                        'Nach dem Event hat die Brand 7 Tage, deine Leistung zu bestätigen oder ein Problem zu melden. Ohne Rückmeldung gilt sie danach als bestätigt.',
+                    })}
+              </p>
+            )}
+            {review.status === 'confirmed' && (
+              <div className="flex items-start gap-2 text-green-800">
+                <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+                <p>
+                  {review.autoConfirmed
+                    ? t('creatorDashboard.reviewAutoConfirmedHint', {
+                        defaultValue: 'Die Prüffrist der Brand ist ohne Meldung abgelaufen. Deine Leistung gilt als bestätigt.',
+                      })
+                    : t('creatorDashboard.reviewConfirmedHint', { defaultValue: 'Die Brand hat deine Leistung bestätigt. Danke!' })}
+                  {review.confirmedAt ? ` (${formatDate(review.confirmedAt)})` : ''}
+                </p>
+              </div>
+            )}
+            {review.status === 'reported' && (
+              <p>
+                {t('creatorDashboard.reviewReportedHint', {
+                  defaultValue:
+                    'Die Brand hat ein Problem gemeldet. Du kannst dazu Stellung nehmen und eigene Belege hochladen. Danach entscheiden wir, ob deine Vergütung voll, gekürzt oder gar nicht ausgezahlt wird. Bis dahin ist die Auszahlung gesperrt.',
+                })}
+              </p>
+            )}
+            {review.status === 'responded' && (
+              <p className="text-muted-foreground">
+                {t('creatorDashboard.reviewRespondedHint', {
+                  defaultValue: 'Deine Stellungnahme ist bei uns. Wir prüfen beide Darstellungen und melden uns mit der Entscheidung.',
+                })}
+              </p>
+            )}
+            <ReviewReportSummary review={review} />
+            <ReviewResponseSummary review={review} />
+            <ReviewDecisionSummary review={review} audience="creator" />
+
+            {review.status === 'reported' && !review.response && (
+              canRespond ? (
+                <div className="space-y-3 rounded-md border p-3 bg-background">
+                  {review.responseDeadlineAt && (
+                    <div className={`flex items-center gap-2 text-sm ${(responseDeadlineRemaining?.totalMs ?? Infinity) < 24 * 60 * 60 * 1000 ? 'text-orange-700' : 'text-muted-foreground'}`}>
+                      <Clock className="h-4 w-4 shrink-0" />
+                      {t('creatorDashboard.reviewResponseBy', {
+                        date: formatDateTime(review.responseDeadlineAt),
+                        defaultValue: 'Stellungnahme möglich bis {{date}}',
+                      })}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="review-response-text">{t('creatorDashboard.reviewResponseLabel', { defaultValue: 'Deine Stellungnahme' })}</Label>
+                    <Textarea
+                      id="review-response-text"
+                      rows={5}
+                      maxLength={REVIEW_TEXT_MAX_LENGTH}
+                      value={responseText}
+                      disabled={respondReview.isPending}
+                      placeholder={t('creatorDashboard.reviewResponsePlaceholder', {
+                        defaultValue: 'Schilder aus deiner Sicht, was passiert ist. Sachlich und konkret hilft am meisten.',
+                      })}
+                      onChange={(event) => setResponseText(event.target.value)}
+                    />
+                  </div>
+                  <EvidencePicker
+                    files={responseFiles}
+                    disabled={respondReview.isPending}
+                    onChange={(files, error) => {
+                      setResponseFiles(files)
+                      setResponseFileError(error)
+                    }}
+                  />
+                  {responseFileError && <p className="text-xs text-destructive">{responseFileError}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    {t('creatorDashboard.reviewResponseOnce', { defaultValue: 'Du kannst nur einmal Stellung nehmen – die Brand sieht deine Stellungnahme ebenfalls.' })}
+                  </p>
+                  <Button
+                    variant="gradient"
+                    className="gap-2"
+                    loading={respondReview.isPending}
+                    disabled={!responseText.trim() || respondReview.isPending}
+                    onClick={() => respondReview.mutate()}
+                  >
+                    <Send className="h-4 w-4" />
+                    {t('creatorDashboard.reviewRespondAction', { defaultValue: 'Stellungnahme abschicken' })}
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t('creatorDashboard.reviewResponseExpired', {
+                    defaultValue: 'Die Frist für die Stellungnahme ist abgelaufen. Wir entscheiden auf Basis der Meldung; bei Fragen schreib uns an office@shareyourparty.de.',
+                  })}
+                </p>
+              )
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Die Brand: Wer fragt an? Name, SYP-Profil und Links, damit der
           Creator weiss, für wen er zusagt. */}
@@ -525,9 +709,19 @@ function AnswerDeadline({ deadline }: { deadline: string }) {
 }
 
 /** Nach der Buchung: Wie es mit der Vergütung weitergeht. */
-function PayoutHint({ assignment }: { assignment: CreatorAssignment }) {
+function PayoutHint({ assignment, review }: { assignment: CreatorAssignment; review: PerformanceReview | null }) {
   const { t } = useTranslation()
   const localePath = useLocalePath()
+
+  // Nach einer Entscheidung ohne Auszahlung gibt es nichts mehr, worauf zu warten wäre.
+  if (review?.status === 'decided' && review.decision?.outcome === 'withheld' && !isPaidOut(assignment)) {
+    return (
+      <div className="flex items-start gap-2 text-muted-foreground">
+        <Wallet className="h-5 w-5 shrink-0 mt-0.5" />
+        <p>{t('creatorDashboard.payoutWithheldHint', { defaultValue: 'Die Vergütung wurde nach der Leistungsprüfung einbehalten (siehe unten).' })}</p>
+      </div>
+    )
+  }
 
   if (isPaidOut(assignment)) {
     // Ohne Datum (Altfall, von Hand vermerkt) die Variante ohne „am …".
@@ -571,13 +765,26 @@ function PayoutHint({ assignment }: { assignment: CreatorAssignment }) {
     )
   }
 
+  // Solange die Brand prüfen kann oder eine Meldung offen ist, wartet die
+  // Auszahlung — das sagt die Prüfungskarte im Detail.
+  const waitingForReview = review !== null && !isReviewSettled(review)
+
   return (
     <div className="flex items-start gap-2 text-muted-foreground">
       <Wallet className="h-5 w-5 shrink-0 mt-0.5" />
       <p>
-        {t('creatorDashboard.payoutOpenHint', {
-          defaultValue: 'Nach dem Event zahlen wir deine Vergütung auf dein Stripe-Auszahlungskonto aus.',
-        })}{' '}
+        {waitingForReview
+          ? review.status === 'pending'
+            ? t('creatorDashboard.payoutAfterReviewHint', {
+                defaultValue:
+                  'Nach dem Event bestätigt die Brand deine Leistung (oder die Frist läuft ab) – dann zahlen wir deine Vergütung auf dein Stripe-Auszahlungskonto aus.',
+              })
+            : t('creatorDashboard.payoutBlockedHint', {
+                defaultValue: 'Die Auszahlung wartet auf die Entscheidung zur Meldung der Brand (siehe Leistungsprüfung).',
+              })
+          : t('creatorDashboard.payoutOpenHint', {
+              defaultValue: 'Nach dem Event zahlen wir deine Vergütung auf dein Stripe-Auszahlungskonto aus.',
+            })}{' '}
         <Link href={localePath('/settings#payout')} className="text-primary hover:underline">
           {t('creatorDashboard.payoutSettingsLink', { defaultValue: 'Auszahlungskonto prüfen' })}
         </Link>

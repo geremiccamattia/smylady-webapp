@@ -2,6 +2,7 @@
 
 import axios from 'axios'
 import { apiClient, publicClient } from './api'
+import { appendEvidence, mapPerformanceReview, type PerformanceReview, type ReviewReason } from './review'
 
 /**
  * Brand-Seite des Brand-Creator-Systems: eigenes Profil und eigene Aufträge.
@@ -267,6 +268,12 @@ export interface ProposedCreatorCard {
   decisionReason: string
   response: CreatorResponse | null
   respondedAt: string
+  /**
+   * Die Leistungsprüfung nach dem Event: ihr Stand, die eigene Meldung, die
+   * Stellungnahme des Creators und unsere Entscheidung (ohne seine
+   * Vergütung). null vor der Buchung.
+   */
+  review: PerformanceReview | null
 }
 
 export interface BrandOrder {
@@ -325,6 +332,14 @@ export interface BrandOrder {
   payment: BrandOrderPayment | null
   /** Nach der Zahlung: Stehen Event und Buchung schon? 'failed' heisst: wir holen es nach. */
   provisioning: 'pending' | 'done' | 'failed' | null
+  /**
+   * Die Brand kann gerade je Creator die Leistung bestätigen oder ein
+   * Problem melden: Event vorbei, Frist nicht verstrichen.
+   */
+  reviewOpen: boolean
+  /** Bis wann (leer, solange das Event läuft); danach gilt alles als bestätigt. */
+  reviewDeadlineAt: string
+  reviewAutoConfirmedAt: string
 }
 
 /** Was POST /brand-orders/:id/checkout liefert: die Stripe-Seite. */
@@ -422,6 +437,7 @@ function mapProposedCreator(raw: any): ProposedCreatorCard {
     decisionReason: str(raw?.brandDecision?.reason),
     response: CREATOR_RESPONSES.includes(raw?.response) ? (raw.response as CreatorResponse) : null,
     respondedAt: str(raw?.respondedAt),
+    review: mapPerformanceReview(raw?.review),
   }
 }
 
@@ -517,6 +533,9 @@ export function mapBrandOrder(raw: any): BrandOrder {
       raw?.provisioning?.status === 'failed'
         ? raw.provisioning.status
         : null,
+    reviewOpen: Boolean(raw?.reviewOpen),
+    reviewDeadlineAt: str(raw?.performanceReview?.deadlineAt),
+    reviewAutoConfirmedAt: str(raw?.performanceReview?.autoConfirmedAt),
   }
 }
 
@@ -747,6 +766,37 @@ export const brandService = {
    */
   async syncCheckout(id: string): Promise<BrandOrder> {
     const response = await apiClient.post(`/brand-orders/${id}/checkout/sync`)
+    return mapBrandOrder(unwrap(response))
+  },
+
+  /**
+   * Leistung eines gebuchten Creators nach dem Event bestätigen. Nur der
+   * Inhaber, nur solange die Frist läuft (409 danach, 409 vor dem Eventende).
+   */
+  async confirmCreatorPerformance(id: string, creatorUserId: string): Promise<BrandOrder> {
+    const response = await apiClient.post(`/brand-orders/${id}/creators/${encodeURIComponent(creatorUserId)}/review/confirm`)
+    return mapBrandOrder(unwrap(response))
+  },
+
+  /**
+   * Problem mit der Leistung eines Creators melden: Grund aus der Liste,
+   * Freitext, optional Belege (Bilder oder PDF, je bis 10 MB, höchstens
+   * fünf). Keine Entscheidung — der Creator nimmt Stellung, wir entscheiden.
+   */
+  async reportCreatorPerformance(
+    id: string,
+    creatorUserId: string,
+    payload: { reason: ReviewReason; text: string; files?: File[] },
+  ): Promise<BrandOrder> {
+    const form = new FormData()
+    form.append('reason', payload.reason)
+    form.append('text', payload.text.trim())
+    appendEvidence(form, payload.files)
+    const response = await apiClient.post(
+      `/brand-orders/${id}/creators/${encodeURIComponent(creatorUserId)}/review/report`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
     return mapBrandOrder(unwrap(response))
   },
 

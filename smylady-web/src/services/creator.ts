@@ -2,6 +2,7 @@
 
 import axios from 'axios'
 import { apiClient } from './api'
+import { appendEvidence, mapPerformanceReview, type PerformanceReview } from './review'
 
 /**
  * Stand der eigenen Creator-Bewerbung, aus `GET /influencer/my-application`.
@@ -194,6 +195,12 @@ export interface CreatorAssignment {
   respondedAt: string
   /** Die Auszahlung der Vergütung, sobald wir sie vermerkt haben. */
   payout: { status: PayoutStatus; amount: number | null; paidAt: string } | null
+  /**
+   * Die Leistungsprüfung nach dem Event: Frist der Brand, ihre Meldung mit
+   * Grund, Text und Belegen, die eigene Stellungnahme, unsere Entscheidung
+   * mit Begründung und Betrag. null vor der Buchung.
+   */
+  review: PerformanceReview | null
 }
 
 const text = (value: unknown): string =>
@@ -303,6 +310,7 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
             paidAt: text(own.payout.paidAt),
           }
         : null,
+    review: mapPerformanceReview(own.review),
   }
 }
 
@@ -347,6 +355,20 @@ export const creatorAreaService = {
   /** Nur solange die eigene Antwort 'pending' ist; sonst 409. */
   async respond(id: string, answer: 'accept' | 'decline'): Promise<CreatorAssignment> {
     const response = await apiClient.post(`/creators/me/assignments/${id}/${answer}`)
+    return mapCreatorAssignment(unwrapData(response))
+  },
+
+  /**
+   * Stellungnahme zur Meldung der Brand, mit Belegen (Bilder oder PDF, je
+   * bis 10 MB, höchstens fünf). Einmalig und nur innerhalb der Frist (409).
+   */
+  async respondToReview(id: string, payload: { text: string; files?: File[] }): Promise<CreatorAssignment> {
+    const form = new FormData()
+    form.append('text', payload.text.trim())
+    appendEvidence(form, payload.files)
+    const response = await apiClient.post(`/creators/me/assignments/${id}/review/response`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return mapCreatorAssignment(unwrapData(response))
   },
 }
