@@ -47,7 +47,8 @@ export interface PerformanceReview {
     outcome: ReviewOutcome
     reason: string
     at: string
-    payoutPercent: number
+    /** Nur in der Creator-Sicht; die Brand könnte daraus die Vergütung errechnen. */
+    payoutPercent: number | null
     /** Nur in der Creator-Sicht: was an ihn geht. */
     amount: number | null
     /** Was an die Brand zurückgeht. */
@@ -79,6 +80,7 @@ function mapEvidence(raw: unknown): ReviewEvidence[] {
 export function mapPerformanceReview(raw: any): PerformanceReview | null {
   if (!raw || typeof raw !== 'object' || !REVIEW_STATUSES.includes(raw.status)) return null
   const amount = Number(raw.decision?.amount)
+  const percent = Number(raw.decision?.payoutPercent)
   return {
     status: raw.status as ReviewStatus,
     legacy: Boolean(raw.legacy),
@@ -105,7 +107,8 @@ export function mapPerformanceReview(raw: any): PerformanceReview | null {
             outcome: raw.decision.outcome as ReviewOutcome,
             reason: text(raw.decision.reason),
             at: text(raw.decision.at),
-            payoutPercent: Number(raw.decision.payoutPercent) || 0,
+            payoutPercent:
+              Number.isFinite(percent) && raw.decision.payoutPercent !== null && raw.decision.payoutPercent !== undefined ? percent : null,
             amount: Number.isFinite(amount) && raw.decision.amount !== null && raw.decision.amount !== undefined ? amount : null,
             refundAmount: Number(raw.decision.refundAmount) || 0,
             refundManual: Boolean(raw.decision.refundManual),

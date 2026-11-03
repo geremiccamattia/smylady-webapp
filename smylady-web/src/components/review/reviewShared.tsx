@@ -150,7 +150,9 @@ export function EvidencePicker({
     const next = [...files]
     let error: string | null = null
     for (const file of Array.from(incoming)) {
-      const ok = file.type === 'application/pdf' || file.type.startsWith('image/')
+      // HEIC-Dateien melden Browser oft ohne MIME-Typ — die Endung zählt dann.
+      const ok =
+        file.type === 'application/pdf' || file.type.startsWith('image/') || /\.(heic|heif|jpe?g|png|webp|gif|pdf)$/i.test(file.name)
       if (!ok) {
         error = t('review.evidenceTypeError', { defaultValue: 'Nur Bilder (JPG, PNG, WebP, HEIC) oder PDF.' })
         continue
@@ -203,7 +205,7 @@ export function EvidencePicker({
             <li key={`${file.name}-${index}`} className="flex items-center gap-2 text-xs">
               {file.type === 'application/pdf' ? <FileText className="h-3.5 w-3.5 shrink-0" /> : <ImageIcon className="h-3.5 w-3.5 shrink-0" />}
               <span className="truncate flex-1">{file.name}</span>
-              <span className="text-muted-foreground">{Math.round(file.size / 1024)} KB</span>
+              <span className="text-muted-foreground">{file.size < 1024 ? '< 1 KB' : `${Math.round(file.size / 1024)} KB`}</span>
               <button
                 type="button"
                 className="text-muted-foreground hover:text-foreground"
@@ -221,8 +223,12 @@ export function EvidencePicker({
   )
 }
 
-/** Die Meldung der Brand: Grund, Text, Belege, Zeitpunkt. */
-export function ReviewReportSummary({ review }: { review: PerformanceReview }) {
+/**
+ * Die Meldung der Brand: Grund, Text, Belege, Zeitpunkt. Die Frist für die
+ * Stellungnahme steht hier nur für die Brand — der Creator sieht sie an
+ * seinem Formular.
+ */
+export function ReviewReportSummary({ review, audience = 'brand' }: { review: PerformanceReview; audience?: 'brand' | 'creator' }) {
   const { t } = useTranslation()
   const labels = useReviewLabels()
   if (!review.report) return null
@@ -235,7 +241,7 @@ export function ReviewReportSummary({ review }: { review: PerformanceReview }) {
       </div>
       <p className="whitespace-pre-wrap">{review.report.text}</p>
       <EvidenceLinks evidence={review.report.evidence} />
-      {!review.response && review.status === 'reported' && review.responseDeadlineAt && (
+      {audience === 'brand' && !review.response && review.status === 'reported' && review.responseDeadlineAt && (
         <p className="text-xs text-muted-foreground">
           {t('review.responseDeadlineHint', {
             date: formatDateTime(review.responseDeadlineAt),
@@ -274,20 +280,26 @@ export function ReviewDecisionSummary({ review, audience }: { review: Performanc
   const decision = review.decision
   if (!decision) return null
 
+  // Die Brand bekommt keinen Prozentsatz (Backend liefert null): Aus Prozent
+  // und Rückerstattung liesse sich die Vergütung des Creators errechnen.
   const summary =
     audience === 'creator'
       ? decision.outcome === 'full'
-        ? t('review.decisionCreatorFull', {
-            amount: decision.amount !== null ? formatPrice(decision.amount) : '',
-            defaultValue: 'Deine Vergütung wird in voller Höhe ({{amount}}) ausgezahlt.',
-          })
+        ? decision.amount !== null
+          ? t('review.decisionCreatorFull', {
+              amount: formatPrice(decision.amount),
+              defaultValue: 'Deine Vergütung wird in voller Höhe ({{amount}}) ausgezahlt.',
+            })
+          : t('review.decisionCreatorFullNoAmount', { defaultValue: 'Deine Vergütung wird in voller Höhe ausgezahlt.' })
         : decision.outcome === 'withheld'
           ? t('review.decisionCreatorWithheld', { defaultValue: 'Deine Vergütung wird einbehalten und nicht ausgezahlt.' })
-          : t('review.decisionCreatorPartial', {
-              percent: decision.payoutPercent,
-              amount: decision.amount !== null ? formatPrice(decision.amount) : '',
-              defaultValue: 'Deine Vergütung wird auf {{percent}} % gekürzt; ausgezahlt werden {{amount}}.',
-            })
+          : decision.amount !== null && decision.payoutPercent !== null
+            ? t('review.decisionCreatorPartial', {
+                percent: decision.payoutPercent,
+                amount: formatPrice(decision.amount),
+                defaultValue: 'Deine Vergütung wird auf {{percent}} % gekürzt; ausgezahlt werden {{amount}}.',
+              })
+            : t('review.decisionCreatorPartialNoAmount', { defaultValue: 'Deine Vergütung wird gekürzt ausgezahlt.' })
       : decision.outcome === 'full'
         ? t('review.decisionBrandFull', { defaultValue: 'Die Vergütung des Creators wird in voller Höhe ausgezahlt.' })
         : decision.outcome === 'withheld'
@@ -296,9 +308,8 @@ export function ReviewDecisionSummary({ review, audience }: { review: Performanc
               defaultValue: 'Die Vergütung des Creators wird einbehalten. {{amount}} gehen an dich zurück.',
             })
           : t('review.decisionBrandPartial', {
-              percent: 100 - decision.payoutPercent,
               amount: formatPrice(decision.refundAmount),
-              defaultValue: 'Die Vergütung des Creators wird um {{percent}} % gekürzt. {{amount}} gehen an dich zurück.',
+              defaultValue: 'Die Vergütung des Creators wird gekürzt. {{amount}} gehen an dich zurück.',
             })
 
   return (

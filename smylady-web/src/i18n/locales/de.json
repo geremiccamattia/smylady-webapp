@@ -439,7 +439,9 @@
     "reviewRespondFailed": "Die Stellungnahme konnte nicht gespeichert werden.",
     "payoutWithheldHint": "Die Vergütung wurde nach der Leistungsprüfung einbehalten (siehe unten).",
     "payoutAfterReviewHint": "Nach dem Event bestätigt die Brand deine Leistung (oder die Frist läuft ab) – dann zahlen wir deine Vergütung auf dein Stripe-Auszahlungskonto aus.",
-    "payoutBlockedHint": "Die Auszahlung wartet auf die Entscheidung zur Meldung der Brand (siehe Leistungsprüfung)."
+    "payoutBlockedHint": "Die Auszahlung wartet auf die Entscheidung zur Meldung der Brand (siehe Leistungsprüfung).",
+    "payoutDecidedHint": "Nach der Entscheidung zahlen wir {{amount}} auf dein Stripe-Auszahlungskonto aus.",
+    "compensationAfterReview": "nach Leistungsprüfung"
   },
   "review": {
     "reasonNoShow": "Nicht erschienen",
@@ -465,11 +467,13 @@
     "responseTitle": "Stellungnahme des Creators",
     "decisionReason": "Begründung",
     "decisionCreatorFull": "Deine Vergütung wird in voller Höhe ({{amount}}) ausgezahlt.",
+    "decisionCreatorFullNoAmount": "Deine Vergütung wird in voller Höhe ausgezahlt.",
     "decisionCreatorWithheld": "Deine Vergütung wird einbehalten und nicht ausgezahlt.",
     "decisionCreatorPartial": "Deine Vergütung wird auf {{percent}} % gekürzt; ausgezahlt werden {{amount}}.",
+    "decisionCreatorPartialNoAmount": "Deine Vergütung wird gekürzt ausgezahlt.",
     "decisionBrandFull": "Die Vergütung des Creators wird in voller Höhe ausgezahlt.",
     "decisionBrandWithheld": "Die Vergütung des Creators wird einbehalten. {{amount}} gehen an dich zurück.",
-    "decisionBrandPartial": "Die Vergütung des Creators wird um {{percent}} % gekürzt. {{amount}} gehen an dich zurück.",
+    "decisionBrandPartial": "Die Vergütung des Creators wird gekürzt. {{amount}} gehen an dich zurück.",
     "refundManualHint": "Die Erstattung überweisen wir dir; wir melden uns dazu.",
     "refundStripeHint": "Die Erstattung läuft über Stripe auf dein ursprüngliches Zahlungsmittel; je nach Bank dauert das einige Tage."
   },
@@ -779,7 +783,12 @@
     "reviewConfirmedDesc": "Danke! Der Creator wird ausgezahlt.",
     "reviewReportedTitle": "Meldung eingegangen",
     "reviewReportedDesc": "Der Creator kann innerhalb von 5 Tagen Stellung nehmen. Danach entscheiden wir und melden uns bei dir.",
-    "reviewFailed": "Die Rückmeldung konnte nicht gespeichert werden."
+    "reviewFailed": "Die Rückmeldung konnte nicht gespeichert werden.",
+    "reviewReasonPlaceholder": "Bitte wählen",
+    "reviewOwnerOnly": "Bestätigen oder melden kann nur der Inhaber der Brand.",
+    "reviewListShort": "Event vorbei – Leistung der Creator bestätigen",
+    "hintReviewOpen_one": "Dein Event ist vorbei. Bitte bestätige unten bei „Deine Creator“, dass die Leistung gepasst hat, oder melde ein Problem – für 1 Creator noch offen. Ohne Rückmeldung gilt die Leistung nach der Frist als bestätigt.",
+    "hintReviewOpen_other": "Dein Event ist vorbei. Bitte bestätige unten bei „Deine Creator“, dass die Leistung gepasst hat, oder melde ein Problem – für {{count}} Creator noch offen. Ohne Rückmeldung gilt die Leistung nach der Frist als bestätigt."
   },
   "brandRegister": {
     "title": "Als Marke registrieren",

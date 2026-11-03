@@ -292,6 +292,12 @@ function DashboardContent() {
                           })}
                         </div>
                       )}
+                      {/* Nach dem Event: Die Leistung der Creator wartet auf die Bestätigung. */}
+                      {order.reviewOpen && (
+                        <div className="text-xs text-yellow-800 mt-0.5">
+                          {t('brandDashboard.reviewListShort', { defaultValue: 'Event vorbei – Leistung der Creator bestätigen' })}
+                        </div>
+                      )}
                       {/* Die Besetzung, sobald ein Angebot vorliegt. */}
                       {order.responses && (
                         <div className="text-xs text-muted-foreground mt-0.5">

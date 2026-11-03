@@ -426,7 +426,9 @@
     "reviewRespondFailed": "The response could not be saved.",
     "payoutWithheldHint": "The fee was withheld after the performance review (see below).",
     "payoutAfterReviewHint": "After the event the brand confirms your performance (or the period ends) – then we pay your fee to your Stripe payout account.",
-    "payoutBlockedHint": "The payout waits for the decision on the brand's report (see performance review)."
+    "payoutBlockedHint": "The payout waits for the decision on the brand's report (see performance review).",
+    "payoutDecidedHint": "After the decision we pay {{amount}} to your Stripe payout account.",
+    "compensationAfterReview": "after performance review"
   },
   "review": {
     "reasonNoShow": "Did not show up",
@@ -452,11 +454,13 @@
     "responseTitle": "Creator's response",
     "decisionReason": "Reason",
     "decisionCreatorFull": "Your fee is paid out in full ({{amount}}).",
+    "decisionCreatorFullNoAmount": "Your fee is paid out in full.",
     "decisionCreatorWithheld": "Your fee is withheld and not paid out.",
     "decisionCreatorPartial": "Your fee is reduced to {{percent}} %; {{amount}} will be paid out.",
+    "decisionCreatorPartialNoAmount": "Your fee is paid out at a reduced amount.",
     "decisionBrandFull": "The creator's fee is paid out in full.",
     "decisionBrandWithheld": "The creator's fee is withheld. {{amount}} is refunded to you.",
-    "decisionBrandPartial": "The creator's fee is reduced by {{percent}} %. {{amount}} is refunded to you.",
+    "decisionBrandPartial": "The creator's fee is reduced. {{amount}} is refunded to you.",
     "refundManualHint": "We will transfer the refund to you and get in touch.",
     "refundStripeHint": "The refund goes through Stripe to your original payment method; depending on your bank this takes a few days."
   },
@@ -766,7 +770,12 @@
     "reviewConfirmedDesc": "Thank you! The creator will be paid out.",
     "reviewReportedTitle": "Report received",
     "reviewReportedDesc": "The creator can respond within 5 days. We then decide and let you know.",
-    "reviewFailed": "Your feedback could not be saved."
+    "reviewFailed": "Your feedback could not be saved.",
+    "reviewReasonPlaceholder": "Please choose",
+    "reviewOwnerOnly": "Only the brand's owner can confirm or report.",
+    "reviewListShort": "Event over – confirm the creators' performance",
+    "hintReviewOpen_one": "Your event is over. Please confirm under “Your creators” that the performance was fine, or report a problem – still open for 1 creator. Without feedback the performance counts as confirmed after the deadline.",
+    "hintReviewOpen_other": "Your event is over. Please confirm under “Your creators” that the performance was fine, or report a problem – still open for {{count}} creators. Without feedback the performance counts as confirmed after the deadline."
   },
   "brandRegister": {
     "title": "Register as a brand",

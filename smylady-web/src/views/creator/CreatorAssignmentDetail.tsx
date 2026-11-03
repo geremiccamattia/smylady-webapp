@@ -242,8 +242,13 @@ function AssignmentDetail() {
   const booked = assignment.phase === 'booked' && assignment.response === 'accepted' && !cancelled
   // Leistungsprüfung nach dem Event: gibt es erst mit der Buchung und nur,
   // solange der Auftrag nicht storniert ist.
-  const review = booked ? assignment.review : null
-  const canRespond = review?.status === 'reported' && !(responseDeadlineRemaining?.expired ?? false)
+  // Alt-Buchungen ohne Prüfung bekommen keine Karte: „Die Brand hat
+  // bestätigt" wäre dort erfunden.
+  const review = booked && assignment.review && !assignment.review.legacy ? assignment.review : null
+  const responseExpired = responseDeadlineRemaining?.expired ?? false
+  const canRespond = review?.status === 'reported' && !responseExpired
+  // Nach einer Entscheidung zählt der entschiedene Betrag, nicht die Vergütung.
+  const decidedAmount = review?.status === 'decided' ? review.decision?.amount ?? null : null
 
   return (
     <>
@@ -267,11 +272,23 @@ function AssignmentDetail() {
       <Card className={canAnswer ? 'border-yellow-200 bg-yellow-50/40' : booked ? 'border-green-200 bg-green-50/40' : undefined}>
         <CardContent className="p-6 space-y-4">
           {assignment.compensation !== null && (
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">{formatPrice(assignment.compensation)}</span>
-              <span className="text-sm text-muted-foreground">
-                {t('creatorDashboard.compensation', { defaultValue: 'Vergütung' })}
-              </span>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              {decidedAmount !== null && decidedAmount !== assignment.compensation ? (
+                <>
+                  <span className="text-3xl font-bold">{formatPrice(decidedAmount)}</span>
+                  <span className="text-sm text-muted-foreground line-through">{formatPrice(assignment.compensation)}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('creatorDashboard.compensationAfterReview', { defaultValue: 'nach Leistungsprüfung' })}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-3xl font-bold">{formatPrice(assignment.compensation)}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('creatorDashboard.compensation', { defaultValue: 'Vergütung' })}
+                  </span>
+                </>
+              )}
             </div>
           )}
 
@@ -425,14 +442,16 @@ function AssignmentDetail() {
                 })}
               </p>
             )}
-            <ReviewReportSummary review={review} />
+            <ReviewReportSummary review={review} audience="creator" />
             <ReviewResponseSummary review={review} />
             <ReviewDecisionSummary review={review} audience="creator" />
 
+            {/* Das Formular bleibt auch nach Fristablauf stehen, damit ein
+                halb geschriebener Text nicht verschwindet — nur der
+                Sende-Knopf ist dann gesperrt. */}
             {review.status === 'reported' && !review.response && (
-              canRespond ? (
                 <div className="space-y-3 rounded-md border p-3 bg-background">
-                  {review.responseDeadlineAt && (
+                  {review.responseDeadlineAt && !responseExpired && (
                     <div className={`flex items-center gap-2 text-sm ${(responseDeadlineRemaining?.totalMs ?? Infinity) < 24 * 60 * 60 * 1000 ? 'text-orange-700' : 'text-muted-foreground'}`}>
                       <Clock className="h-4 w-4 shrink-0" />
                       {t('creatorDashboard.reviewResponseBy', {
@@ -440,6 +459,13 @@ function AssignmentDetail() {
                         defaultValue: 'Stellungnahme möglich bis {{date}}',
                       })}
                     </div>
+                  )}
+                  {responseExpired && (
+                    <p className="text-sm text-destructive" role="alert">
+                      {t('creatorDashboard.reviewResponseExpired', {
+                        defaultValue: 'Die Frist für die Stellungnahme ist abgelaufen. Wir entscheiden auf Basis der Meldung; bei Fragen schreib uns an office@shareyourparty.de.',
+                      })}
+                    </p>
                   )}
                   <div className="space-y-1.5">
                     <Label htmlFor="review-response-text">{t('creatorDashboard.reviewResponseLabel', { defaultValue: 'Deine Stellungnahme' })}</Label>
@@ -463,7 +489,11 @@ function AssignmentDetail() {
                       setResponseFileError(error)
                     }}
                   />
-                  {responseFileError && <p className="text-xs text-destructive">{responseFileError}</p>}
+                  {responseFileError && (
+                    <p className="text-xs text-destructive" role="alert">
+                      {responseFileError}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {t('creatorDashboard.reviewResponseOnce', { defaultValue: 'Du kannst nur einmal Stellung nehmen – die Brand sieht deine Stellungnahme ebenfalls.' })}
                   </p>
@@ -471,20 +501,13 @@ function AssignmentDetail() {
                     variant="gradient"
                     className="gap-2"
                     loading={respondReview.isPending}
-                    disabled={!responseText.trim() || respondReview.isPending}
+                    disabled={!canRespond || !responseText.trim() || respondReview.isPending}
                     onClick={() => respondReview.mutate()}
                   >
                     <Send className="h-4 w-4" />
                     {t('creatorDashboard.reviewRespondAction', { defaultValue: 'Stellungnahme abschicken' })}
                   </Button>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t('creatorDashboard.reviewResponseExpired', {
-                    defaultValue: 'Die Frist für die Stellungnahme ist abgelaufen. Wir entscheiden auf Basis der Meldung; bei Fragen schreib uns an office@shareyourparty.de.',
-                  })}
-                </p>
-              )
             )}
           </CardContent>
         </Card>
@@ -766,8 +789,10 @@ function PayoutHint({ assignment, review }: { assignment: CreatorAssignment; rev
   }
 
   // Solange die Brand prüfen kann oder eine Meldung offen ist, wartet die
-  // Auszahlung — das sagt die Prüfungskarte im Detail.
+  // Auszahlung — das sagt die Prüfungskarte im Detail. Nach einer Kürzung
+  // nennt der Hinweis den entschiedenen Betrag.
   const waitingForReview = review !== null && !isReviewSettled(review)
+  const decidedAmount = review?.status === 'decided' ? review.decision?.amount ?? null : null
 
   return (
     <div className="flex items-start gap-2 text-muted-foreground">
@@ -782,9 +807,14 @@ function PayoutHint({ assignment, review }: { assignment: CreatorAssignment; rev
             : t('creatorDashboard.payoutBlockedHint', {
                 defaultValue: 'Die Auszahlung wartet auf die Entscheidung zur Meldung der Brand (siehe Leistungsprüfung).',
               })
-          : t('creatorDashboard.payoutOpenHint', {
-              defaultValue: 'Nach dem Event zahlen wir deine Vergütung auf dein Stripe-Auszahlungskonto aus.',
-            })}{' '}
+          : decidedAmount !== null
+            ? t('creatorDashboard.payoutDecidedHint', {
+                amount: formatPrice(decidedAmount),
+                defaultValue: 'Nach der Entscheidung zahlen wir {{amount}} auf dein Stripe-Auszahlungskonto aus.',
+              })
+            : t('creatorDashboard.payoutOpenHint', {
+                defaultValue: 'Nach dem Event zahlen wir deine Vergütung auf dein Stripe-Auszahlungskonto aus.',
+              })}{' '}
         <Link href={localePath('/settings#payout')} className="text-primary hover:underline">
           {t('creatorDashboard.payoutSettingsLink', { defaultValue: 'Auszahlungskonto prüfen' })}
         </Link>
