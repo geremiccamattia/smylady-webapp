@@ -1339,12 +1339,25 @@ function SafeStripeLink({ href, children }: { href: string; children: React.Reac
   )
 }
 
+/** Welcher Social-Link zu welchem Kanal gehört — ein Kanal-Badge zeigt den Link gleich mit. */
+const PLATFORM_LINK_KEY: Record<string, (typeof CREATOR_LINK_KEYS)[number]> = {
+  Instagram: 'instagram',
+  TikTok: 'tiktok',
+  YouTube: 'youtube',
+  Snapchat: 'snapchat',
+}
+
 /**
  * Die Links zu einem Creator: SYP-Profil und Social Media, als Badges mit
  * Link. Was das Backend liefert, ist schon auf http(s) gefiltert.
+ *
+ * Plattformen, die der Creator als Kanal führt (mit Handle und Follower),
+ * stehen nicht noch einmal hier: Der Kanal-Badge trägt denselben Link. Hier
+ * bleiben SYP-Profil und Links ohne Kanal (X, LinkedIn, Facebook …).
  */
 function CreatorLinksRow({ creator, brandLabels }: { creator: ProposedCreatorCard; brandLabels: ReturnType<typeof useBrandLabels> }) {
-  const entries = CREATOR_LINK_KEYS.filter((key) => creator.links[key])
+  const coveredByChannel = new Set(creator.channels.map((channel) => PLATFORM_LINK_KEY[channel.platform]).filter(Boolean))
+  const entries = CREATOR_LINK_KEYS.filter((key) => creator.links[key] && !coveredByChannel.has(key))
   if (entries.length === 0) return null
   return (
     <div className="flex flex-wrap gap-1">
@@ -1411,9 +1424,12 @@ function CreatorCardRow({
             {creator.channels.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {creator.channels.map((channel, index) => {
-                  // Die hinterlegte URL, sonst aus Plattform und Handle gebaut —
-                  // die Brand soll den Kanal mit einem Klick öffnen können.
-                  const href = channelUrl(channel)
+                  // Der Link zum Kanal: zuerst, was der Vorschlag für diese
+                  // Plattform nennt (Profil-Link oder vom Admin eingetragen),
+                  // sonst die hinterlegte URL, sonst aus Plattform und Handle
+                  // gebaut — die Brand soll den Kanal mit einem Klick öffnen.
+                  const linkKey = PLATFORM_LINK_KEY[channel.platform]
+                  const href = (linkKey && creator.links[linkKey]) || channelUrl(channel)
                   const label = `${creatorLabels.platform(channel.platform)}: @${channel.username}`
                   const followers = channel.followerRange
                     ? ` · ${t('brandDashboard.followersLabel', {
