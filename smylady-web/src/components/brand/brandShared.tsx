@@ -30,6 +30,7 @@ export function useBrandLabels() {
       draft: t('brandDashboard.statusDraft', { defaultValue: 'Entwurf' }),
       submitted: t('brandDashboard.statusSubmitted', { defaultValue: 'Eingereicht' }),
       in_review: t('brandDashboard.statusInReview', { defaultValue: 'In Prüfung' }),
+      creators_proposed: t('brandDashboard.statusCreatorsProposed', { defaultValue: 'Creator-Vorschlag prüfen' }),
       creators_requested: t('brandDashboard.statusCreatorsRequested', { defaultValue: 'Creator werden angefragt' }),
       offer_sent: t('brandDashboard.statusOfferSent', { defaultValue: 'Angebot erhalten' }),
       awaiting_payment: t('brandDashboard.statusAwaitingPayment', { defaultValue: 'Zahlung ausstehend' }),
@@ -105,7 +106,40 @@ export function useBrandLabels() {
       deliverables: t('brandDashboard.missingDeliverables', { defaultValue: 'mindestens ein gewünschter Inhalt' }),
     })[code] ?? code
 
-  return { orderStatus, paymentStatus, profileStatus, deliverable, gender, platform, paymentMethod, missingField }
+  // Die Links eines vorgeschlagenen Creators: Plattformnamen bleiben, nur das
+  // SYP-Profil hat eine Beschriftung.
+  const creatorLink = (key: string): string =>
+    ({
+      profileUrl: t('brandDashboard.creatorLinkProfile', { defaultValue: 'Profil bei Share Your Party' }),
+      instagram: 'Instagram',
+      youtube: 'YouTube',
+      x: 'X',
+      linkedin: 'LinkedIn',
+      snapchat: 'Snapchat',
+      facebook: 'Facebook',
+    })[key] ?? key
+
+  const decision = (value: 'pending' | 'accepted' | 'rejected'): string =>
+    ({
+      pending: t('brandDashboard.decisionPending', { defaultValue: 'Deine Entscheidung steht aus' }),
+      accepted: t('brandDashboard.decisionAccepted', { defaultValue: 'Angenommen' }),
+      rejected: t('brandDashboard.decisionRejected', { defaultValue: 'Abgelehnt' }),
+    })[value] ?? value
+
+  return { orderStatus, paymentStatus, profileStatus, deliverable, gender, platform, paymentMethod, missingField, creatorLink, decision }
+}
+
+/** Die Entscheidung der Brand zu einem vorgeschlagenen Creator. */
+export function DecisionBadge({ value }: { value: 'pending' | 'accepted' | 'rejected' }) {
+  const { decision } = useBrandLabels()
+  switch (value) {
+    case 'accepted':
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{decision(value)}</Badge>
+    case 'rejected':
+      return <Badge variant="destructive">{decision(value)}</Badge>
+    default:
+      return <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{decision(value)}</Badge>
+  }
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -121,6 +155,8 @@ export function OrderStatusBadge({ status }: { status: BrandOrderStatus }) {
     case 'submitted':
     case 'in_review':
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{label}</Badge>
+    case 'creators_proposed':
+      return <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{label}</Badge>
     case 'creators_requested':
       return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{label}</Badge>
     case 'offer_sent':

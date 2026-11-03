@@ -61,6 +61,9 @@ function DashboardContent() {
       order.status === 'offer_sent' ||
       (order.status === 'awaiting_payment' && order.payment?.status !== 'processing'),
   )
+  // Ein Creator-Vorschlag wartet auf ihre Entscheidung — erst danach fragen
+  // wir die Creator an.
+  const proposalsPending = orders.filter((order) => (order.proposal?.pending ?? 0) > 0 && order.status !== 'cancelled')
 
   return (
     <>
@@ -131,6 +134,39 @@ function DashboardContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Creator-Vorschläge, über die die Brand entscheiden muss — vor den
+          Angeboten, weil ohne Entscheidung kein Angebot entsteht. */}
+      {proposalsPending.length > 0 && (
+        <Card className="border-cyan-200 bg-cyan-50/50">
+          <CardContent className="p-4 text-sm space-y-2">
+            <p>
+              {t('brandDashboard.proposalHint', {
+                count: proposalsPending.length,
+                defaultValue_one: 'Für einen Auftrag wartet unser Creator-Vorschlag auf deine Entscheidung.',
+                defaultValue_other: 'Für {{count}} Aufträge warten Creator-Vorschläge auf deine Entscheidung.',
+                defaultValue: 'Für {{count}} Aufträge warten Creator-Vorschläge auf deine Entscheidung.',
+              })}
+              {!isOwner
+                ? ` ${t('brandDashboard.decisionOwnerOnly', { defaultValue: 'Annehmen oder ablehnen kann nur der Inhaber der Brand.' })}`
+                : ''}
+            </p>
+            <ul className="space-y-1">
+              {proposalsPending.map((order) => (
+                <li key={order.id}>
+                  <Link
+                    href={localePath(`/brand/orders/${order.id}`)}
+                    className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                  >
+                    {order.title}
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hinweis auf offene Angebote. Bei genau einem Auftrag ist die ganze
           Karte der Link dorthin, bei mehreren folgt die Liste der Aufträge. */}
@@ -245,6 +281,17 @@ function DashboardContent() {
                           {order.eventDate ? ` · ${formatDate(order.eventDate)}` : ''}
                         </span>
                       </div>
+                      {/* Ein Vorschlag wartet auf die Entscheidung der Brand. */}
+                      {(order.proposal?.pending ?? 0) > 0 && order.status !== 'cancelled' && (
+                        <div className="text-xs text-cyan-800 mt-0.5">
+                          {t('brandDashboard.proposalShort', {
+                            count: order.proposal?.pending ?? 0,
+                            defaultValue_one: '1 Creator-Vorschlag prüfen',
+                            defaultValue_other: '{{count}} Creator-Vorschläge prüfen',
+                            defaultValue: '{{count}} Creator-Vorschläge prüfen',
+                          })}
+                        </div>
+                      )}
                       {/* Die Besetzung, sobald ein Angebot vorliegt. */}
                       {order.responses && (
                         <div className="text-xs text-muted-foreground mt-0.5">

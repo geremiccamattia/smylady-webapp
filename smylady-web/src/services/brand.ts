@@ -119,15 +119,18 @@ export interface UpdateBrandProfilePayload {
 
 /**
  * Der Ablauf eines Auftrags:
- *   draft → submitted → in_review → creators_requested (wir fragen Creator
- *   nach ihrer Verfügbarkeit) → offer_sent (Angebot aus den Zusagen) →
- *   awaiting_payment (Brand bezahlt bei Stripe) → confirmed (bezahlt, Event
- *   und Buchung stehen) → completed. 'cancelled' aus jedem Zwischenstand.
+ *   draft → submitted → in_review → creators_proposed (wir schlagen Creator
+ *   vor, die Brand nimmt jeden an oder lehnt ihn ab) → creators_requested
+ *   (wir fragen die angenommenen Creator nach ihrer Verfügbarkeit) →
+ *   offer_sent (Angebot aus den Zusagen) → awaiting_payment (Brand bezahlt
+ *   bei Stripe) → confirmed (bezahlt, Event und Buchung stehen) → completed.
+ *   'cancelled' aus jedem Zwischenstand.
  */
 export type BrandOrderStatus =
   | 'draft'
   | 'submitted'
   | 'in_review'
+  | 'creators_proposed'
   | 'creators_requested'
   | 'offer_sent'
   | 'awaiting_payment'
@@ -221,6 +224,15 @@ export interface BrandOrderPayload {
 export type CreatorResponse = 'pending' | 'accepted' | 'declined' | 'expired'
 const CREATOR_RESPONSES: readonly string[] = ['pending', 'accepted', 'declined', 'expired']
 
+/** Die Links zu einem vorgeschlagenen Creator, in Anzeige-Reihenfolge. */
+export const CREATOR_LINK_KEYS = ['profileUrl', 'instagram', 'youtube', 'x', 'linkedin', 'snapchat', 'facebook'] as const
+export type CreatorLinkKey = (typeof CREATOR_LINK_KEYS)[number]
+export type CreatorLinks = Partial<Record<CreatorLinkKey, string>>
+
+/** Was die Brand zu einem vorgeschlagenen Creator gesagt hat. */
+export type BrandDecision = 'pending' | 'accepted' | 'rejected'
+const BRAND_DECISIONS: readonly string[] = ['pending', 'accepted', 'rejected']
+
 /**
  * Ein vorgeschlagener Creator aus Sicht der Brand.
  *
@@ -228,8 +240,14 @@ const CREATOR_RESPONSES: readonly string[] = ['pending', 'accepted', 'declined',
  * einen Hinweis — die Brand erfährt dann nicht, wer dahintersteht. Eine
  * Vergütung ist nie dabei; die Brand zahlt den Angebotspreis.
  *
+ * `links`, `note` und `decision` gehören zum Vorschlag: die Links (SYP-Profil
+ * und Social Media, vom Creator hinterlegt oder von uns ergänzt), ein Satz
+ * von uns, und die Entscheidung der Brand selbst. Sie kommen auch für nicht
+ * freigegebene Creator — dann nur, was wir von Hand eingetragen haben.
+ *
  * `response` gibt es erst, sobald ein Creator-Auftrag existiert (ab
- * 'confirmed'); vorher null. Sie kommt auch für nicht freigegebene Creator.
+ * 'creators_requested'); vorher null. Sie kommt auch für nicht freigegebene
+ * Creator.
  */
 export interface ProposedCreatorCard {
   creatorUserId: string
@@ -241,6 +259,12 @@ export interface ProposedCreatorCard {
   channels: { platform: string; username: string; url?: string; followerRange?: string }[]
   portfolioLinks: string[]
   bio: string
+  links: CreatorLinks
+  note: string
+  proposedAt: string
+  decision: BrandDecision
+  decisionAt: string
+  decisionReason: string
   response: CreatorResponse | null
   respondedAt: string
 }
@@ -285,6 +309,12 @@ export interface BrandOrder {
   /** Bis wann die Brand annehmen und bezahlen kann; danach storniert das System. */
   offerExpiresAt: string
   proposedCreators: ProposedCreatorCard[]
+  /**
+   * Der Creator-Vorschlag, sobald wir einen geschickt haben: wann, mit
+   * welchem Begleittext, und wie viele Creator die Brand noch prüfen muss
+   * bzw. angenommen oder abgelehnt hat. null vor dem Vorschlag.
+   */
+  proposal: { sentAt: string; message: string; pending: number; accepted: number; rejected: number } | null
   eventId: string
   createdAt: string
   /** Nur im Status 'cancelled': wer storniert hat, wann, und (optional) warum. */
@@ -384,9 +414,26 @@ function mapProposedCreator(raw: any): ProposedCreatorCard {
     })),
     portfolioLinks: Array.isArray(raw?.portfolioLinks) ? raw.portfolioLinks.map(str) : [],
     bio: str(raw?.bio),
+    links: mapLinks(raw?.links),
+    note: str(raw?.note),
+    proposedAt: str(raw?.proposedAt),
+    decision: BRAND_DECISIONS.includes(raw?.brandDecision?.status) ? (raw.brandDecision.status as BrandDecision) : 'pending',
+    decisionAt: str(raw?.brandDecision?.at),
+    decisionReason: str(raw?.brandDecision?.reason),
     response: CREATOR_RESPONSES.includes(raw?.response) ? (raw.response as CreatorResponse) : null,
     respondedAt: str(raw?.respondedAt),
   }
+}
+
+/** Nur die bekannten Schlüssel, nur gesetzte Werte — und nur http(s), damit kein „javascript:" in einen Link rutscht. */
+function mapLinks(raw: unknown): CreatorLinks {
+  const links: CreatorLinks = {}
+  if (!raw || typeof raw !== 'object') return links
+  for (const key of CREATOR_LINK_KEYS) {
+    const value = str((raw as Record<string, unknown>)[key]).trim()
+    if (/^https?:\/\//i.test(value)) links[key] = value
+  }
+  return links
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -434,6 +481,16 @@ export function mapBrandOrder(raw: any): BrandOrder {
     offerSentAt: str(raw?.offer?.sentAt),
     offerExpiresAt: str(raw?.offer?.expiresAt),
     proposedCreators: proposed.map(mapProposedCreator),
+    proposal:
+      raw?.proposal && typeof raw.proposal === 'object' && raw.proposal.sentAt
+        ? {
+            sentAt: str(raw.proposal.sentAt),
+            message: str(raw.proposal.message),
+            pending: num(raw.proposal.pending),
+            accepted: num(raw.proposal.accepted),
+            rejected: num(raw.proposal.rejected),
+          }
+        : null,
     eventId: idOf(raw?.eventId),
     createdAt: str(raw?.createdAt),
     cancellation:
@@ -615,6 +672,22 @@ export const brandService = {
   async cancelOrder(id: string, reason?: string): Promise<BrandOrder> {
     const trimmed = reason?.trim()
     const response = await apiClient.post(`/brand-orders/${id}/cancel`, trimmed ? { reason: trimmed } : {})
+    return mapBrandOrder(unwrap(response))
+  },
+
+  /**
+   * Einen vorgeschlagenen Creator annehmen oder ablehnen. Nur für Creator,
+   * die uns vorgelegt wurden, und nur in 'creators_proposed' bzw.
+   * 'creators_requested' (409 sonst; 409 auch, wenn ein angenommener Creator
+   * schon angefragt ist). Erst angenommene Creator werden angefragt. Nur der
+   * Inhaber (403 für Mitglieder).
+   */
+  async decideOnCreator(id: string, creatorUserId: string, decision: 'accepted' | 'rejected', reason?: string): Promise<BrandOrder> {
+    const trimmed = reason?.trim()
+    const response = await apiClient.post(
+      `/brand-orders/${id}/proposed-creators/${encodeURIComponent(creatorUserId)}/decision`,
+      trimmed ? { decision, reason: trimmed } : { decision },
+    )
     return mapBrandOrder(unwrap(response))
   },
 

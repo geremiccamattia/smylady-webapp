@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CalendarDays, Check, CheckCircle2, Clapperboard, Clock, ExternalLink, FileText, Wallet, X } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarDays, Check, CheckCircle2, Clapperboard, Clock, ExternalLink, FileText, Wallet, X } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +26,7 @@ import {
   isPaidOut,
   readCreatorConflict,
   readCreatorError,
+  type AssignmentBrand,
   type CreatorAssignment,
 } from '@/services/creator'
 import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, isEventOver } from '@/lib/utils'
@@ -286,9 +287,14 @@ function AssignmentDetail() {
           ) : (
             <p className="text-sm text-muted-foreground">
               {assignment.response === 'accepted'
-                ? t('creatorDashboard.alreadyAccepted', {
-                    defaultValue: 'Du hast zugesagt. Sobald die Brand gebucht hat, bekommst du die Bestätigung mit allen Details.',
-                  })
+                ? assignment.orderStatus === 'offer_sent' || assignment.orderStatus === 'awaiting_payment'
+                  ? t('creatorDashboard.alreadyAcceptedOfferSent', {
+                      defaultValue:
+                        'Du hast zugesagt und bist Teil unseres Angebots an die Brand. Sobald sie es annimmt und bezahlt, bist du verbindlich gebucht und bekommst die Bestätigung.',
+                    })
+                  : t('creatorDashboard.alreadyAccepted', {
+                      defaultValue: 'Du hast zugesagt. Sobald die Brand gebucht hat, bekommst du die Bestätigung mit allen Details.',
+                    })
                 : assignment.response === 'expired'
                   ? t('creatorDashboard.alreadyExpired', {
                       defaultValue: 'Die Anfrage ist ohne deine Antwort abgelaufen. Beim nächsten Mal gern schneller – oder melde dich bei uns.',
@@ -299,6 +305,28 @@ function AssignmentDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Die Brand: Wer fragt an? Name, SYP-Profil und Links, damit der
+          Creator weiss, für wen er zusagt. */}
+      {assignment.brand && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              {t('creatorDashboard.brandSection', { defaultValue: 'Die Brand' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2">
+            {assignment.brand.name && <div className="font-medium">{assignment.brand.name}</div>}
+            <BrandLinks brand={assignment.brand} />
+            <p className="text-xs text-muted-foreground">
+              {t('creatorDashboard.brandSectionHint', {
+                defaultValue: 'Sieh dir die Brand an, bevor du zusagst. Die Brand hat dich vorher ebenfalls geprüft und angenommen.',
+              })}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Event */}
       <Card>
@@ -433,6 +461,36 @@ function AssignmentDetail() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  )
+}
+
+/** Die Links der Brand als Badges; das Mapping hat sie schon auf http(s) gefiltert. */
+function BrandLinks({ brand }: { brand: AssignmentBrand }) {
+  const { t } = useTranslation()
+  const entries: Array<[keyof AssignmentBrand, string]> = [
+    ['profileUrl', t('creatorDashboard.brandLinkProfile', { defaultValue: 'Profil bei Share Your Party' })],
+    ['instagram', 'Instagram'],
+    ['tiktok', 'TikTok'],
+    ['website', t('creatorDashboard.brandLinkWebsite', { defaultValue: 'Website' })],
+    ['other', t('creatorDashboard.brandLinkOther', { defaultValue: 'Weiterer Link' })],
+  ]
+  const links = entries.filter(([key]) => brand[key])
+  if (links.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1">
+      {links.map(([key, label]) => (
+        <a
+          key={key}
+          href={brand[key]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-0.5 text-xs hover:bg-muted"
+        >
+          {label}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ))}
+    </div>
   )
 }
 

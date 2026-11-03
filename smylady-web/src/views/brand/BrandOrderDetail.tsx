@@ -46,6 +46,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import {
+  CREATOR_LINK_KEYS,
   brandService,
   isRateLimited,
   readBrandError,
@@ -57,7 +58,15 @@ import { eventsService } from '@/services/events'
 import { formatDate, formatDateTime, formatDateTimeSmart, formatPrice, getInitials, resolveImageUrl } from '@/lib/utils'
 import { formatRemaining, useCountdown, type RemainingUnits } from '@/lib/deadline'
 import { navigateToExternalUrl, STRIPE_HOSTS } from '@/lib/navigation'
-import { BrandGate, LoadingBars, OrderStatusBadge, OwnerOnlyHint, PaymentStatusBadge, useBrandLabels } from '@/components/brand/brandShared'
+import {
+  BrandGate,
+  DecisionBadge,
+  LoadingBars,
+  OrderStatusBadge,
+  OwnerOnlyHint,
+  PaymentStatusBadge,
+  useBrandLabels,
+} from '@/components/brand/brandShared'
 import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
@@ -65,11 +74,20 @@ import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 /** Ab diesen Status steht die Besetzung und darf der Brand gezeigt werden. */
 const PROPOSED_VISIBLE_FROM: BrandOrder['status'][] = ['offer_sent', 'awaiting_payment', 'confirmed', 'completed']
 
+/**
+ * In diesen Status prüft die Brand unseren Creator-Vorschlag: Sie sieht jeden
+ * vorgeschlagenen Creator mit Profil und Links und nimmt ihn an oder lehnt
+ * ihn ab. Nur angenommene Creator fragen wir an; erst mit dem Angebot wird
+ * daraus die Besetzung (PROPOSED_VISIBLE_FROM).
+ */
+const PROPOSAL_REVIEW_IN: BrandOrder['status'][] = ['creators_proposed', 'creators_requested']
+
 /** Bis hierhin beendet die Brand den Auftrag selbst; ab 'confirmed' nur noch über uns (409). */
 const CANCELLABLE: BrandOrder['status'][] = [
   'draft',
   'submitted',
   'in_review',
+  'creators_proposed',
   'creators_requested',
   'offer_sent',
   'awaiting_payment',
@@ -86,8 +104,11 @@ const PAYMENT_POLL_MS = 3000
  *
  * Je nach Status gibt es eine Aktion:
  *   draft              — bearbeiten, einreichen oder verwerfen
- *   submitted / in_review / creators_requested — warten, wir prüfen und
- *                        fragen Creator an; oder zurückziehen
+ *   submitted / in_review — warten, wir prüfen und suchen Creator; oder zurückziehen
+ *   creators_proposed  — unseren Creator-Vorschlag prüfen: Profil und Links
+ *                        ansehen, je Creator annehmen oder ablehnen
+ *   creators_requested — wir fragen die angenommenen Creator an; ein
+ *                        nachgereichter Vorschlag wartet hier ebenfalls
  *   offer_sent         — Angebot mit Preis und zugesagten Creatorn ansehen,
  *                        annehmen UND bezahlen (Stripe) oder ablehnen
  *   awaiting_payment   — Zahlung läuft oder ist offen: fortsetzen oder abbrechen
@@ -140,6 +161,9 @@ function OrderDetail() {
   const [confirmSubmit, setConfirmSubmit] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
+  // Ablehnen eines vorgeschlagenen Creators: Rückfrage mit freiwilligem Grund.
+  const [rejecting, setRejecting] = useState<ProposedCreatorCard | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
   // Nach dem Klick auf „bezahlen" bleibt der Knopf im Ladezustand, bis die
   // Seite zu Stripe wechselt — sonst klickt jemand zweimal.
   const [redirecting, setRedirecting] = useState(false)
@@ -366,6 +390,43 @@ function OrderDetail() {
     onError: (error: unknown) => fail(error, t('brandDashboard.visibilityFailed', { defaultValue: 'Die Sichtbarkeit konnte nicht geändert werden.' })),
   })
 
+  // Die Entscheidung zu einem vorgeschlagenen Creator. Das Backend antwortet
+  // mit dem ganzen Auftrag — samt Stand aller Entscheidungen.
+  const decide = useMutation({
+    mutationFn: ({ creatorUserId, decision, reason }: { creatorUserId: string; decision: 'accepted' | 'rejected'; reason?: string }) =>
+      brandService.decideOnCreator(id, creatorUserId, decision, reason),
+    onSuccess: (updated, { decision }) => {
+      applyUpdate(updated)
+      const remaining = updated.proposal?.pending ?? 0
+      toast({
+        title:
+          decision === 'accepted'
+            ? t('brandDashboard.creatorAcceptedTitle', { defaultValue: 'Creator angenommen' })
+            : t('brandDashboard.creatorRejectedTitle', { defaultValue: 'Creator abgelehnt' }),
+        description:
+          remaining > 0
+            ? t('brandDashboard.decisionRemaining', {
+                count: remaining,
+                defaultValue_one: 'Noch {{count}} Creator wartet auf deine Entscheidung.',
+                defaultValue_other: 'Noch {{count}} Creator warten auf deine Entscheidung.',
+                defaultValue: 'Noch {{count}} Creator warten auf deine Entscheidung.',
+              })
+            : decision === 'accepted' || (updated.proposal?.accepted ?? 0) > 0
+              ? t('brandDashboard.decisionDoneAccepted', {
+                  defaultValue: 'Danke! Wir fragen die angenommenen Creator jetzt nach ihrer Verfügbarkeit und melden uns mit dem Angebot.',
+                })
+              : t('brandDashboard.decisionDoneRejected', {
+                  defaultValue: 'Danke für die Rückmeldung. Wir suchen weitere Creator und schlagen sie dir vor.',
+                }),
+      })
+    },
+    onError: (error: unknown) => {
+      // 409: Der Stand hat sich geändert (schon angefragt, Angebot liegt vor, storniert).
+      queryClient.invalidateQueries({ queryKey: ['brand', 'order', id] })
+      fail(error, t('brandDashboard.decisionFailed', { defaultValue: 'Die Entscheidung konnte nicht gespeichert werden.' }))
+    },
+  })
+
   const cancel = useMutation({
     // Grund und Ausgangsstatus kommen als Variablen mit: Der Dialog leert den
     // Grund beim Schliessen, und nach dem Erfolg ist der Auftrag schon
@@ -418,7 +479,17 @@ function OrderDetail() {
       ? 'public'
       : 'selected'
   const eventApproved = event?.status === 'Approved'
-  const busy = submit.isPending || checkout.isPending || redirecting || visibility.isPending || cancel.isPending
+  const busy = submit.isPending || checkout.isPending || redirecting || visibility.isPending || cancel.isPending || decide.isPending
+
+  // Der Creator-Vorschlag, solange die Brand ihn prüft. Entscheiden darf nur
+  // der Inhaber; umentscheiden geht, solange noch niemand angefragt ist
+  // ('creators_proposed'). Ab 'creators_requested' ist eine Annahme fest.
+  const reviewingProposal = PROPOSAL_REVIEW_IN.includes(order.status) && order.proposedCreators.length > 0
+  const canDecide = (creator: ProposedCreatorCard): boolean =>
+    isOwner &&
+    reviewingProposal &&
+    !busy &&
+    (creator.decision === 'pending' || order.status === 'creators_proposed' || creator.decision === 'rejected')
 
   const payment = order.payment
   const paymentProcessing = order.status === 'awaiting_payment' && payment?.status === 'processing'
@@ -713,6 +784,105 @@ function OrderDetail() {
         </Card>
       )}
 
+      {/* Der Creator-Vorschlag: Die Brand sieht jeden Creator mit Profil,
+          Social-Media-Links und unserem Hinweis und nimmt ihn an oder lehnt
+          ihn ab. Erst angenommene Creator fragen wir nach ihrer
+          Verfügbarkeit — niemand kommt auf das Event, den die Brand nicht
+          vorher gesehen hat. */}
+      {reviewingProposal && (
+        <Card className={(order.proposal?.pending ?? 0) > 0 && isOwner ? 'border-cyan-200 bg-cyan-50/40' : undefined}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 flex-wrap">
+              <Users className="h-5 w-5" />
+              {t('brandDashboard.proposalTitle', { defaultValue: 'Unser Creator-Vorschlag' })}
+              <span className="text-muted-foreground font-normal">({order.proposedCreators.length})</span>
+              {order.proposal && (
+                <span className="text-sm text-muted-foreground font-normal">
+                  ·{' '}
+                  {t('brandDashboard.proposalSummary', {
+                    accepted: order.proposal.accepted,
+                    rejected: order.proposal.rejected,
+                    pending: order.proposal.pending,
+                    defaultValue: '{{accepted}} angenommen, {{rejected}} abgelehnt, {{pending}} offen',
+                  })}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm">
+              {t('brandDashboard.proposalDesc', {
+                defaultValue:
+                  'Sieh dir Profil und Social-Media-Kanäle an und sag uns je Creator, ob er zu deinem Event passt. Erst wenn du einen Creator angenommen hast, fragen wir ihn nach seiner Verfügbarkeit – so kommt niemand zu deinem Event, den du nicht vorher gesehen hast.',
+              })}
+            </p>
+            {order.proposal?.message && (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap rounded-md border bg-background p-3">
+                {order.proposal.message}
+              </p>
+            )}
+            {!isOwner && <OwnerOnlyHint text={t('brandDashboard.decisionOwnerOnly', { defaultValue: 'Annehmen oder ablehnen kann nur der Inhaber der Brand.' })} />}
+            {order.proposedCreators.map((creator) => {
+              const decidable = canDecide(creator)
+              const requested = order.status === 'creators_requested' && creator.decision === 'accepted'
+              return (
+                <CreatorCardRow
+                  key={creator.creatorUserId}
+                  creator={creator}
+                  creatorLabels={creatorLabels}
+                  brandLabels={labels}
+                  localePath={localePath}
+                  proposal
+                  actions={
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
+                      <DecisionBadge value={creator.decision} />
+                      {creator.decisionReason && (
+                        <span className="text-xs text-muted-foreground">„{creator.decisionReason}“</span>
+                      )}
+                      {requested && (
+                        <span className="text-xs text-muted-foreground">
+                          {t('brandDashboard.creatorRequestedHint', { defaultValue: 'Wird gerade nach seiner Verfügbarkeit gefragt.' })}
+                        </span>
+                      )}
+                      {decidable && (
+                        <div className="flex gap-2 ml-auto">
+                          {creator.decision !== 'accepted' && (
+                            <Button
+                              size="sm"
+                              variant="gradient"
+                              className="gap-1"
+                              loading={decide.isPending && decide.variables?.creatorUserId === creator.creatorUserId && decide.variables?.decision === 'accepted'}
+                              onClick={() => decide.mutate({ creatorUserId: creator.creatorUserId, decision: 'accepted' })}
+                            >
+                              <Check className="h-4 w-4" />
+                              {t('brandDashboard.acceptCreator', { defaultValue: 'Passt, annehmen' })}
+                            </Button>
+                          )}
+                          {creator.decision !== 'rejected' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={() => {
+                                setRejectReason('')
+                                setRejecting(creator)
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                              {t('brandDashboard.rejectCreator', { defaultValue: 'Ablehnen' })}
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Die Besetzung — erst mit dem Angebot. Vorher prüfen wir noch die
           Verfügbarkeit; der Statushinweis sagt das. Das Backend liefert hier
           nur Creator, die zugesagt haben (bzw. bei Altfällen noch offene). */}
@@ -746,11 +916,67 @@ function OrderDetail() {
                   })}
             </p>
             {order.proposedCreators.map((creator) => (
-              <CreatorCardRow key={creator.creatorUserId} creator={creator} creatorLabels={creatorLabels} localePath={localePath} />
+              <CreatorCardRow
+                key={creator.creatorUserId}
+                creator={creator}
+                creatorLabels={creatorLabels}
+                brandLabels={labels}
+                localePath={localePath}
+              />
             ))}
           </CardContent>
         </Card>
       )}
+
+      {/* Rückfrage vor dem Ablehnen eines Creators, mit freiwilligem Grund. */}
+      <AlertDialog
+        open={rejecting !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejecting(null)
+            setRejectReason('')
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('brandDashboard.rejectCreatorConfirmTitle', {
+                name: rejecting?.name || t('brandDashboard.creatorUnnamed', { defaultValue: 'Creator' }),
+                defaultValue: '{{name}} ablehnen?',
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('brandDashboard.rejectCreatorConfirmDesc', {
+                defaultValue:
+                  'Dieser Creator wird nicht angefragt und kommt nicht zu deinem Event. Ein Grund hilft uns, einen passenderen Creator zu finden – er geht nur an uns, nicht an den Creator.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reject-reason">{t('brandDashboard.rejectReasonLabel', { defaultValue: 'Grund (optional)' })}</Label>
+            <Textarea
+              id="reject-reason"
+              rows={3}
+              maxLength={500}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder={t('brandDashboard.rejectReasonPlaceholder', { defaultValue: 'z. B. passt nicht zu unserer Zielgruppe' })}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', { defaultValue: 'Abbrechen' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (rejecting) decide.mutate({ creatorUserId: rejecting.creatorUserId, decision: 'rejected', reason: rejectReason })
+                setRejecting(null)
+              }}
+            >
+              {t('brandDashboard.rejectCreator', { defaultValue: 'Ablehnen' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Auftrag */}
       <Card>
@@ -1049,22 +1275,59 @@ function SafeStripeLink({ href, children }: { href: string; children: React.Reac
   )
 }
 
+/**
+ * Die Links zu einem Creator: SYP-Profil und Social Media, als Badges mit
+ * Link. Was das Backend liefert, ist schon auf http(s) gefiltert.
+ */
+function CreatorLinksRow({ creator, brandLabels }: { creator: ProposedCreatorCard; brandLabels: ReturnType<typeof useBrandLabels> }) {
+  const entries = CREATOR_LINK_KEYS.filter((key) => creator.links[key])
+  if (entries.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1">
+      {entries.map((key) => (
+        <a
+          key={key}
+          href={creator.links[key]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-0.5 text-xs hover:bg-muted"
+        >
+          {brandLabels.creatorLink(key)}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ))}
+    </div>
+  )
+}
+
 function CreatorCardRow({
   creator,
   creatorLabels,
+  brandLabels,
   localePath,
+  proposal = false,
+  actions,
 }: {
   creator: ProposedCreatorCard
   creatorLabels: ReturnType<typeof useCreatorLabels>
+  brandLabels: ReturnType<typeof useBrandLabels>
   localePath: (path: string) => string
+  /** Im Vorschlag: Hinweis von uns und Links auch ohne Profilfreigabe zeigen. */
+  proposal?: boolean
+  /** Entscheidung und Knöpfe unter der Karte (Vorschlag). */
+  actions?: React.ReactNode
 }) {
   const { t } = useTranslation()
   // Abgesagt oder abgelaufen zeigt das Backend der Brand gar nicht; eine
   // Zusage ist der Normalfall und braucht kein Badge — nur Offenes (Altfall).
-  const badge = creator.response === 'pending' ? <ResponseBadge value={creator.response} /> : null
+  // Im Vorschlag sagt die Entscheidung der Brand alles; die Antwort des
+  // Creators kommt erst mit dem Angebot.
+  const badge = !proposal && creator.response === 'pending' ? <ResponseBadge value={creator.response} /> : null
+  const note = proposal && creator.note ? <p className="text-sm whitespace-pre-wrap">💬 {creator.note}</p> : null
 
   return (
-    <div className="flex gap-3 rounded-md border p-3">
+    <div className="flex flex-col rounded-md border p-3">
+    <div className="flex gap-3">
       {creator.released ? (
         <>
           <Avatar className="h-12 w-12 shrink-0">
@@ -1079,6 +1342,8 @@ function CreatorCardRow({
               {badge}
               {creator.city && <span className="text-sm text-muted-foreground">{creator.city}</span>}
             </div>
+            <CreatorLinksRow creator={creator} brandLabels={brandLabels} />
+            {note}
             {creator.channels.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {creator.channels.map((channel, index) => (
@@ -1119,16 +1384,27 @@ function CreatorCardRow({
           </div>
         </>
       ) : (
-        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-          <EyeOff className="h-5 w-5 shrink-0" />
-          <span className="flex-1 min-w-0">
-            {t('brandDashboard.creatorNotReleased', {
-              defaultValue: 'Dieser Creator hat sein Profil noch nicht für Brands freigegeben. Details folgen mit dem Briefing.',
-            })}
-          </span>
-          {badge}
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+            <EyeOff className="h-5 w-5 shrink-0" />
+            <span className="flex-1 min-w-0">
+              {proposal
+                ? t('brandDashboard.creatorNotReleasedProposal', {
+                    defaultValue:
+                      'Dieser Creator hat sein Profil noch nicht für Brands freigegeben. Sieh dir die Links unten an – sie hat unser Team für dich eingetragen.',
+                  })
+                : t('brandDashboard.creatorNotReleased', {
+                    defaultValue: 'Dieser Creator hat sein Profil noch nicht für Brands freigegeben. Details folgen mit dem Briefing.',
+                  })}
+            </span>
+            {badge}
+          </div>
+          {proposal && <CreatorLinksRow creator={creator} brandLabels={brandLabels} />}
+          {note}
         </div>
       )}
+    </div>
+    {actions}
     </div>
   )
 }
@@ -1151,7 +1427,33 @@ function StatusHint({
   isOwner: boolean
 }) {
   const { t } = useTranslation()
-  const { cancellation, responses, payment } = order
+  const { cancellation, responses, payment, proposal } = order
+
+  // Vorschlag: Was die Brand noch tun muss, hängt am Stand ihrer Entscheidungen.
+  const proposalPending = proposal?.pending ?? 0
+  const proposedText =
+    proposalPending > 0
+      ? t('brandDashboard.hintCreatorsProposed', {
+          count: proposalPending,
+          defaultValue_one: 'Wir haben dir einen Creator vorgeschlagen. Sieh dir Profil und Kanäle an und sag uns, ob er zu deinem Event passt – erst dann fragen wir ihn an.',
+          defaultValue_other:
+            'Wir haben dir {{count}} Creator vorgeschlagen. Sieh dir Profil und Kanäle an und sag uns je Creator, ob er zu deinem Event passt – erst dann fragen wir ihn an.',
+          defaultValue: 'Wir haben dir {{count}} Creator vorgeschlagen. Sieh dir Profil und Kanäle an und sag uns je Creator, ob er zu deinem Event passt – erst dann fragen wir ihn an.',
+        })
+      : (proposal?.accepted ?? 0) > 0
+        ? t('brandDashboard.hintCreatorsProposedDecided', {
+            defaultValue: 'Danke, du hast entschieden. Wir fragen die angenommenen Creator jetzt nach ihrer Verfügbarkeit; das Angebot folgt, sobald Zusagen vorliegen.',
+          })
+        : t('brandDashboard.hintCreatorsProposedRejected', {
+            defaultValue: 'Du hast alle Vorschläge abgelehnt. Wir suchen weitere Creator und schlagen sie dir vor.',
+          })
+  const requestedExtra =
+    proposalPending > 0
+      ? ' ' +
+        t('brandDashboard.hintCreatorsRequestedProposalPending', {
+          defaultValue: 'Ein weiterer Vorschlag wartet oben auf deine Entscheidung.',
+        })
+      : ''
 
   // Storniert: von der Brand selbst, von uns oder vom System (Frist), mit
   // Datum, wenn bekannt.
@@ -1259,12 +1561,14 @@ function StatusHint({
       defaultValue: 'Der Auftrag ist bei uns eingegangen. Wir prüfen ihn und suchen passende Creator.',
     }),
     in_review: t('brandDashboard.hintInReview', {
-      defaultValue: 'Wir prüfen den Auftrag gerade und stellen Creator zusammen. Das Angebot folgt in Kürze.',
+      defaultValue: 'Wir prüfen den Auftrag gerade und stellen Creator zusammen. Du bekommst unseren Vorschlag zum Prüfen.',
     }),
-    creators_requested: t('brandDashboard.hintCreatorsRequested', {
-      defaultValue:
-        'Wir fragen gerade passende Creator nach ihrer Verfügbarkeit. Sobald Zusagen vorliegen, folgt ein Angebot – nur mit Creatorn, die wirklich dabei sind.',
-    }),
+    creators_proposed: proposedText,
+    creators_requested:
+      t('brandDashboard.hintCreatorsRequested', {
+        defaultValue:
+          'Wir fragen gerade die von dir angenommenen Creator nach ihrer Verfügbarkeit. Sobald Zusagen vorliegen, folgt ein Angebot – nur mit Creatorn, die wirklich dabei sind.',
+      }) + requestedExtra,
     offer_sent: offerSentText,
     awaiting_payment: awaitingText,
     confirmed: confirmedText,
@@ -1293,7 +1597,7 @@ function StatusHint({
         ? CreditCard
         : order.status === 'confirmed'
           ? Check
-          : order.status === 'creators_requested'
+          : order.status === 'creators_requested' || order.status === 'creators_proposed'
             ? Users
             : FileText
 

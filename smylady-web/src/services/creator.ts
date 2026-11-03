@@ -97,6 +97,15 @@ export interface CreatorChannel {
   isPrimary?: boolean
 }
 
+/**
+ * Die Social-Media-Profile, die ein Creator hinterlegen kann — als
+ * vollständige URLs. Nichts davon ist Pflicht. Brands bekommen sie zu sehen,
+ * wenn wir den Creator vorschlagen.
+ */
+export const CREATOR_SOCIAL_KEYS = ['instagram', 'youtube', 'x', 'linkedin', 'snapchat', 'facebook'] as const
+export type CreatorSocialKey = (typeof CREATOR_SOCIAL_KEYS)[number]
+export type CreatorSocialLinks = Partial<Record<CreatorSocialKey, string>>
+
 export interface CreatorProfile {
   id: string
   status: CreatorProfileStatus
@@ -105,6 +114,7 @@ export interface CreatorProfile {
   city: string
   portfolioLinks: string[]
   bio: string
+  socialLinks: CreatorSocialLinks
   brandVisibilityConsent: boolean
   createdAt: string
 }
@@ -115,7 +125,22 @@ export interface UpdateCreatorProfilePayload {
   city?: string
   portfolioLinks?: string[]
   bio?: string
+  /** Ersetzt die gespeicherten Links als Ganzes; ein leerer String je Feld entfernt den Link. */
+  socialLinks?: Record<CreatorSocialKey, string>
   brandVisibilityConsent?: boolean
+}
+
+/**
+ * Was der Creator über die Brand hinter einer Anfrage erfährt: Name,
+ * SYP-Profilseite und Links. null bei Admin-Aufträgen ohne Brand-Infos.
+ */
+export interface AssignmentBrand {
+  name: string
+  profileUrl: string
+  instagram: string
+  tiktok: string
+  website: string
+  other: string
 }
 
 /** 'expired': Die Antwortfrist ist verstrichen, ohne dass der Creator geantwortet hat. */
@@ -159,6 +184,8 @@ export interface CreatorAssignment {
   hasBriefingFiles: boolean
   /** Gesetzt, wenn die Anfrage an diesen Creator zurückgezogen wurde; leer sonst. */
   cancelledAt: string
+  /** Die Brand hinter der Anfrage, soweit wir sie zeigen; null ohne Angaben. */
+  brand: AssignmentBrand | null
   briefingText: string
   deliverables: { type: string; quantity: number; platform?: string; notes?: string }[]
   compensation: number | null
@@ -192,9 +219,40 @@ export function mapCreatorProfile(raw: any): CreatorProfile {
     city: text(raw?.city),
     portfolioLinks: Array.isArray(raw?.portfolioLinks) ? raw.portfolioLinks.map(text) : [],
     bio: text(raw?.bio),
+    socialLinks: mapSocialLinks(raw?.socialLinks),
     brandVisibilityConsent: Boolean(raw?.brandVisibilityConsent),
     createdAt: text(raw?.createdAt),
   }
+}
+
+function mapSocialLinks(raw: unknown): CreatorSocialLinks {
+  const links: CreatorSocialLinks = {}
+  if (!raw || typeof raw !== 'object') return links
+  for (const key of CREATOR_SOCIAL_KEYS) {
+    const value = text((raw as Record<string, unknown>)[key]).trim()
+    if (value) links[key] = value
+  }
+  return links
+}
+
+/** Nur http(s)-Links — nichts anderes gehört in ein href. */
+const safeLink = (value: unknown): string => {
+  const trimmed = text(value).trim()
+  return /^https?:\/\//i.test(trimmed) ? trimmed : ''
+}
+
+function mapAssignmentBrand(raw: unknown): AssignmentBrand | null {
+  if (!raw || typeof raw !== 'object') return null
+  const source = raw as Record<string, unknown>
+  const brand: AssignmentBrand = {
+    name: text(source.name).trim(),
+    profileUrl: safeLink(source.profileUrl),
+    instagram: safeLink(source.instagram),
+    tiktok: safeLink(source.tiktok),
+    website: safeLink(source.website),
+    other: safeLink(source.other),
+  }
+  return Object.values(brand).some(Boolean) ? brand : null
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -225,6 +283,7 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
     publishDeadline: text(raw?.publishDeadline) || null,
     hasBriefingFiles: Boolean(raw?.hasBriefingFiles),
     cancelledAt: text(raw?.cancelledAt),
+    brand: mapAssignmentBrand(raw?.brand),
     briefingText: text(raw?.briefingText),
     deliverables: deliverables.map((entry) => ({
       type: text(entry?.type) || 'other',

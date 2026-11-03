@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, AtSign, Plus, Tag, Trash2, User } from 'lucide-react'
+import { ArrowLeft, AtSign, Plus, Share2, Tag, Trash2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,10 +18,12 @@ import {
   CREATOR_CATEGORIES,
   CREATOR_FOLLOWER_RANGES,
   CREATOR_PLATFORMS,
+  CREATOR_SOCIAL_KEYS,
   creatorAreaService,
   readCreatorError,
   type CreatorChannel,
   type CreatorPlatform,
+  type CreatorSocialKey,
 } from '@/services/creator'
 import { CreatorGate, CreatorStatusBadge, useCreatorLabels } from '@/components/creator/creatorShared'
 
@@ -39,6 +41,34 @@ interface ChannelRow {
 }
 
 const emptyChannel = (): ChannelRow => ({ platform: 'Instagram', username: '', url: '', followerRange: '' })
+
+const emptySocialLinks = (): Record<CreatorSocialKey, string> => ({
+  instagram: '',
+  youtube: '',
+  x: '',
+  linkedin: '',
+  snapchat: '',
+  facebook: '',
+})
+
+/** Plattformnamen sind Markennamen und werden nicht übersetzt. */
+const SOCIAL_LABELS: Record<CreatorSocialKey, string> = {
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  x: 'X',
+  linkedin: 'LinkedIn',
+  snapchat: 'Snapchat',
+  facebook: 'Facebook',
+}
+
+const SOCIAL_PLACEHOLDERS: Record<CreatorSocialKey, string> = {
+  instagram: 'https://instagram.com/deinprofil',
+  youtube: 'https://youtube.com/@deinkanal',
+  x: 'https://x.com/deinprofil',
+  linkedin: 'https://linkedin.com/in/deinprofil',
+  snapchat: 'https://snapchat.com/add/deinprofil',
+  facebook: 'https://facebook.com/deinprofil',
+}
 
 /** Gültig im Sinne von @IsUrl (class-validator): http(s), Host mit Punkt, keine Leerzeichen. */
 function isValidPortfolioLink(value: string): boolean {
@@ -86,6 +116,7 @@ function ProfileForm() {
   const [city, setCity] = useState('')
   const [bio, setBio] = useState('')
   const [portfolio, setPortfolio] = useState('')
+  const [socialLinks, setSocialLinks] = useState<Record<CreatorSocialKey, string>>(emptySocialLinks())
 
   useEffect(() => {
     if (!profile) return
@@ -102,6 +133,7 @@ function ProfileForm() {
     setCity(profile.city)
     setBio(profile.bio)
     setPortfolio(profile.portfolioLinks.join('\n'))
+    setSocialLinks({ ...emptySocialLinks(), ...profile.socialLinks })
   }, [profile])
 
   const mutation = useMutation({
@@ -117,12 +149,18 @@ function ProfileForm() {
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean)
+      // Alle sechs Felder mitschicken: Ein leerer String entfernt den Link
+      // im Backend, ein weggelassenes Feld bliebe stehen.
+      const cleanSocial = Object.fromEntries(
+        CREATOR_SOCIAL_KEYS.map((key) => [key, socialLinks[key].trim()]),
+      ) as Record<CreatorSocialKey, string>
       return creatorAreaService.updateMyProfile({
         channels: cleanChannels,
         categories,
         city: city.trim(),
         bio: bio.trim(),
         portfolioLinks: links,
+        socialLinks: cleanSocial,
       })
     },
     onSuccess: (updated) => {
@@ -165,6 +203,17 @@ function ProfileForm() {
         t('creatorDashboard.validatePortfolioLink', {
           link: badLink,
           defaultValue: 'Ungültiger Portfolio-Link: {{link}} – bitte eine vollständige Adresse mit http:// oder https:// angeben.',
+        }),
+      )
+    }
+    // Social-Links: Was nicht leer ist, muss eine vollständige URL sein —
+    // Brands klicken darauf, wenn wir den Creator vorschlagen.
+    const badSocial = CREATOR_SOCIAL_KEYS.map((key) => socialLinks[key].trim()).find((value) => value && !isValidPortfolioLink(value))
+    if (badSocial) {
+      return problem(
+        t('creatorDashboard.validateSocialLink', {
+          link: badSocial,
+          defaultValue: 'Ungültiger Social-Media-Link: {{link}} – bitte die vollständige Profiladresse mit https:// angeben.',
         }),
       )
     }
@@ -288,6 +337,39 @@ function ProfileForm() {
                   </button>
                 )
               })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Social-Media-Profile: Das bekommen Brands zu sehen, wenn wir den
+            Creator vorschlagen — sie entscheiden damit, ob er zum Event passt. */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5" />
+              {t('creatorDashboard.socialSection', { defaultValue: 'Social-Media-Profile' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('creatorDashboard.socialSectionDesc', {
+                defaultValue:
+                  'Wenn wir dich einer Brand vorschlagen, sieht sie diese Links und entscheidet damit, ob du zu ihrem Event passt. Alles freiwillig – trag ein, was du zeigen möchtest, als vollständige Adresse.',
+              })}
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              {CREATOR_SOCIAL_KEYS.map((key) => (
+                <div key={key} className="space-y-2">
+                  <Label htmlFor={`social-${key}`}>{SOCIAL_LABELS[key]}</Label>
+                  <Input
+                    id={`social-${key}`}
+                    type="url"
+                    value={socialLinks[key]}
+                    onChange={(e) => setSocialLinks((current) => ({ ...current, [key]: e.target.value }))}
+                    placeholder={SOCIAL_PLACEHOLDERS[key]}
+                  />
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
