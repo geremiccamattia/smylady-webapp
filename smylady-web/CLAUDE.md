@@ -87,6 +87,21 @@ Das Frontend kommuniziert mit dem Backend unter `https://app.shareyourparty.de`:
 - Chat: `/api/chat/*`
 - Notifications: `/api/notifications/*`
 
+## PFLICHT: Feature-Parität mit der Mobile-App (iOS/Android)
+
+Web und App sind **zwei getrennte Codebasen** (diese Next.js-Webapp und die Expo/React-Native-App
+`smylady-frontend`), die nur das Backend teilen. Damit die App nie wieder hinterherhängt:
+
+- **Jedes neue Feature für User, Creator oder Brand wird im selben Zug auch in der App gebaut**
+  (`smylady-frontend`, gleiche Endpoints, gleiche Texte de/en). Nie zuerst nur für das Web.
+- Ausnahmen: Admin-Panel (nur Web) und reine SEO-/Marketing-Seiten.
+- Im Plan für jede Feature-Arbeit stehen Schritte für **Web und App**. Kann der App-Teil nicht
+  sofort mit, wird das ausdrücklich gesagt und als offener Punkt festgehalten.
+- App-Änderungen, die nur JS betreffen, gehen per OTA raus (`npm run update:preview` /
+  `update:production` in `smylady-frontend`), ohne neuen Store-Build.
+- Stand 04.11.2026: Brand- und Creator-Bereich sowie die Leistungsprüfung gibt es bisher nur im Web
+  und müssen in der App nachgebaut werden.
+
 ## WICHTIG: API Endpoint Konsistenz mit Mobile-App
 
 Die Web-App MUSS die gleichen API-Endpoints wie die Mobile-App (`smylady-mobile`) verwenden!
