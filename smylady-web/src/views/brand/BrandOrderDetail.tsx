@@ -48,6 +48,7 @@ import { useLocalePath } from '@/hooks/useLocalePath'
 import {
   CREATOR_LINK_KEYS,
   brandService,
+  channelUrl,
   isRateLimited,
   readBrandError,
   readMissingFields,
@@ -164,6 +165,9 @@ function OrderDetail() {
   // Ablehnen eines vorgeschlagenen Creators: Rückfrage mit freiwilligem Grund.
   const [rejecting, setRejecting] = useState<ProposedCreatorCard | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  // Annehmen: Rückfrage mit Bestätigung (Profil geprüft, verbindlich, AGB).
+  const [accepting, setAccepting] = useState<ProposedCreatorCard | null>(null)
+  const [termsChecked, setTermsChecked] = useState(false)
   // Nach dem Klick auf „bezahlen" bleibt der Knopf im Ladezustand, bis die
   // Seite zu Stripe wechselt — sonst klickt jemand zweimal.
   const [redirecting, setRedirecting] = useState(false)
@@ -394,7 +398,7 @@ function OrderDetail() {
   // mit dem ganzen Auftrag — samt Stand aller Entscheidungen.
   const decide = useMutation({
     mutationFn: ({ creatorUserId, decision, reason }: { creatorUserId: string; decision: 'accepted' | 'rejected'; reason?: string }) =>
-      brandService.decideOnCreator(id, creatorUserId, decision, reason),
+      brandService.decideOnCreator(id, creatorUserId, decision, { reason, termsAccepted: decision === 'accepted' }),
     onSuccess: (updated, { decision }) => {
       applyUpdate(updated)
       const remaining = updated.proposal?.pending ?? 0
@@ -482,14 +486,10 @@ function OrderDetail() {
   const busy = submit.isPending || checkout.isPending || redirecting || visibility.isPending || cancel.isPending || decide.isPending
 
   // Der Creator-Vorschlag, solange die Brand ihn prüft. Entscheiden darf nur
-  // der Inhaber; umentscheiden geht, solange noch niemand angefragt ist
-  // ('creators_proposed'). Ab 'creators_requested' ist eine Annahme fest.
+  // der Inhaber, und jede Entscheidung ist endgültig: Ein Hin und Her
+  // zwischen Annehmen und Ablehnen gibt es nicht (das Backend weist es ab).
   const reviewingProposal = PROPOSAL_REVIEW_IN.includes(order.status) && order.proposedCreators.length > 0
-  const canDecide = (creator: ProposedCreatorCard): boolean =>
-    isOwner &&
-    reviewingProposal &&
-    !busy &&
-    (creator.decision === 'pending' || order.status === 'creators_proposed' || creator.decision === 'rejected')
+  const canDecide = (creator: ProposedCreatorCard): boolean => isOwner && reviewingProposal && !busy && creator.decision === 'pending'
 
   const payment = order.payment
   const paymentProcessing = order.status === 'awaiting_payment' && payment?.status === 'processing'
@@ -816,6 +816,12 @@ function OrderDetail() {
                   'Sieh dir Profil und Social-Media-Kanäle an und sag uns je Creator, ob er zu deinem Event passt. Erst wenn du einen Creator angenommen hast, fragen wir ihn nach seiner Verfügbarkeit – so kommt niemand zu deinem Event, den du nicht vorher gesehen hast.',
               })}
             </p>
+            <p className="text-xs text-muted-foreground">
+              {t('brandDashboard.decisionFinalHint', {
+                defaultValue:
+                  'Jede Entscheidung ist endgültig. Der Auftrag selbst kommt erst zustande, wenn du unser Angebot annimmst und bezahlst. Hast du dich vertan, melde dich bei office@shareyourparty.de.',
+              })}
+            </p>
             {order.proposal?.message && (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap rounded-md border bg-background p-3">
                 {order.proposal.message}
@@ -846,32 +852,31 @@ function OrderDetail() {
                       )}
                       {decidable && (
                         <div className="flex gap-2 ml-auto">
-                          {creator.decision !== 'accepted' && (
-                            <Button
-                              size="sm"
-                              variant="gradient"
-                              className="gap-1"
-                              loading={decide.isPending && decide.variables?.creatorUserId === creator.creatorUserId && decide.variables?.decision === 'accepted'}
-                              onClick={() => decide.mutate({ creatorUserId: creator.creatorUserId, decision: 'accepted' })}
-                            >
-                              <Check className="h-4 w-4" />
-                              {t('brandDashboard.acceptCreator', { defaultValue: 'Passt, annehmen' })}
-                            </Button>
-                          )}
-                          {creator.decision !== 'rejected' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1"
-                              onClick={() => {
-                                setRejectReason('')
-                                setRejecting(creator)
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                              {t('brandDashboard.rejectCreator', { defaultValue: 'Ablehnen' })}
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="gradient"
+                            className="gap-1"
+                            loading={decide.isPending && decide.variables?.creatorUserId === creator.creatorUserId && decide.variables?.decision === 'accepted'}
+                            onClick={() => {
+                              setTermsChecked(false)
+                              setAccepting(creator)
+                            }}
+                          >
+                            <Check className="h-4 w-4" />
+                            {t('brandDashboard.acceptCreator', { defaultValue: 'Passt, annehmen' })}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            onClick={() => {
+                              setRejectReason('')
+                              setRejecting(creator)
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                            {t('brandDashboard.rejectCreator', { defaultValue: 'Ablehnen' })}
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -928,6 +933,65 @@ function OrderDetail() {
         </Card>
       )}
 
+      {/* Rückfrage vor dem Annehmen: Die Brand bestätigt, dass sie das Profil
+          geprüft hat, die Annahme verbindlich ist und die AGB gelten. Der
+          Zeitpunkt wird im Backend festgehalten. */}
+      <AlertDialog
+        open={accepting !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAccepting(null)
+            setTermsChecked(false)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('brandDashboard.acceptCreatorConfirmTitle', {
+                name: accepting?.name || t('brandDashboard.creatorUnnamed', { defaultValue: 'Creator' }),
+                defaultValue: '{{name}} verbindlich annehmen?',
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('brandDashboard.acceptCreatorConfirmDesc', {
+                defaultValue:
+                  'Wir fragen diesen Creator dann nach seiner Verfügbarkeit. Sagt er zu, ist er Teil unseres Angebots an dich. Die Annahme lässt sich danach nicht mehr zurücknehmen – ein Hin und Her zwischen Annehmen und Ablehnen gibt es nicht. Der Auftrag selbst kommt erst zustande, wenn du das Angebot annimmst und bezahlst.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="flex items-start gap-3 rounded-md border p-3 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0"
+              checked={termsChecked}
+              onChange={(e) => setTermsChecked(e.target.checked)}
+            />
+            <span>
+              {t('brandDashboard.acceptTermsLabel', {
+                defaultValue: 'Ich habe das Profil und die Kanäle geprüft. Die Annahme ist verbindlich, es gelten die',
+              })}{' '}
+              <Link href={localePath('/terms')} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:no-underline">
+                {t('brandDashboard.acceptTermsLink', { defaultValue: 'AGB von Share Your Party' })}
+              </Link>
+              .
+            </span>
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', { defaultValue: 'Abbrechen' })}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!termsChecked}
+              onClick={() => {
+                if (accepting && termsChecked) decide.mutate({ creatorUserId: accepting.creatorUserId, decision: 'accepted' })
+                setAccepting(null)
+              }}
+            >
+              {t('brandDashboard.acceptCreatorConfirm', { defaultValue: 'Verbindlich annehmen' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Rückfrage vor dem Ablehnen eines Creators, mit freiwilligem Grund. */}
       <AlertDialog
         open={rejecting !== null}
@@ -949,7 +1013,7 @@ function OrderDetail() {
             <AlertDialogDescription>
               {t('brandDashboard.rejectCreatorConfirmDesc', {
                 defaultValue:
-                  'Dieser Creator wird nicht angefragt und kommt nicht zu deinem Event. Ein Grund hilft uns, einen passenderen Creator zu finden – er geht nur an uns, nicht an den Creator.',
+                  'Dieser Creator wird nicht angefragt und kommt nicht zu deinem Event. Die Ablehnung ist endgültig. Ein Grund hilft uns, einen passenderen Creator zu finden – er geht nur an uns, nicht an den Creator.',
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1346,20 +1410,31 @@ function CreatorCardRow({
             {note}
             {creator.channels.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {creator.channels.map((channel, index) => (
-                  <Badge key={`${channel.platform}-${index}`} variant="secondary" className="font-normal">
-                    {channel.url ? (
-                      <a href={channel.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        {creatorLabels.platform(channel.platform)}: @{channel.username}
-                      </a>
-                    ) : (
-                      <>
-                        {creatorLabels.platform(channel.platform)}: @{channel.username}
-                      </>
-                    )}
-                    {channel.followerRange ? ` · ${creatorLabels.followerRange(channel.followerRange)}` : ''}
-                  </Badge>
-                ))}
+                {creator.channels.map((channel, index) => {
+                  // Die hinterlegte URL, sonst aus Plattform und Handle gebaut —
+                  // die Brand soll den Kanal mit einem Klick öffnen können.
+                  const href = channelUrl(channel)
+                  const label = `${creatorLabels.platform(channel.platform)}: @${channel.username}`
+                  const followers = channel.followerRange
+                    ? ` · ${t('brandDashboard.followersLabel', {
+                        range: creatorLabels.followerRange(channel.followerRange),
+                        defaultValue: '{{range}} Follower',
+                      })}`
+                    : ''
+                  return (
+                    <Badge key={`${channel.platform}-${index}`} variant="secondary" className="font-normal">
+                      {href ? (
+                        <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
+                          {label}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        label
+                      )}
+                      {followers}
+                    </Badge>
+                  )
+                })}
               </div>
             )}
             {creator.categories.length > 0 && (

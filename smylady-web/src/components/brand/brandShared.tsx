@@ -112,6 +112,7 @@ export function useBrandLabels() {
     ({
       profileUrl: t('brandDashboard.creatorLinkProfile', { defaultValue: 'Profil bei Share Your Party' }),
       instagram: 'Instagram',
+      tiktok: 'TikTok',
       youtube: 'YouTube',
       x: 'X',
       linkedin: 'LinkedIn',

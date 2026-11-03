@@ -44,6 +44,7 @@ const emptyChannel = (): ChannelRow => ({ platform: 'Instagram', username: '', u
 
 const emptySocialLinks = (): Record<CreatorSocialKey, string> => ({
   instagram: '',
+  tiktok: '',
   youtube: '',
   x: '',
   linkedin: '',
@@ -54,6 +55,7 @@ const emptySocialLinks = (): Record<CreatorSocialKey, string> => ({
 /** Plattformnamen sind Markennamen und werden nicht übersetzt. */
 const SOCIAL_LABELS: Record<CreatorSocialKey, string> = {
   instagram: 'Instagram',
+  tiktok: 'TikTok',
   youtube: 'YouTube',
   x: 'X',
   linkedin: 'LinkedIn',
@@ -63,6 +65,7 @@ const SOCIAL_LABELS: Record<CreatorSocialKey, string> = {
 
 const SOCIAL_PLACEHOLDERS: Record<CreatorSocialKey, string> = {
   instagram: 'https://instagram.com/deinprofil',
+  tiktok: 'https://www.tiktok.com/@deinprofil',
   youtube: 'https://youtube.com/@deinkanal',
   x: 'https://x.com/deinprofil',
   linkedin: 'https://linkedin.com/in/deinprofil',

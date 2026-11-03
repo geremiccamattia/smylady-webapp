@@ -102,7 +102,7 @@ export interface CreatorChannel {
  * vollständige URLs. Nichts davon ist Pflicht. Brands bekommen sie zu sehen,
  * wenn wir den Creator vorschlagen.
  */
-export const CREATOR_SOCIAL_KEYS = ['instagram', 'youtube', 'x', 'linkedin', 'snapchat', 'facebook'] as const
+export const CREATOR_SOCIAL_KEYS = ['instagram', 'tiktok', 'youtube', 'x', 'linkedin', 'snapchat', 'facebook'] as const
 export type CreatorSocialKey = (typeof CREATOR_SOCIAL_KEYS)[number]
 export type CreatorSocialLinks = Partial<Record<CreatorSocialKey, string>>
 

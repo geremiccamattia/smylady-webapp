@@ -225,7 +225,7 @@ export type CreatorResponse = 'pending' | 'accepted' | 'declined' | 'expired'
 const CREATOR_RESPONSES: readonly string[] = ['pending', 'accepted', 'declined', 'expired']
 
 /** Die Links zu einem vorgeschlagenen Creator, in Anzeige-Reihenfolge. */
-export const CREATOR_LINK_KEYS = ['profileUrl', 'instagram', 'youtube', 'x', 'linkedin', 'snapchat', 'facebook'] as const
+export const CREATOR_LINK_KEYS = ['profileUrl', 'instagram', 'tiktok', 'youtube', 'x', 'linkedin', 'snapchat', 'facebook'] as const
 export type CreatorLinkKey = (typeof CREATOR_LINK_KEYS)[number]
 export type CreatorLinks = Partial<Record<CreatorLinkKey, string>>
 
@@ -586,6 +586,30 @@ function mapAcceptedInvitation(data: any): AcceptedInvitation {
   }
 }
 
+/**
+ * Der Link zu einem Kanal: die hinterlegte URL, sonst aus Plattform und
+ * Handle gebaut (Instagram, TikTok, YouTube, Snapchat). Leer für „Sonstige"
+ * ohne URL und für alles, was nicht http(s) ist.
+ */
+export function channelUrl(channel: { platform: string; username: string; url?: string }): string {
+  const url = channel.url?.trim() ?? ''
+  if (/^https?:\/\//i.test(url)) return url
+  const handle = encodeURIComponent(channel.username.trim().replace(/^@+/, ''))
+  if (!handle) return ''
+  switch (channel.platform) {
+    case 'Instagram':
+      return `https://instagram.com/${handle}`
+    case 'TikTok':
+      return `https://www.tiktok.com/@${handle}`
+    case 'YouTube':
+      return `https://youtube.com/@${handle}`
+    case 'Snapchat':
+      return `https://snapchat.com/add/${handle}`
+    default:
+      return ''
+  }
+}
+
 /** Die Angebotsfrist ist verstrichen (das System storniert in Kürze). */
 export function isOfferExpired(order: Pick<BrandOrder, 'offerExpiresAt'>, now: Date = new Date()): boolean {
   if (!order.offerExpiresAt) return false
@@ -678,16 +702,23 @@ export const brandService = {
   /**
    * Einen vorgeschlagenen Creator annehmen oder ablehnen. Nur für Creator,
    * die uns vorgelegt wurden, und nur in 'creators_proposed' bzw.
-   * 'creators_requested' (409 sonst; 409 auch, wenn ein angenommener Creator
-   * schon angefragt ist). Erst angenommene Creator werden angefragt. Nur der
-   * Inhaber (403 für Mitglieder).
+   * 'creators_requested' (409 sonst). Jede Entscheidung ist endgültig (409
+   * bei einer Änderung); eine Annahme verlangt `termsAccepted` (400 sonst):
+   * Profil geprüft, Annahme verbindlich, AGB gelten. Erst angenommene
+   * Creator werden angefragt. Nur der Inhaber (403 für Mitglieder).
    */
-  async decideOnCreator(id: string, creatorUserId: string, decision: 'accepted' | 'rejected', reason?: string): Promise<BrandOrder> {
-    const trimmed = reason?.trim()
-    const response = await apiClient.post(
-      `/brand-orders/${id}/proposed-creators/${encodeURIComponent(creatorUserId)}/decision`,
-      trimmed ? { decision, reason: trimmed } : { decision },
-    )
+  async decideOnCreator(
+    id: string,
+    creatorUserId: string,
+    decision: 'accepted' | 'rejected',
+    options: { reason?: string; termsAccepted?: boolean } = {},
+  ): Promise<BrandOrder> {
+    const reason = options.reason?.trim()
+    const response = await apiClient.post(`/brand-orders/${id}/proposed-creators/${encodeURIComponent(creatorUserId)}/decision`, {
+      decision,
+      ...(reason ? { reason } : {}),
+      ...(decision === 'accepted' ? { termsAccepted: options.termsAccepted === true } : {}),
+    })
     return mapBrandOrder(unwrap(response))
   },
 
