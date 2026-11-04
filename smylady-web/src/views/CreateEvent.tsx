@@ -1,6 +1,7 @@
 'use client'
 
 import imageCompression from 'browser-image-compression'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -60,6 +61,7 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
   // Gleiches Formular, verknüpft mit dem Auftrag; ab der Creator-Anfrage ist
   // der Tag fest, vor der Zahlung sehen es nur Eingeladene.
   const creatorMode = Boolean(brandOrder)
+  const queryClient = useQueryClient()
   const dayLocked = brandOrder ? isCreatorEventDayLocked(brandOrder) : false
   const orderImageUrl = brandOrder?.eventImageThumbnailUrl || brandOrder?.eventImageUrl || ''
   const searchParams = useSearchParams()
@@ -212,7 +214,11 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
     prefilledOrderRef.current = brandOrder.id
     const start = viennaParts(brandOrder.eventDate)
     const end = viennaParts(brandOrder.eventEndDate)
-    const endsOtherDay = Boolean(start && end && end.date !== start.date)
+    // Eine Nacht (Ende am Folgetag vor der Startzeit) bleibt eintägig: Das
+    // Formular legt ein Ende vor dem Beginn selbst auf den Folgetag.
+    const endsOtherDay = Boolean(
+      start && end && end.date !== start.date && !isOvernight(start, end)
+    )
     setFormData((prev) => ({
       ...prev,
       name: brandOrder.eventName || brandOrder.title || prev.name,
@@ -799,6 +805,9 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
       if (brandOrder) {
         // Genau ein Event je Auftrag: keine Serie.
         await brandService.createEventForOrder(brandOrder.id, eventFormData)
+        // Auftrag, Liste und Event neu laden: Die Auftragsseite zeigt sonst noch
+        // „Event anlegen“ aus dem Zwischenspeicher.
+        await queryClient.invalidateQueries({ queryKey: ['brand'] })
         toast({
           title: t('creatorEvent.created', { defaultValue: 'Creator-Event angelegt' }),
           description: t('creatorEvent.createdDesc', {
@@ -1976,6 +1985,13 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
       />
     </div>
   )
+}
+
+/** Endet am Tag nach dem Beginn, vor der Startzeit (z. B. 20:30 bis 01:30)? */
+function isOvernight(start: { date: string; time: string }, end: { date: string; time: string }) {
+  const next = new Date(`${start.date}T00:00:00Z`)
+  next.setUTCDate(next.getUTCDate() + 1)
+  return end.date === next.toISOString().slice(0, 10) && end.time <= start.time
 }
 
 /** Datum (YYYY-MM-DD) und Uhrzeit (HH:mm) eines Zeitpunkts in Wiener Zeit. */
