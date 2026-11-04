@@ -26,6 +26,7 @@ import {
   type CreatorSocialKey,
 } from '@/services/creator'
 import { CreatorGate, CreatorStatusBadge, useCreatorLabels } from '@/components/creator/creatorShared'
+import { CreatorBillingCard } from '@/components/billing/CreatorBillingCard'
 
 const SELECT_CLASS =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
@@ -88,7 +89,7 @@ function isValidPortfolioLink(value: string): boolean {
 
 /**
  * Eigenes Creator-Profil bearbeiten: Kanäle, Kategorien, Stadt, Bio und
- * Portfolio. Die Freigabe für Brands sitzt auf der Übersichtsseite, der
+ * Portfolio; darunter die Abrechnungsdaten (#billing). Die Freigabe für Brands sitzt auf der Übersichtsseite, der
  * Status gehört allein uns.
  *
  * Auch für ein Profil in Prüfung erreichbar, damit Angaben vor der
@@ -430,6 +431,11 @@ function ProfileForm() {
           </Button>
         </div>
       </form>
+
+      {/* Abrechnungsdaten für den Auszahlungsbeleg: eigenes Formular mit eigenem
+          Speichern (PUT /creators/me/billing), deshalb ausserhalb des
+          Profilformulars, das nach dem Speichern zur Übersicht springt. */}
+      <CreatorBillingCard />
     </>
   )
 }

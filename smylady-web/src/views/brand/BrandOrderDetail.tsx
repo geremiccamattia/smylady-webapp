@@ -85,6 +85,7 @@ import {
 } from '@/components/brand/brandShared'
 import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { ResponseBadge, useCreatorLabels } from '@/components/creator/creatorShared'
+import { BrandInvoiceSection } from '@/components/billing/BillingDocuments'
 import { BRAND_ORDERS_QUERY_KEY } from './BrandDashboard'
 
 /** Ab diesen Status steht die Besetzung und darf der Brand gezeigt werden. */
@@ -811,6 +812,15 @@ function OrderDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Rechnung und Korrekturen, sobald bezahlt. Ohne eigene Rechnung
+          (Altauftrag) die Stripe-Rechnung als Rückfall. */}
+      <BrandInvoiceSection
+        orderId={order.id || id}
+        enabled={Boolean(payment && (payment.status === 'paid' || payment.status === 'refunded'))}
+        refreshKey={payment ? `${payment.status}|${payment.refundedAt ?? ''}` : ''}
+        fallback={payment && (payment.invoiceUrl || payment.invoicePdfUrl) ? <StripeInvoiceLinks payment={payment} /> : undefined}
+      />
 
       {/* Event nach der Zahlung. Bei einem stornierten Auftrag bleibt die
           Karte weg: Die Sichtbarkeit eines abgesagten Events soll die Brand
@@ -1672,18 +1682,31 @@ function PaymentSummary({ payment }: { payment: NonNullable<BrandOrder['payment'
           )
         )}
       </div>
-      {(payment.invoiceUrl || payment.invoicePdfUrl || payment.receiptUrl) && (
+      {/* Die Rechnung steht im eigenen Abschnitt „Rechnung" (BrandInvoiceSection),
+          hier bleibt nur der Zahlungsbeleg von Stripe. */}
+      {payment.receiptUrl && (
         <div className="flex flex-wrap gap-3 text-primary">
-          {payment.invoiceUrl && (
-            <SafeStripeLink href={payment.invoiceUrl}>{t('brandDashboard.invoice', { defaultValue: 'Rechnung' })}</SafeStripeLink>
-          )}
-          {payment.invoicePdfUrl && (
-            <SafeStripeLink href={payment.invoicePdfUrl}>{t('brandDashboard.invoicePdf', { defaultValue: 'Rechnung (PDF)' })}</SafeStripeLink>
-          )}
-          {payment.receiptUrl && (
-            <SafeStripeLink href={payment.receiptUrl}>{t('brandDashboard.receipt', { defaultValue: 'Zahlungsbeleg' })}</SafeStripeLink>
-          )}
+          <SafeStripeLink href={payment.receiptUrl}>{t('brandDashboard.receipt', { defaultValue: 'Zahlungsbeleg' })}</SafeStripeLink>
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Die alte Stripe-Rechnung als Rückfall im Abschnitt „Rechnung": nur, solange
+ * es keine eigene Rechnung gibt (Altaufträge). null ohne Stripe-Links.
+ */
+function StripeInvoiceLinks({ payment }: { payment: NonNullable<BrandOrder['payment']> }) {
+  const { t } = useTranslation()
+  if (!payment.invoiceUrl && !payment.invoicePdfUrl) return null
+  return (
+    <div className="flex flex-wrap gap-3 text-primary">
+      {payment.invoiceUrl && (
+        <SafeStripeLink href={payment.invoiceUrl}>{t('brandDashboard.invoice', { defaultValue: 'Rechnung' })}</SafeStripeLink>
+      )}
+      {payment.invoicePdfUrl && (
+        <SafeStripeLink href={payment.invoicePdfUrl}>{t('brandDashboard.invoicePdf', { defaultValue: 'Rechnung (PDF)' })}</SafeStripeLink>
       )}
     </div>
   )

@@ -68,6 +68,7 @@ import {
   ResponseBadge,
   useCreatorLabels,
 } from '@/components/creator/creatorShared'
+import { CreatorPayoutStatementsSection } from '@/components/billing/BillingDocuments'
 import { CREATOR_ASSIGNMENTS_QUERY_KEY } from './CreatorDashboard'
 
 /**
@@ -530,6 +531,13 @@ function AssignmentDetail() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Auszahlungsbeleg: kommt mit der Auszahlung; vorher (und ohne Belege)
+          zeigt der Abschnitt nichts. Auch nach einer Stornierung abfragen —
+          eine Teilauszahlung bekommt ebenfalls einen Beleg. */}
+      {assignment.phase === 'booked' && assignment.response === 'accepted' && (
+        <CreatorPayoutStatementsSection assignmentId={assignment.id || id} />
       )}
 
       {/* Die Brand: Wer fragt an? Name, SYP-Profil und Links, damit der

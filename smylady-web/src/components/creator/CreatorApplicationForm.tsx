@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { Check, Ghost, Globe, Instagram, Music2, Plus, Sparkles, User, X } from 'lucide-react'
+import { Check, Ghost, Globe, Instagram, Music2, Plus, Receipt, Sparkles, User, X } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
@@ -12,6 +12,13 @@ import { useLocalePath } from '@/hooks/useLocalePath'
 import { apiClient } from '@/services/api'
 import { authService } from '@/services/auth'
 import { cn, isValidEmail } from '@/lib/utils'
+import {
+  CreatorBillingFields,
+  emptyBillingForm,
+  toBillingPayload,
+  useBillingValidation,
+  type BillingFormValues,
+} from '@/components/billing/CreatorBillingFields'
 
 /*
  * Creator-Bewerbung als eigenständige Komponente.
@@ -86,8 +93,14 @@ const STEP_KEYS = [
   'influencer.step0Label',
   'influencer.step1Label',
   'influencer.step2Label',
+  // Abrechnungsdaten für den Auszahlungsbeleg; bei Annahme übernimmt das Backend sie ins Profil.
+  'billing.applicationStepLabel',
   'influencer.step3Label',
 ]
+
+/** Die Schritte mit eigener Prüfung: Abrechnungsdaten und Abschluss. */
+const BILLING_STEP = 3
+const FINISH_STEP = 4
 
 /**
  * Alter aus dem Geburtsdatum des Kontos.
@@ -179,7 +192,7 @@ export default function CreatorApplicationForm({
   /*
    * Zu jung: Das Alter steht fest und lässt sich nicht einfach hochsetzen, wie
    * es im freien Altersfeld möglich wäre. Das Backend lehnt ohnehin ab, aber
-   * erst nach dem Ausfüllen aller vier Schritte — der Hinweis gehört an den
+   * erst nach dem Ausfüllen aller Schritte — der Hinweis gehört an den
    * Anfang.
    */
   const isUnderage = accountAge !== null && accountAge < 18
@@ -198,6 +211,21 @@ export default function CreatorApplicationForm({
     categories: [],
   })
   const [consent, setConsent] = useState(false)
+  const [billing, setBilling] = useState<BillingFormValues>(() => emptyBillingForm())
+  const validateBilling = useBillingValidation()
+
+  /*
+   * Name und Wohnort aus dem ersten Schritt als Vorschlag für die
+   * Rechnungsanschrift — nur in leere Felder, Eingaben bleiben stehen.
+   */
+  const prefillBilling = (target: number) => {
+    if (target !== BILLING_STEP) return
+    setBilling(prev => ({
+      ...prev,
+      legalName: prev.legalName || `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+      city: prev.city || form.city.trim(),
+    }))
+  }
   const [stepError, setStepError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -259,7 +287,10 @@ export default function CreatorApplicationForm({
       }
       return ''
     }
-    if (step === 3) {
+    if (step === BILLING_STEP) {
+      return validateBilling(billing)
+    }
+    if (step === FINISH_STEP) {
       if (!consent) {
         return t('influencer.consentRequired', { defaultValue: 'Bitte akzeptiere die Datenschutzerklärung.' })
       }
@@ -280,6 +311,7 @@ export default function CreatorApplicationForm({
       return
     }
     setStepError('')
+    prefillBilling(index)
     setCurrentStep(index)
   }
 
@@ -290,7 +322,9 @@ export default function CreatorApplicationForm({
       return
     }
     setStepError('')
-    setCurrentStep(prev => Math.min(prev + 1, STEP_KEYS.length - 1))
+    const next = Math.min(currentStep + 1, STEP_KEYS.length - 1)
+    prefillBilling(next)
+    setCurrentStep(next)
   }
 
   const handleBack = () => {
@@ -301,7 +335,7 @@ export default function CreatorApplicationForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    for (let step = 0; step <= 3; step++) {
+    for (let step = 0; step < STEP_KEYS.length; step++) {
       const error = validateStep(step)
       if (error) {
         setCurrentStep(step)
@@ -357,6 +391,8 @@ export default function CreatorApplicationForm({
           .map(c => ({ platform: c.platform, username: c.username.trim() })),
         followerRange: form.followerRange,
         categories: form.categories,
+        // Im Formular Pflicht; das Backend nimmt die Bewerbung auch ohne an (alte App-Versionen).
+        billing: toBillingPayload(billing),
       })
       onSubmitted()
     } catch (err: unknown) {
@@ -420,7 +456,7 @@ export default function CreatorApplicationForm({
     }
   }
 
-  const stepIcons = [User, Instagram, Sparkles, Check]
+  const stepIcons = [User, Instagram, Sparkles, Receipt, Check]
 
   /*
    * Unter 18: gar kein Formular.
@@ -713,7 +749,29 @@ export default function CreatorApplicationForm({
           </div>
         )}
 
-        {currentStep === 3 && (
+        {currentStep === BILLING_STEP && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-bold mb-1">
+                {t('billing.sectionTitle', { defaultValue: 'Abrechnungsdaten' })}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t('billing.applicationDesc', {
+                  defaultValue:
+                    'Mit jeder Auszahlung schicken wir dir einen Auszahlungsbeleg. Dafür brauchen wir deinen Namen und deine Anschrift. Ändern kannst du die Angaben später im Creator-Profil.',
+                })}
+              </p>
+            </div>
+            <CreatorBillingFields
+              value={billing}
+              onChange={setBilling}
+              idPrefix="application-billing"
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
+
+        {currentStep === FINISH_STEP && (
           <div className="text-center py-4 px-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="" className="w-20 mx-auto mb-3" />
