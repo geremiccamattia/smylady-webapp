@@ -176,6 +176,10 @@ function OrderForm() {
     retry: false,
   })
 
+  // Gibt es schon das Creator-Event, sind dessen Daten die Eckdaten des
+  // Auftrags: Die Eventfelder hier sind dann nur zur Ansicht.
+  const eventLinked = Boolean(existing.data?.eventId)
+
   useEffect(() => {
     const order = existing.data
     if (!order) return
@@ -461,7 +465,10 @@ function OrderForm() {
       // und das Einreichen unterbleibt — ohne Bild wiese das Backend es
       // ohnehin ab.
       try {
-        if (imageFile) {
+        // Mit Creator-Event kommt das Bild aus dem Event (Backend: 409).
+        if (eventLinked) {
+          // nichts — Bild und Eckdaten pflegt die Brand im Event
+        } else if (imageFile) {
           saved = await brandService.uploadOrderImage(saved.id, imageFile)
         } else if (imageRemoved && existingImageUrl) {
           saved = await brandService.removeOrderImage(saved.id)
@@ -720,7 +727,15 @@ function OrderForm() {
               {t('brandDashboard.eventSection', { defaultValue: 'Event' })}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
+          {eventLinked && (
+            <p className="text-sm text-muted-foreground mb-4">
+              {t('creatorEvent.formLinkedHint', {
+                defaultValue: 'Das Event zum Auftrag ist angelegt. Name, Datum, Ort, Beschreibung und Bild änderst du jetzt im Event selbst.',
+              })}
+            </p>
+          )}
+          <fieldset disabled={eventLinked} className="space-y-4 disabled:opacity-60">
             <div className="space-y-2">
               <Label htmlFor="eventName">{t('brandDashboard.fieldEventName', { defaultValue: 'Name des Events' })} *</Label>
               <Input id="eventName" value={eventName} onChange={(e) => setEventName(e.target.value)} required />
@@ -858,6 +873,7 @@ function OrderForm() {
                 })}
               </p>
             </div>
+          </fieldset>
           </CardContent>
         </Card>
 

@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { useGetConnectedAccount } from '@/hooks/useStripe'
 import { eventsService } from '@/services/events'
+import { brandService, isCreatorEventDayLocked, type BrandOrder } from '@/services/brand'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useRef, Suspense } from 'react'
@@ -51,8 +53,15 @@ import {
   type DailyHoursState,
 } from '@/lib/eventSchedule'
 
-function CreateEventContent() {
+function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
   const router = useRouter()
+  const localePath = useLocalePath()
+  // Creator-Event: das Event zu einem Brand-Auftrag (siehe CreateEventChooser).
+  // Gleiches Formular, verknüpft mit dem Auftrag; ab der Creator-Anfrage ist
+  // der Tag fest, vor der Zahlung sehen es nur Eingeladene.
+  const creatorMode = Boolean(brandOrder)
+  const dayLocked = brandOrder ? isCreatorEventDayLocked(brandOrder) : false
+  const orderImageUrl = brandOrder?.eventImageThumbnailUrl || brandOrder?.eventImageUrl || ''
   const searchParams = useSearchParams()
   const communityIdFromUrl = searchParams.get('communityId')
   const { t, i18n } = useTranslation()
@@ -192,12 +201,55 @@ function CreateEventContent() {
   const [addressDetail, setAddressDetail] = useState('')
   const [locationType, setLocationType] = useState<'physical' | 'online' | 'tba'>('physical')
   const [onlineUrl, setOnlineUrl] = useState('')
+  // Die aus dem Auftrag eingetragene Adresse soll keine Suche auslösen.
+  const prefilledLocationRef = useRef('')
+
+  // Creator-Event: Eckdaten aus dem Auftrag eintragen (einmal). Datum und
+  // Uhrzeit in Wiener Zeit, wie das Backend sie liest.
+  const prefilledOrderRef = useRef('')
+  useEffect(() => {
+    if (!brandOrder || prefilledOrderRef.current === brandOrder.id) return
+    prefilledOrderRef.current = brandOrder.id
+    const start = viennaParts(brandOrder.eventDate)
+    const end = viennaParts(brandOrder.eventEndDate)
+    const endsOtherDay = Boolean(start && end && end.date !== start.date)
+    setFormData((prev) => ({
+      ...prev,
+      name: brandOrder.eventName || brandOrder.title || prev.name,
+      description: brandOrder.eventDescription || prev.description,
+      eventDate: start?.date ?? prev.eventDate,
+      eventStartTime: start?.time ?? prev.eventStartTime,
+      eventEndTime: end && !endsOtherDay ? end.time : prev.eventEndTime,
+      partyType: prev.partyType || 'corporate',
+      ...(brandOrder.eventLocation && brandOrder.eventCoordinates
+        ? {
+            locationName: brandOrder.eventLocation,
+            lat: brandOrder.eventCoordinates.lat,
+            lng: brandOrder.eventCoordinates.lng,
+          }
+        : {}),
+    }))
+    if (endsOtherDay && end) {
+      setIsMultiDay(true)
+      setEventEndDate(end.date)
+      setEventEndTimeValue(end.time)
+    }
+    if (brandOrder.eventLocation) {
+      prefilledLocationRef.current = brandOrder.eventLocation
+      setLocationQuery(brandOrder.eventLocation)
+    }
+  }, [brandOrder])
+
   const [tbaCityQuery, setTbaCityQuery] = useState('')
   const [tbaCityResults, setTbaCityResults] = useState<Array<{ name: string; lat: number; lng: number }>>([])
   const [selectedTbaCity, setSelectedTbaCity] = useState<{ name: string; lat: number; lng: number } | null>(null)
 
   useEffect(() => {
-    if (!locationQuery.trim() || locationQuery.trim().length < 3) {
+    if (
+      !locationQuery.trim() ||
+      locationQuery.trim().length < 3 ||
+      locationQuery === prefilledLocationRef.current
+    ) {
       setLocationResults([])
       setShowLocationDropdown(false)
       return
@@ -539,7 +591,8 @@ function CreateEventContent() {
       return
     }
 
-    if (images.length === 0) {
+    // Creator-Event: Ohne neues Bild nimmt das Backend das aus dem Auftrag.
+    if (images.length === 0 && !(creatorMode && orderImageUrl)) {
       toast({
         variant: 'destructive',
         title: t('common.error'),
@@ -711,8 +764,11 @@ function CreateEventContent() {
       }
 
       // Add visibility settings (matching mobile app)
-      eventFormData.append('visibility', visibility)
-      if (visibility === 'selected' && invitedUsers.length > 0) {
+      // Creator-Event: bis zur Zahlung nur für Eingeladene (das Backend setzt
+      // es ohnehin so); öffentlich schaltet die Brand im Auftrag.
+      const effectiveVisibility: EventVisibility = creatorMode ? 'selected' : visibility
+      eventFormData.append('visibility', effectiveVisibility)
+      if (effectiveVisibility === 'selected' && invitedUsers.length > 0) {
         eventFormData.append('invitedUsers', JSON.stringify(invitedUsers))
       }
       eventFormData.append('allowGuestMemories', String(allowGuestMemories))
@@ -736,8 +792,21 @@ function CreateEventContent() {
         eventFormData.append('files', image)
       })
 
-      if (communityIdFromUrl) {
+      if (communityIdFromUrl && !creatorMode) {
         eventFormData.append('communityId', communityIdFromUrl)
+      }
+
+      if (brandOrder) {
+        // Genau ein Event je Auftrag: keine Serie.
+        await brandService.createEventForOrder(brandOrder.id, eventFormData)
+        toast({
+          title: t('creatorEvent.created', { defaultValue: 'Creator-Event angelegt' }),
+          description: t('creatorEvent.createdDesc', {
+            defaultValue: 'Es ist mit deinem Auftrag verknüpft. Wir prüfen es und schalten es frei.',
+          }),
+        })
+        router.push(localePath(`/brand/orders/${brandOrder.id}`))
+        return
       }
 
       if (seriesConfig) {
@@ -767,9 +836,13 @@ function CreateEventContent() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{t('events.createEvent')}</h1>
+        <h1 className="text-3xl font-bold">
+          {creatorMode ? t('creatorEvent.title', { defaultValue: 'Creator-Event anlegen' }) : t('events.createEvent')}
+        </h1>
         <p className="text-muted-foreground mt-1">
-          {t('createEvent.fillInfo')}
+          {creatorMode
+            ? t('creatorEvent.forOrder', { defaultValue: 'Zum Brand-Auftrag „{{title}}“. Alle Angaben wie bei jedem Event, die Eckdaten aus dem Auftrag sind schon eingetragen.', title: brandOrder?.title ?? '' })
+            : t('createEvent.fillInfo')}
         </p>
         {/* Step indicator */}
         <div className="flex items-center gap-2 mt-4">
@@ -800,10 +873,19 @@ function CreateEventContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <VisibilitySelector value={visibility} onChange={setVisibility} />
+                {creatorMode ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t('creatorEvent.visibilityHint', {
+                      defaultValue:
+                        'Bis zur Zahlung sehen das Event nur die gebuchten Creator und deine Gäste. Öffentlich schaltest du es danach im Auftrag.',
+                    })}
+                  </p>
+                ) : (
+                  <VisibilitySelector value={visibility} onChange={setVisibility} />
+                )}
 
                 {/* Select Subscribers Button (matching mobile) */}
-                {visibility === 'selected' && (
+                {(creatorMode || visibility === 'selected') && (
                   <SubscriberPicker
                     userId={userId}
                     value={invitedUsers}
@@ -832,8 +914,16 @@ function CreateEventContent() {
                       min={new Date().toISOString().split('T')[0]}
                       value={formData.eventDate}
                       onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                      disabled={dayLocked}
                       required
                     />
+                    {dayLocked && (
+                      <p className="text-xs text-muted-foreground">
+                        {t('creatorEvent.dayLocked', {
+                          defaultValue: 'Der Tag ist mit den Creatorn abgestimmt. Für einen anderen Tag melde dich bei uns.',
+                        })}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="eventStartTime">{t('createEvent.eventTime')} *</Label>
@@ -923,8 +1013,8 @@ function CreateEventContent() {
               </CardContent>
             </Card>
 
-            {/* Wiederkehrendes Event */}
-            <Card>
+            {/* Wiederkehrendes Event — nicht beim Creator-Event (ein Event je Auftrag) */}
+            <Card className={creatorMode ? 'hidden' : undefined}>
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1789,6 +1879,17 @@ function CreateEventContent() {
                       </div>
                     ))}
                   </div>
+                ) : creatorMode && orderImageUrl ? (
+                  <div className="w-full space-y-2">
+                    <div className="relative aspect-video max-w-sm rounded-lg overflow-hidden">
+                      <img src={orderImageUrl} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t('creatorEvent.orderImageHint', {
+                        defaultValue: 'Das Bild aus deinem Auftrag wird verwendet. Lädst du eigene Bilder hoch, ersetzen sie es.',
+                      })}
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <Upload className="h-12 w-12 text-muted-foreground mb-4" />
@@ -1877,10 +1978,35 @@ function CreateEventContent() {
   )
 }
 
-export default function CreateEvent() {
+/** Datum (YYYY-MM-DD) und Uhrzeit (HH:mm) eines Zeitpunkts in Wiener Zeit. */
+function viennaParts(iso: string): { date: string; time: string } | null {
+  if (!iso) return null
+  const instant = new Date(iso)
+  if (Number.isNaN(instant.getTime())) return null
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Vienna',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(instant)
+      .map((part) => [part.type, part.value]),
+  )
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` }
+}
+
+/**
+ * Das Eventformular. Mit `brandOrder` legt es das Creator-Event zu diesem
+ * Brand-Auftrag an (POST /brand-orders/:id/event), sonst ein normales Event.
+ */
+export default function CreateEvent({ brandOrder }: { brandOrder?: BrandOrder } = {}) {
   return (
     <Suspense>
-      <CreateEventContent />
+      <CreateEventContent brandOrder={brandOrder} />
     </Suspense>
   )
 }

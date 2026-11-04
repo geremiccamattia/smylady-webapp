@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Ban,
+  CalendarPlus,
   CalendarDays,
   Check,
   Clapperboard,
@@ -52,6 +53,8 @@ import { useLocalePath } from '@/hooks/useLocalePath'
 import {
   CREATOR_LINK_KEYS,
   brandService,
+  canCreateCreatorEvent,
+  canPublishCreatorEvent,
   channelUrl,
   isRateLimited,
   readBrandError,
@@ -603,7 +606,10 @@ function OrderDetail() {
     order.offerPrice !== null &&
     (order.status === 'offer_sent' ||
       (order.status === 'awaiting_payment' && payment?.status !== 'processing'))
-  const canPay = payable && isOwner
+  // Bezahlt wird ein Auftrag mit fertigem Event (Creator-Event): ohne Event
+  // kein Checkout, stattdessen der Weg zum Formular.
+  const eventMissing = !order.eventId
+  const canPay = payable && isOwner && !eventMissing
   // Welcher Text auf dem Bezahlknopf steht, hängt am Zahlungsstand: Ein
   // gescheiterter Versuch heisst „erneut", ein offener Checkout „fortsetzen".
   const payLabel =
@@ -759,6 +765,20 @@ function OrderDetail() {
             {/* Frist, solange das Angebot offen ist. */}
             {canPay && order.offerExpiresAt && <OfferDeadline expiresAt={order.offerExpiresAt} />}
 
+            {payable && isOwner && eventMissing && (
+              <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-200 bg-amber-50/60 p-3 text-sm">
+                <CalendarPlus className="h-5 w-5 shrink-0 text-amber-700" />
+                <p className="flex-1">
+                  {t('creatorEvent.payNeedsEvent', {
+                    defaultValue: 'Lege zuerst das Event zum Auftrag an. Danach kannst du das Angebot annehmen und bezahlen.',
+                  })}
+                </p>
+                <Link href={localePath(`/create-event?brandOrder=${order.id}`)}>
+                  <Button size="sm" variant="gradient">{t('creatorEvent.createButton', { defaultValue: 'Event anlegen' })}</Button>
+                </Link>
+              </div>
+            )}
+
             {canPay && (
               <div className="pt-2">
                 <div className="flex flex-wrap gap-2">
@@ -822,7 +842,38 @@ function OrderDetail() {
         fallback={payment && (payment.invoiceUrl || payment.invoicePdfUrl) ? <StripeInvoiceLinks payment={payment} /> : undefined}
       />
 
-      {/* Event nach der Zahlung. Bei einem stornierten Auftrag bleibt die
+      {/* Noch kein Event: die Brand legt es selbst an (Creator-Event, bis zur
+          Zahlung). */}
+      {canCreateCreatorEvent(order) && (
+        <Card className={isOwner ? 'border-amber-200 bg-amber-50/40' : undefined}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5" />
+              {t('creatorEvent.cardTitle', { defaultValue: 'Event zum Auftrag' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {t('creatorEvent.cardDesc', {
+                defaultValue:
+                  'Lege das Event mit allen Angaben an: Kategorie, Tickets, Preise, Ort. Die Eckdaten aus dem Auftrag sind schon eingetragen. Bezahlen kannst du, sobald das Event angelegt ist.',
+              })}
+            </p>
+            {isOwner ? (
+              <Link href={localePath(`/create-event?brandOrder=${order.id}`)}>
+                <Button variant="gradient" className="gap-2">
+                  <CalendarPlus className="h-4 w-4" />
+                  {t('creatorEvent.createButton', { defaultValue: 'Event anlegen' })}
+                </Button>
+              </Link>
+            ) : (
+              <OwnerOnlyHint />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Das Event zum Auftrag. Bei einem stornierten Auftrag bleibt die
           Karte weg: Die Sichtbarkeit eines abgesagten Events soll die Brand
           nicht mehr umschalten können. */}
       {order.eventId && order.status !== 'cancelled' && (
@@ -867,13 +918,21 @@ function OrderDetail() {
                 variant={currentVisibility === 'public' ? 'default' : 'outline'}
                 size="sm"
                 className="gap-2"
-                disabled={busy || eventUnknown || !isOwner}
+                disabled={busy || eventUnknown || !isOwner || !canPublishCreatorEvent(order)}
                 onClick={() => currentVisibility !== 'public' && visibility.mutate('public')}
               >
                 <Globe className="h-4 w-4" />
                 {t('brandDashboard.visibilityOptionPublic', { defaultValue: 'Öffentlich' })}
               </Button>
               <div className="flex-1" />
+              {isOwner && (
+                <Link href={localePath(`/edit-event/${order.eventId}`)}>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <Pencil className="h-4 w-4" />
+                    {t('creatorEvent.editEvent', { defaultValue: 'Event bearbeiten' })}
+                  </Button>
+                </Link>
+              )}
               <Link href={localePath(`/event/${order.eventId}`)}>
                 <Button variant="ghost" size="sm" className="gap-2">
                   {t('brandDashboard.openEvent', { defaultValue: 'Event öffnen' })}
@@ -882,6 +941,13 @@ function OrderDetail() {
               </Link>
             </div>
             {!isOwner && <OwnerOnlyHint />}
+            {!canPublishCreatorEvent(order) && (
+              <p className="text-xs text-muted-foreground">
+                {t('creatorEvent.publishAfterPayment', {
+                  defaultValue: 'Öffentlich schalten kannst du das Event, sobald der Auftrag bezahlt ist.',
+                })}
+              </p>
+            )}
             {currentVisibility === 'public' && event && !eventApproved && (
               <p className="text-xs text-muted-foreground">
                 {t('brandDashboard.visibilityPublicPending', {

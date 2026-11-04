@@ -1,5 +1,7 @@
-import CreateEvent from '@/views/CreateEvent'
+'use client'
+
+import CreateEventChooser from '@/views/CreateEventChooser'
 
 export default function CreateEventPageEN() {
-  return <CreateEvent />
+  return <CreateEventChooser />
 }

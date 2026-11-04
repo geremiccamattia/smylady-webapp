@@ -637,6 +637,39 @@ export function channelUrl(channel: { platform: string; username: string; url?: 
 }
 
 /** Die Angebotsfrist ist verstrichen (das System storniert in Kürze). */
+/**
+ * Bis zur Zahlung legt die Brand das Creator-Event zum Auftrag an (über
+ * /create-event → Creator-Event). Spiegelt BRAND_EVENT_CREATABLE_STATUSES im
+ * Backend (brand-order-event-rules.ts).
+ */
+export const CREATOR_EVENT_STATUSES: readonly BrandOrderStatus[] = [
+  'draft',
+  'submitted',
+  'in_review',
+  'creators_proposed',
+  'creators_requested',
+  'offer_sent',
+  'awaiting_payment',
+]
+
+/** Kann zu diesem Auftrag (noch) ein Creator-Event angelegt werden? */
+export function canCreateCreatorEvent(order: Pick<BrandOrder, 'status' | 'eventId'>): boolean {
+  return !order.eventId && CREATOR_EVENT_STATUSES.includes(order.status)
+}
+
+/** Öffentlich schalten geht erst nach der Zahlung (Backend: BRAND_EVENT_PUBLIC_STATUSES). */
+export function canPublishCreatorEvent(order: Pick<BrandOrder, 'status'>): boolean {
+  return order.status === 'confirmed' || order.status === 'completed'
+}
+
+/**
+ * Ab der Creator-Anfrage ist der Tag des Events mit den Creatorn abgestimmt
+ * (Backend: BRAND_EVENT_DAY_LOCKED_STATUSES) und im Formular fest.
+ */
+export function isCreatorEventDayLocked(order: Pick<BrandOrder, 'status'>): boolean {
+  return ['creators_requested', 'offer_sent', 'awaiting_payment', 'confirmed', 'completed'].includes(order.status)
+}
+
 export function isOfferExpired(order: Pick<BrandOrder, 'offerExpiresAt'>, now: Date = new Date()): boolean {
   if (!order.offerExpiresAt) return false
   const expires = new Date(order.offerExpiresAt)
@@ -696,6 +729,20 @@ export const brandService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return mapBrandOrder(unwrap(response))
+  },
+
+  /**
+   * Legt das Creator-Event zum Auftrag an: dieselben Formularfelder wie
+   * POST /events (multipart), nur mit dem Auftrag verknüpft. Nur der Inhaber,
+   * nur bis zur Zahlung, genau ein Event je Auftrag (sonst 409). Ohne
+   * hochgeladenes Bild nimmt das Backend das Eventbild aus dem Auftrag.
+   */
+  async createEventForOrder(id: string, form: FormData): Promise<{ order: BrandOrder; eventId: string }> {
+    const response = await apiClient.post(`/brand-orders/${id}/event`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    const data = unwrap(response)
+    return { order: mapBrandOrder(data?.order), eventId: str(data?.eventId) }
   },
 
   /** Entfernt das Eventbild vom Entwurf. Nur im Status 'draft'; sonst 409. */
