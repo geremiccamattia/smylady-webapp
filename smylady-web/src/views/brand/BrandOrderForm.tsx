@@ -1004,10 +1004,10 @@ function OrderForm() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label htmlFor="brandMayReuse">{t('brandDashboard.fieldReuse', { defaultValue: 'Inhalte weiterverwenden' })}</Label>
+                <Label htmlFor="brandMayReuse">{t('brandDashboard.fieldReuse', { defaultValue: 'Inhalte weiterverwenden (auch für Werbeanzeigen)' })}</Label>
                 <p className="text-xs text-muted-foreground">
                   {t('brandDashboard.fieldReuseHint', {
-                    defaultValue: 'Du möchtest die Inhalte der Creator auch auf eigenen Kanälen nutzen.',
+                    defaultValue: 'Fotos und Videos, die die gebuchten Creator auf deinem Event für dich erstellen, darfst du für eigene Werbekampagnen wiederverwenden – auf deinen Kanälen und als bezahlte Anzeigen.',
                   })}
                 </p>
               </div>

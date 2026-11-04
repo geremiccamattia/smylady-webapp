@@ -1421,7 +1421,7 @@ function OrderDetail() {
             <Field label={t('brandDashboard.termsSection', { defaultValue: 'Rahmenbedingungen' })}>
               <div>
                 {order.brandMayReuse
-                  ? t('brandDashboard.reuseYes', { defaultValue: 'Inhalte dürfen weiterverwendet werden' })
+                  ? t('brandDashboard.reuseYes', { defaultValue: 'Inhalte dürfen weiterverwendet werden, auch für Werbeanzeigen' })
                   : t('brandDashboard.reuseNo', { defaultValue: 'Keine Weiterverwendung der Inhalte' })}
               </div>
               {order.usageNotes && <div className="text-muted-foreground">{order.usageNotes}</div>}
