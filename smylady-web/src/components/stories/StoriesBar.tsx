@@ -9,6 +9,7 @@ import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, cn, resolveImageUrl } from '@/lib/utils'
 import { isHeicFile } from '@/lib/heic'
+import ReportModal from '@/components/ReportModal'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
@@ -24,6 +25,7 @@ import {
   Play,
   Volume2,
   VolumeX,
+  Flag,
 } from 'lucide-react'
 
 /**
@@ -206,6 +208,14 @@ export function StoriesBar({ onStoryClick, currentUserId: _currentUserId }: Stor
     }
     if (!file) return
 
+    // Rechtehinweis (M8) — der Story-Upload hat keinen eigenen Dialog.
+    toast({
+      description: t('upload.rightsNotice', {
+        defaultValue:
+          'Lade nur Fotos/Videos hoch, mit deren Veröffentlichung die abgebildeten Personen einverstanden sind und an denen du die Rechte hast.',
+      }),
+    })
+
     // Browser können HEIC nicht dekodieren — der Crop-Dialog würde nur eine
     // schwarze Fläche zeigen. Das Backend konvertiert HEIC zuverlässig,
     // daher Crop überspringen und die Originaldatei direkt hochladen. Magic
@@ -268,6 +278,10 @@ export function StoriesBar({ onStoryClick, currentUserId: _currentUserId }: Stor
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <button
             onClick={() => fileInputRef.current?.click()}
+            title={t('upload.rightsNotice', {
+              defaultValue:
+                'Lade nur Fotos/Videos hoch, mit deren Veröffentlichung die abgebildeten Personen einverstanden sind und an denen du die Rechte hast.',
+            })}
             className="relative h-16 w-16 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-primary/50 hover:border-primary transition-colors"
             disabled={createStoryMutation.isPending}
           >
@@ -366,6 +380,7 @@ function StoryViewer({
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
   const [progress, setProgress] = useState(0)
+  const [reportOpen, setReportOpen] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -551,6 +566,21 @@ function StoryViewer({
                 <Trash2 className="h-5 w-5" />
               </button>
             )}
+            {/* Story melden (M7) */}
+            {!isOwnStory && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsPaused(true)
+                  setReportOpen(true)
+                }}
+                className="p-2 text-white"
+                aria-label={t('report.storyTitle', { defaultValue: 'Story melden' })}
+                title={t('report.storyTitle', { defaultValue: 'Story melden' })}
+              >
+                <Flag className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -634,6 +664,17 @@ function StoryViewer({
           </button>
         )}
       </div>
+
+      {/* Außerhalb des Tap-Containers: Klicks im Dialog sollen nicht weiterblättern. */}
+      <ReportModal
+        open={reportOpen}
+        onClose={() => {
+          setReportOpen(false)
+          setIsPaused(false)
+        }}
+        contentType="story"
+        storyId={currentStory._id}
+      />
     </div>
   )
 }

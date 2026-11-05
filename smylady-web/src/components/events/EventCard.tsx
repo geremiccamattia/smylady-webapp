@@ -231,11 +231,14 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
             Ticketmaster
           </div>
         )}
-        {/* Boost Badge */}
-        {event.boostStatus === 'active' && (
+        {/* Kennzeichnung bezahlter Platzierung (H6): Das Backend entscheidet
+            über `sponsored` (Boost im Zeitraum, Spotlight, Partner in Top Picks).
+            Fällt auf boostStatus zurück, solange ein älteres Backend das Feld
+            nicht liefert. */}
+        {(event.sponsored ?? event.boostStatus === 'active') && (
           <div className="absolute top-2 left-2 px-2 py-1 bg-amber-500 text-white rounded-md text-xs font-semibold flex items-center gap-1">
             <Zap className="h-3 w-3" />
-            Gesponsert
+            {t('events.sponsored', { defaultValue: 'Anzeige' })}
           </div>
         )}
         {/* Raffle Badge — entfällt nach der Ziehung, dann übernimmt unten das

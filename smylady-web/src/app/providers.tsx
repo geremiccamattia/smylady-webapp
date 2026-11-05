@@ -14,6 +14,11 @@ const CookieConsent = dynamic(() => import('@/components/CookieConsent'), {
   ssr: false,
 })
 
+// Pflichtdialoge Geburtsdatum / aktuelle AGB — nur clientseitig, braucht den User.
+const AccountGate = dynamic(() => import('@/components/auth/AccountGate'), {
+  ssr: false,
+})
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: { queries: { staleTime: 60 * 1000 } },
@@ -28,6 +33,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <Toaster />
             <CookieConsent />
             <AuthModal />
+            <AccountGate />
           </SocketProvider>
         </AuthModalProvider>
       </AuthProvider>

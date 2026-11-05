@@ -177,23 +177,27 @@ function ExploreContent() {
           return
         }
 
-        // 2. Try browser geolocation (auto-detect user's actual location)
-        try {
-          const current = await getCurrentLocation()
-          const detectedLocation: LocationResult = {
-            place_id: 'current',
-            description: `Aktueller Standort (${current.latitude.toFixed(4)}, ${current.longitude.toFixed(4)})`,
-            lat: current.latitude,
-            lng: current.longitude,
+        // 2. Browser-Standort NUR, wenn „Live-Standort“ in den Einstellungen an ist
+        //    (M5). Sonst keine automatische Abfrage beim Laden — wer seinen
+        //    Standort nutzen will, klickt im Standortdialog auf „Standort verwenden“.
+        if (isLiveLocationEnabled()) {
+          try {
+            const current = await getCurrentLocation()
+            const detectedLocation: LocationResult = {
+              place_id: 'current',
+              description: `Aktueller Standort (${current.latitude.toFixed(4)}, ${current.longitude.toFixed(4)})`,
+              lat: current.latitude,
+              lng: current.longitude,
+            }
+            setSelectedLocations([detectedLocation])
+            setLocationLoaded(true)
+            return
+          } catch {
+            // Geolocation denied or unavailable - fall through to fallback
           }
-          setSelectedLocations([detectedLocation])
-          setLocationLoaded(true)
-          return
-        } catch {
-          // Geolocation denied or unavailable - fall through to fallback
         }
 
-        // 3. Fallback only when geolocation is not available
+        // 3. Fallback: Live-Standort aus oder Geolocation nicht verfügbar
         setSelectedLocations([FALLBACK_LOCATION])
       } catch {
         setSelectedLocations([FALLBACK_LOCATION])

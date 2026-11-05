@@ -137,8 +137,17 @@
     "dateOfBirth": "Date of birth",
     "loginNow": "Sign in now",
     "termsPrefix": "By registering you agree to our",
+    "termsPrefixSocial": "By signing up with Google you accept our",
+    "termsPrefixSocialPrivacy": "and acknowledge the",
+    "termsPrefixSocialEnd": ". Registration is open to persons aged 18 and over.",
     "termsLink": "Terms & Conditions",
     "privacyLink": "Privacy Policy",
+    "acceptTermsBefore": "I accept the",
+    "acceptTermsMiddle": "and have read the",
+    "acceptTermsAfter": ". I am at least 18 years old.",
+    "acceptTermsAfterBrand": ".",
+    "termsRequired": "Please accept the Terms & Conditions to continue.",
+    "ageRequired": "You must be at least 18 years old.",
     "registerSuccess": "Registration successful!",
     "checkEmailOTP": "Please check your email for the verification code.",
     "emailConfirmed": "Email confirmed!",
@@ -251,7 +260,8 @@
     "deleteEventTitle": "Delete Event?",
     "deleteEventMessage": "Do you really want to delete this event? This action cannot be undone.",
     "deleteSuccess": "Event has been deleted",
-    "deleteFailed": "Event could not be deleted"
+    "deleteFailed": "Event could not be deleted",
+    "sponsored": "Ad"
   },
   "signupChoice": {
     "title": "How do you want to join?",
@@ -1430,7 +1440,12 @@
     "myLocation": "My location",
     "newUser": "New user",
     "openFailed": "Failed to open",
-    "replyTo": "Reply to"
+    "replyTo": "Reply to",
+    "moreActions": "More actions",
+    "blockUser": "Block",
+    "blockConfirmTitle": "Block {{name}}?",
+    "blockConfirmDesc": "You will no longer be able to message each other. You can lift the block in Settings under “Blocked users”.",
+    "userBlocked": "User blocked"
   },
   "notifications": {
     "title": "Notifications",
@@ -1778,7 +1793,21 @@
       "title": "Payout account",
       "description": "Connect your Stripe account so we can pay out your fee from brand orders after the event.",
       "notConnected": "No payout account yet. Setting it up with Stripe takes only a few minutes – afterwards your fee lands directly in your bank account."
-    }
+    },
+    "marketingPush": "Promotional push notifications",
+    "marketingPushDesc": "News and offers from Share Your Party. Voluntary, can be turned off here at any time.",
+    "marketingPushOn": "Promotional push notifications enabled",
+    "marketingPushOff": "Promotional push notifications disabled",
+    "exportData": "Export my data",
+    "exportDone": "Data export downloaded",
+    "exportFailed": "Export failed",
+    "deleteRequestCode": "Request code",
+    "deleteCodeSent": "Code sent",
+    "deleteCodeSentDesc": "We have sent a confirmation code to {{email}}.",
+    "deleteCodeLabel": "Confirmation code from the email",
+    "deleteCodeResend": "Resend code",
+    "deleteCodeInvalid": "The code is wrong or has expired.",
+    "deleteRetentionNote": "We are legally required to keep payment and ticket data for 7 years for tax purposes (§ 132 BAO). It is pseudonymised and no longer linked to your name or email address."
   },
   "spotify": {
     "searchSong": "Search song",
@@ -1816,9 +1845,24 @@
   "legal": {
     "privacy": "Privacy Policy",
     "terms": "Terms & Conditions",
-    "impressum": "Imprint",
+    "impressum": "Legal Notice",
     "contact": "Contact",
-    "cookieSettings": "Cookie Settings"
+    "cookieSettings": "Cookie settings"
+  },
+  "cookie": {
+    "title": "Privacy settings",
+    "description": "We use strictly necessary cookies. With your consent we also use analytics services (Google Analytics) and marketing services (Google Ads, Meta Pixel, AdSense), including data transfers to the USA. You can change your choice at any time via \"Cookie settings\" in the footer.",
+    "settings": "Settings",
+    "rejectOptional": "Necessary only",
+    "acceptAll": "Accept all",
+    "save": "Save selection",
+    "necessary": "Necessary",
+    "required": "required",
+    "necessaryDesc": "Login, language, security and storing your choice. The platform does not work without these cookies.",
+    "analytics": "Analytics",
+    "analyticsDesc": "Google Analytics 4: usage statistics with truncated IP address, transmitted to Google (including the USA).",
+    "marketing": "Marketing",
+    "marketingDesc": "Google Ads, Meta Pixel and AdSense: measurement of our advertising and personalised ads, transmitted to Google and Meta (including the USA)."
   },
   "time": {
     "justNow": "Just now",
@@ -1856,7 +1900,19 @@
       "nudity": "Nudity",
       "copyright": "Copyright",
       "other": "Other"
-    }
+    },
+    "userTitle": "Report user",
+    "storyTitle": "Report story",
+    "titles": {
+      "memory": "Report photo/video",
+      "comment": "Report comment",
+      "post": "Report post",
+      "user": "Report user",
+      "event": "Report event",
+      "story": "Report story"
+    },
+    "selfReport": "You cannot report yourself.",
+    "emailAlternative": "Alternatively by email to"
   },
   "qrScanner": {
     "title": "QR Code Scanner",
@@ -1953,6 +2009,10 @@
   },
   "payment": {
     "title": "Payment",
+    "payBinding": "Book with obligation to pay",
+    "totalHint": "incl. VAT and guest fee",
+    "legalNoteBefore": "By booking you accept the",
+    "legalNoteAfter": "There is no statutory right of withdrawal for tickets (§ 18 (1) no. 10 FAGG). You can cancel your ticket voluntarily until the event starts as long as it has not been scanned. The ticket contract is concluded with the organiser.",
     "success": "Payment successful!",
     "successTitle": "Payment successful!",
     "failed": "Payment failed",
@@ -2308,7 +2368,9 @@
     "promoPrize": "Win: {{prize}}",
     "promoGeneric": "Raffle — Amazing prizes to win!",
     "promoFree": "Participate for free",
-    "promoButton": "Join →"
+    "promoButton": "Join →",
+    "partnerConsent": "I agree that my name and email address are passed on to {{partner}} for advertising purposes (voluntary, can be withdrawn at any time via office@shareyourparty.de).",
+    "partnerConsentOptional": "This is not required to take part in the giveaway."
   },
   "raffleTerms": {
     "title": "Raffle Terms and Conditions",
@@ -2526,6 +2588,7 @@
     "readInBlog": "Read in blog"
   },
   "contact": {
+    "privacyNote": "Your details are used only to answer your request and are deleted twelve months after completion. The form opens your email programme; the message is not sent via our servers. More in the",
     "title": "Contact form",
     "subtitle": "Have questions or suggestions? Send us a message!",
     "namePlaceholder": "Your name",
@@ -3100,5 +3163,39 @@
     "copyCode": "Copy code",
     "codeCopied": "Code copied",
     "toEvent": "Go to event"
+  },
+  "accountGate": {
+    "dobTitle": "Enter your date of birth",
+    "dobDesc": "Share Your Party is only available from age 18. Please enter your date of birth to continue.",
+    "dobHint": "Only for people aged 18 or over. Your date of birth is not shown publicly.",
+    "tooYoung": "You must be at least 18 years old.",
+    "retry": "Correct date",
+    "logout": "Log out",
+    "termsTitle": "Our Terms and Privacy Policy have been updated",
+    "termsDesc": "Please read the current versions and confirm them to keep using Share Your Party.",
+    "termsCheckbox": "I accept the current Terms and have taken note of the Privacy Policy.",
+    "termsConfirm": "Accept and continue"
+  },
+  "organizerStatus": {
+    "title": "Organizer status",
+    "business": "I act as a business",
+    "private": "I act as a private individual",
+    "privateHint": "Guests will see that you organise privately and that no consumer protection rights (e.g. right of withdrawal) apply towards you.",
+    "imprint": "Legal notice (imprint)",
+    "imprintPlaceholder": "Max Muster GmbH\nMusterstraße 1, 1010 Vienna\ncontact@example.com\nVAT ID: ATU12345678",
+    "imprintHint": "Name or company, address, email address and VAT ID if applicable. Shown on your event pages.",
+    "required": "Please state whether you act as a business or as a private individual.",
+    "imprintRequired": "As a business you must provide a legal notice (imprint).",
+    "imprintTooLong": "The legal notice may be at most 1000 characters long.",
+    "profileHint": "Only relevant if you organise events. Shown on your event pages.",
+    "createEventHint": "Before you publish your first event, please state whether you organise as a business or as a private individual. Guests see this on the event page and at checkout. You can change it later in your profile.",
+    "saveFailed": "Your organizer status could not be saved.",
+    "badgeBusiness": "Business",
+    "showImprint": "Show legal notice",
+    "hideImprint": "Hide legal notice",
+    "badgePrivate": "Private individual – no consumer protection rights apply towards the organizer"
+  },
+  "upload": {
+    "rightsNotice": "Only upload photos/videos that the people shown have agreed to be published and that you hold the rights to."
   }
 }

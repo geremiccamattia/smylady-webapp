@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
+import Link from 'next/link'
+import { useLocalePath } from '@/hooks/useLocalePath'
 import {
   Dialog,
   DialogContent,
@@ -16,6 +18,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useConfirmPaymentIntent } from '@/hooks/useStripe'
 import { formatPrice } from '@/lib/utils'
 import { Loader2, CreditCard, CheckCircle, AlertCircle } from 'lucide-react'
+import { OrganizerStatusNotice } from '@/components/events/OrganizerStatusNotice'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -25,6 +28,8 @@ interface PaymentModalProps {
   eventName: string
   amount: number
   eventId?: string | null
+  organizerType?: 'business' | 'private' | null
+  organizerImprint?: string
 }
 
 export function PaymentModal({
@@ -34,8 +39,11 @@ export function PaymentModal({
   eventName,
   amount,
   eventId,
+  organizerType,
+  organizerImprint,
 }: PaymentModalProps) {
   const { t } = useTranslation()
+  const localePath = useLocalePath()
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
@@ -172,11 +180,33 @@ export function PaymentModal({
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <span className="text-muted-foreground">
                 {t('payment.total', { defaultValue: 'Gesamt' })}
+                <span className="block text-xs">
+                  {t('payment.totalHint', { defaultValue: 'inkl. USt. und Gästegebühr' })}
+                </span>
               </span>
               <span className="text-xl font-bold text-primary">
                 {formatPrice(amount)}
               </span>
             </div>
+
+            {/*
+              * Pflichtinformationen vor dem Kauf (§ 4 und § 8 FAGG):
+              * Hinweis auf die AGB, auf den gesetzlichen Ausschluss des
+              * Rücktrittsrechts bei Tickets und die freiwillige Stornomöglichkeit.
+              */}
+            {/* Veranstalter: Unternehmer (mit Impressum) oder Privatperson (H4) */}
+            <OrganizerStatusNotice organizerType={organizerType} organizerImprint={organizerImprint} />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t('payment.legalNoteBefore', { defaultValue: 'Mit der Buchung akzeptierst du die' })}{' '}
+              <Link href={localePath('/terms')} target="_blank" className="text-primary hover:underline">
+                {t('legal.terms', { defaultValue: 'AGB' })}
+              </Link>
+              {'. '}
+              {t('payment.legalNoteAfter', {
+                defaultValue:
+                  'Für Tickets besteht kein gesetzliches Rücktrittsrecht (§ 18 Abs. 1 Z 10 FAGG). Du kannst dein Ticket bis zum Eventbeginn freiwillig stornieren, solange es nicht entwertet wurde. Der Ticketvertrag kommt mit dem Veranstalter zustande.',
+              })}
+            </p>
 
             <div className="flex gap-3">
               <Button
@@ -200,7 +230,8 @@ export function PaymentModal({
                     {t('payment.processing', { defaultValue: 'Verarbeite...' })}
                   </>
                 ) : (
-                  t('payment.pay', { defaultValue: 'Jetzt bezahlen' })
+                  // § 8 Abs. 2 FAGG: Der Button muss die Zahlungspflicht eindeutig benennen.
+                  t('payment.payBinding', { defaultValue: 'Zahlungspflichtig buchen' })
                 )}
               </Button>
             </div>

@@ -42,6 +42,13 @@ import { categoryLabel, MUSIC_TYPE_VALUES, OFFERING_VALUES } from '@/lib/eventFi
 import { EVENT_FORM_CATEGORIES } from '@/lib/constants'
 import { VisibilitySelector, type EventVisibility } from '@/components/events/VisibilitySelector'
 import { RaffleSettingsFields } from '@/components/events/RaffleSettingsFields'
+import {
+  OrganizerStatusFields,
+  validateOrganizerStatus,
+  type OrganizerType,
+} from '@/components/profile/OrganizerStatusFields'
+import { authService } from '@/services/auth'
+import { UploadRightsNotice } from '@/components/UploadRightsNotice'
 import { DailyHoursEditor, scheduleErrorMessage } from '@/components/events/DailyHoursEditor'
 import { buildEventTimes } from '@/lib/eventTimes'
 import { SlotDurationField } from '@/components/events/SlotDurationField'
@@ -69,8 +76,14 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
   const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const { data: connectedAccount } = useGetConnectedAccount()
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  // Veranstalter-Status: nur abfragen, wenn der User noch keinen hat. Bewusst
+  // `== null` statt `!`: Ein altes Backend ohne das Feld liefert undefined —
+  // dann ebenfalls fragen, gespeichert wird es ja trotzdem.
+  const needsOrganizerStatus = Boolean(user) && user?.organizerType == null
+  const [organizerType, setOrganizerType] = useState<OrganizerType | null>(null)
+  const [organizerImprint, setOrganizerImprint] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [isAiGenerated, setIsAiGenerated] = useState(false)
@@ -639,7 +652,40 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
       }
     }
 
+    if (needsOrganizerStatus) {
+      const invalid = validateOrganizerStatus(organizerType, organizerImprint)
+      if (invalid) {
+        toast({ variant: 'destructive', title: t('common.error'), description: t(invalid.key, { defaultValue: invalid.defaultValue }) })
+        return
+      }
+    }
+
     setIsLoading(true)
+
+    // Erst das Profil (Veranstalter-Status), dann das Event — damit die
+    // Eventseite die Angabe von Anfang an zeigt.
+    if (needsOrganizerStatus && organizerType) {
+      try {
+        await authService.updateProfile({
+          organizerType,
+          organizerImprint: organizerType === 'business' ? organizerImprint.trim() : '',
+        })
+        try {
+          updateUser(await authService.getCurrentUser())
+        } catch {
+          if (user) updateUser({ ...user, organizerType, organizerImprint: organizerType === 'business' ? organizerImprint.trim() : '' })
+        }
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { message?: string } } }
+        toast({
+          variant: 'destructive',
+          title: t('common.error'),
+          description: err.response?.data?.message || t('organizerStatus.saveFailed', { defaultValue: 'Der Veranstalter-Status konnte nicht gespeichert werden.' }),
+        })
+        setIsLoading(false)
+        return
+      }
+    }
 
     try {
       const eventFormData = new FormData()
@@ -1919,6 +1965,7 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
               <p className="text-xs text-muted-foreground">
                 {t('createEvent.imageHint', { defaultValue: 'Ideales Format: 16:9 (z.B. 1920 × 1080 px)' })}
               </p>
+              <UploadRightsNotice className="mt-1" />
 
               {/* KI-Kennzeichnung */}
               <div className="flex items-center justify-between mt-3 p-3 bg-muted/30 rounded-lg">
@@ -1945,6 +1992,38 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
                   }`} />
                 </button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/*
+          * Veranstalter-Status (H4): Pflicht vor dem ersten Event, solange im
+          * Profil nichts hinterlegt ist. Gespeichert wird am User (PATCH
+          * /users/profile) — und zwar vor dem Event, siehe handleSubmit.
+          */}
+        {step === 3 && needsOrganizerStatus && (
+          <Card className="border-primary/40">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5" />
+                {t('organizerStatus.title', { defaultValue: 'Veranstalter-Status' })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {t('organizerStatus.createEventHint', {
+                  defaultValue:
+                    'Bevor du dein erstes Event veröffentlichst, gib bitte an, ob du als Unternehmer oder als Privatperson veranstaltest. Gäste sehen diese Angabe auf der Eventseite und beim Ticketkauf. Du kannst sie später im Profil ändern.',
+                })}
+              </p>
+              <OrganizerStatusFields
+                idPrefix="create-event-organizer"
+                type={organizerType}
+                imprint={organizerImprint}
+                onTypeChange={setOrganizerType}
+                onImprintChange={setOrganizerImprint}
+                disabled={isLoading}
+              />
             </CardContent>
           </Card>
         )}

@@ -12,6 +12,9 @@ interface PaymentWrapperProps {
   eventName: string
   amount: number
   eventId?: string | null
+  /** Veranstalter-Status (H4) für den Hinweis über dem Rechtstext */
+  organizerType?: 'business' | 'private' | null
+  organizerImprint?: string
 }
 
 export function PaymentWrapper({
@@ -22,6 +25,8 @@ export function PaymentWrapper({
   eventName,
   amount,
   eventId,
+  organizerType,
+  organizerImprint,
 }: PaymentWrapperProps) {
   if (!clientSecret) {
     return null
@@ -40,6 +45,8 @@ export function PaymentWrapper({
         eventName={eventName}
         amount={amount}
         eventId={eventId}
+        organizerType={organizerType}
+        organizerImprint={organizerImprint}
       />
     </StripeElementsWrapper>
   )

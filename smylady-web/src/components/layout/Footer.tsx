@@ -3,14 +3,33 @@
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useLocalePath } from '@/hooks/useLocalePath'
+import { openCookieSettings } from '@/components/CookieConsent'
 
 export default function Footer() {
   const { t, i18n } = useTranslation()
   const localePath = useLocalePath()
 
   return (
-    <footer className="hidden md:block border-t bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <footer className="border-t bg-background">
+      {/*
+        * Mobil: kompakte Zeile mit den Pflichtlinks. Impressum, Datenschutz und
+        * AGB müssen von jeder Seite aus leicht erreichbar sein (§ 5 ECG); nur
+        * im Seitenmenü reicht dafür nicht. Unterer Abstand für die Tab-Leiste.
+        */}
+      <div className="md:hidden container mx-auto px-4 py-4 pb-24 text-xs text-muted-foreground">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+          <Link href={localePath('/imprint')} className="hover:text-foreground">{t('legal.impressum')}</Link>
+          <Link href={localePath('/privacy')} className="hover:text-foreground">{t('legal.privacy')}</Link>
+          <Link href={localePath('/terms')} className="hover:text-foreground">{t('legal.terms')}</Link>
+          <Link href={localePath('/pricing')} className="hover:text-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Link>
+          <button type="button" onClick={() => openCookieSettings()} className="hover:text-foreground">
+            {t('legal.cookieSettings', { defaultValue: 'Cookie-Einstellungen' })}
+          </button>
+        </div>
+        <p className="text-center mt-3">{t('home.allRights', { year: new Date().getFullYear() })}</p>
+      </div>
+
+      <div className="hidden md:block container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="space-y-4">
@@ -173,6 +192,11 @@ export default function Footer() {
               <li><Link href={localePath('/terms')} className="hover:text-foreground">{t('legal.terms')}</Link></li>
               <li><Link href={localePath('/imprint')} className="hover:text-foreground">{t('legal.impressum')}</Link></li>
               <li><Link href={localePath('/pricing')} className="hover:text-foreground">{t('pricing.title', { defaultValue: 'Preise & Konditionen' })}</Link></li>
+              <li>
+                <button type="button" onClick={() => openCookieSettings()} className="hover:text-foreground">
+                  {t('legal.cookieSettings', { defaultValue: 'Cookie-Einstellungen' })}
+                </button>
+              </li>
             </ul>
           </div>
         </div>

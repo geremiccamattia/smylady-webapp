@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 }
 
 export default function PrivacyPageEN() {
-  return <Privacy />
+  return <Privacy lang="en" />
 }

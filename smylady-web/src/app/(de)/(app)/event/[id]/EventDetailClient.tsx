@@ -23,6 +23,7 @@ import { ImageViewer } from '@/components/ImageViewer'
 import { PaymentWrapper, usePaymentModal } from '@/components/payment'
 import { useCreatePaymentIntent, useBuyFreeEvent } from '@/hooks/useStripe'
 import { PurchaseQuestionsDialog } from '@/components/PurchaseQuestionsDialog'
+import { OrganizerStatusNotice } from '@/components/events/OrganizerStatusNotice'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { CONFIG } from '@/lib/constants'
 import type { PurchaseAnswer } from '@/services/stripe'
@@ -116,6 +117,8 @@ export default function EventDetailClient({ id }: Props) {
   const [pendingAnswers, setPendingAnswers] = useState<PurchaseAnswer[] | undefined>(undefined)
   const [userBalance, setUserBalance] = useState(0)
   const [useBalance, setUseBalance] = useState(true) // Default: an
+  // Gewinnspiel-Partner-Einwilligung: bewusst NICHT vorangekreuzt (Art. 7 DSGVO)
+  const [rafflePartnerConsent, setRafflePartnerConsent] = useState(false)
   const [drawLoading, setDrawLoading] = useState(false)
   const queryClient = useQueryClient()
 
@@ -522,6 +525,14 @@ export default function EventDetailClient({ id }: Props) {
     !isPastEvent &&
     (!eventStartTime || eventStartTime > new Date())
 
+  /*
+   * Gewinnspiel-Partner (H5): Einwilligung in die Weitergabe von Name und
+   * E-Mail an den Partner — getrennt von der Teilnahme, freiwillig, nicht
+   * vorangekreuzt. Nur mitsenden, wenn das Event überhaupt einen Partner hat.
+   */
+  const rafflePartnerName = (event?.rafflePartner ?? '').trim()
+  const partnerConsentPayload = rafflePartnerName ? { rafflePartnerConsent } : {}
+
   const executePurchase = (answers?: PurchaseAnswer[]) => {
     if (!id || !event) return
 
@@ -529,7 +540,7 @@ export default function EventDetailClient({ id }: Props) {
     if (isDoorPayment) {
       setIsPurchasing(true)
       buyFreeEvent(
-        { eventId: eventId!, tierId: selectedTierId || undefined, answers, slotStart: selectedSlotStart },
+        { eventId: eventId!, tierId: selectedTierId || undefined, answers, slotStart: selectedSlotStart, ...partnerConsentPayload },
         {
           onSuccess: (ticket: any) => {
             queryClient.invalidateQueries({ queryKey: ['purchasedTicketForEvent'] })
@@ -562,7 +573,7 @@ export default function EventDetailClient({ id }: Props) {
     const isFree = !numericPrice || numericPrice <= 0
 
     if (isFree) {
-      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, slotStart: selectedSlotStart }, {
+      buyFreeEvent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, slotStart: selectedSlotStart, ...partnerConsentPayload }, {
         onSuccess: (ticket) => {
           toast({ title: t('common.success'), description: t('tickets.freeCreated') })
           router.push(`/payment-complete?ticketId=${ticket?._id || ticket?.id}&eventId=${eventId}&type=free`)
@@ -577,7 +588,7 @@ export default function EventDetailClient({ id }: Props) {
         onSettled: () => setIsPurchasing(false),
       })
     } else {
-      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, useBalance: useBalance && userBalance > 0, slotStart: selectedSlotStart }, {
+      createPaymentIntent({ eventId: eventId!, tierId: selectedTierId || undefined, answers, useBalance: useBalance && userBalance > 0, slotStart: selectedSlotStart, ...partnerConsentPayload }, {
         onSuccess: (data) => {
           if (data.ticket) {
             // Full balance coverage — Ticket wurde direkt erstellt, kein Stripe nötig
@@ -926,6 +937,12 @@ export default function EventDetailClient({ id }: Props) {
                   Ticketmaster
                 </span>
               )}
+              {/* Bezahlte Platzierung kennzeichnen (H6, § 6 ECG / UWG) */}
+              {event.sponsored && (
+                <span className="px-2 py-0.5 border border-muted-foreground/40 text-muted-foreground rounded-md text-xs font-medium uppercase tracking-wide">
+                  {t('events.sponsored', { defaultValue: 'Anzeige' })}
+                </span>
+              )}
               {/* Guard wie auf der Karte: Ohne ihn rendert ein Event ohne
                   Kategorie ein leeres Badge. */}
               {event.category && (
@@ -986,6 +1003,11 @@ export default function EventDetailClient({ id }: Props) {
                     </span>
                   </div>
                 )}
+                <OrganizerStatusNotice
+                  className="mt-1"
+                  organizerType={event.organizerType}
+                  organizerImprint={event.organizerImprint}
+                />
               </div>
               <div className="flex gap-2">
                 <Link href={localePath(`/user/${creatorId}`)}>
@@ -1811,6 +1833,28 @@ export default function EventDetailClient({ id }: Props) {
                         buchbar, nur eben ohne Gewinnspiel-Aufmachung. */}
                     {event?.isRaffle && !isRaffleAlreadyDrawn ? (
                       <>
+                        {rafflePartnerName && (
+                          <label className="mb-3 flex items-start gap-2 rounded-lg border p-3 text-xs text-muted-foreground cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={rafflePartnerConsent}
+                              onChange={(e) => setRafflePartnerConsent(e.target.checked)}
+                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
+                            />
+                            <span>
+                              {t('raffle.partnerConsent', {
+                                partner: rafflePartnerName,
+                                defaultValue:
+                                  'Ich bin einverstanden, dass mein Name und meine E-Mail-Adresse an {{partner}} zu Werbezwecken weitergegeben werden (freiwillig, jederzeit widerrufbar unter office@shareyourparty.de).',
+                              })}{' '}
+                              <span className="block mt-1">
+                                {t('raffle.partnerConsentOptional', {
+                                  defaultValue: 'Für die Teilnahme am Gewinnspiel ist das nicht erforderlich.',
+                                })}
+                              </span>
+                            </span>
+                          </label>
+                        )}
                         <Button
                           variant="default"
                           className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold"
@@ -2181,6 +2225,8 @@ export default function EventDetailClient({ id }: Props) {
         eventName={paymentData.eventName}
         amount={paymentData.amount}
         eventId={paymentData.eventId}
+        organizerType={event?.organizerType}
+        organizerImprint={event?.organizerImprint}
       />
 
       {/* Delete Event Confirmation Dialog */}

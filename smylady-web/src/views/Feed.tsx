@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ImageCropModal } from '@/components/ui/image-crop-modal'
 import { useToast } from '@/hooks/use-toast'
 import { getInitials, cn, resolveImageUrl, resolveThumbnailUrl } from '@/lib/utils'
+import { UploadRightsNotice } from '@/components/UploadRightsNotice'
 import { isHeicFile } from '@/lib/heic'
 import { StoriesBar } from '@/components/stories/StoriesBar'
 import CommunityExplore from '@/components/community/CommunityExplore'
@@ -659,6 +660,8 @@ export function CreatePostModal({
               </div>
             </label>
           </div>
+
+          <UploadRightsNotice className="mt-3" />
 
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="flex gap-2">

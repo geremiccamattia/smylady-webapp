@@ -18,7 +18,18 @@ import {
   ExternalLink,
   Phone,
   Music,
+  MoreVertical,
+  Flag,
+  Ban,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import ReportModal from '@/components/ReportModal'
+import { userService } from '@/services/user'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +70,8 @@ function ConversationContent() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [showSongSearch, setShowSongSearch] = useState(false)
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -107,6 +120,20 @@ function ConversationContent() {
         variant: 'destructive',
         description: t('chat.deleteError'),
       })
+    },
+  })
+
+  // Nutzer blockieren (POST /users/block/:id)
+  const blockMutation = useMutation({
+    // otherUserId steht weiter unten; die Funktion läuft erst beim Klick.
+    mutationFn: () => userService.blockUser(otherUserId!),
+    onSuccess: () => {
+      setBlockDialogOpen(false)
+      toast({ description: t('chat.userBlocked', { defaultValue: 'Nutzer blockiert' }) })
+      router.push('/chat')
+    },
+    onError: () => {
+      toast({ variant: 'destructive', description: t('errors.general') })
     },
   })
 
@@ -295,15 +322,69 @@ function ConversationContent() {
             </div>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setDeleteDialogOpen(true)}
-          disabled={deleteChatMutation.isPending}
-        >
-          <Trash2 className="h-5 w-5 text-destructive" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {/* Melden / Blockieren (M7) — nur bei Einzelchats mit bekanntem Gegenüber */}
+          {otherUserId && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={t('chat.moreActions', { defaultValue: 'Weitere Aktionen' })}>
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setReportOpen(true)}>
+                  <Flag className="h-4 w-4 mr-2" />
+                  {t('report.userTitle', { defaultValue: 'Nutzer melden' })}
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={() => setBlockDialogOpen(true)}>
+                  <Ban className="h-4 w-4 mr-2" />
+                  {t('chat.blockUser', { defaultValue: 'Blockieren' })}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteDialogOpen(true)}
+            disabled={deleteChatMutation.isPending}
+          >
+            <Trash2 className="h-5 w-5 text-destructive" />
+          </Button>
+        </div>
       </div>
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        contentType="user"
+        reportedUserId={otherUserId || undefined}
+      />
+
+      <AlertDialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('chat.blockConfirmTitle', { name: displayName || '', defaultValue: '{{name}} blockieren?' })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('chat.blockConfirmDesc', {
+                defaultValue: 'Ihr könnt euch keine Nachrichten mehr schicken. Du kannst die Sperre in den Einstellungen unter „Blockierte Benutzer" wieder aufheben.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={blockMutation.isPending}>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => blockMutation.mutate()}
+              disabled={blockMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('chat.blockUser', { defaultValue: 'Blockieren' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

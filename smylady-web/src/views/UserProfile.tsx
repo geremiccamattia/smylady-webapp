@@ -21,6 +21,7 @@ import i18n from '@/i18n'
 import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { getInitials, cn, resolveImageUrl, safeFormatDate, formatRelativeTime, generateEventSlug, generateCommunitySlug } from '@/lib/utils'
+import { UploadRightsNotice } from '@/components/UploadRightsNotice'
 import { isHeicFile } from '@/lib/heic'
 import { formatDistanceToNow } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
@@ -2159,6 +2160,8 @@ function CreatePostModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               ))}
             </div>
           )}
+
+          <UploadRightsNotice className="mt-3" />
 
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="flex gap-2">

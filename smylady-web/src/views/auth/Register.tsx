@@ -14,7 +14,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { apiClient } from '@/services/api'
 import { authService } from '@/services/auth'
-import { useFingerprint } from '@/hooks/useFingerprint'
+import { getFingerprint } from '@/hooks/useFingerprint'
 import CreatorApplicationForm from '@/components/creator/CreatorApplicationForm'
 import { resolvePostLoginPath } from '@/lib/postLogin'
 import { useLocalePath } from '@/hooks/useLocalePath'
@@ -32,11 +32,11 @@ export default function Register() {
   const [otp, setOtp] = useState('')
   const [referralInput, setReferralInput] = useState('')
   const [wantsCreator, setWantsCreator] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const { t } = useTranslation()
-  const fingerprint = useFingerprint()
   const localePath = useLocalePath()
 
   useEffect(() => {
@@ -79,10 +79,39 @@ export default function Register() {
       return
     }
 
+    /*
+     * Mindestalter 18 (AGB A.3). Das Backend lehnt jüngere Geburtsdaten ohnehin
+     * ab; die Prüfung hier liefert eine verständliche Meldung statt eines
+     * API-Fehlers.
+     */
+    if (dateOfBirth) {
+      const cutoff = new Date()
+      cutoff.setFullYear(cutoff.getFullYear() - 18)
+      if (new Date(dateOfBirth) > cutoff) {
+        toast({
+          variant: 'destructive',
+          title: t('common.error', { defaultValue: 'Error' }),
+          description: t('auth.ageRequired', { defaultValue: 'Du musst mindestens 18 Jahre alt sein.' }),
+        })
+        return
+      }
+    }
+
+    if (!acceptedTerms) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('auth.termsRequired', { defaultValue: 'Bitte akzeptiere die AGB, um fortzufahren.' }),
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
       const referralCode = referralInput.trim().toUpperCase() || localStorage.getItem('referral_code') || undefined
+      // Erst jetzt, beim Absenden (M4)
+      const fingerprint = await getFingerprint()
       await authService.register({
         name,
         email,
@@ -90,6 +119,8 @@ export default function Register() {
         dateOfBirth,
         referralCode,
         deviceFingerprint: fingerprint || undefined,
+        // Checkbox ist oben Pflicht — hier also immer true
+        termsAccepted: acceptedTerms,
       })
       localStorage.removeItem('referral_code')
       window.dataLayer = window.dataLayer || []
@@ -330,6 +361,31 @@ export default function Register() {
                 {t('auth.referralCodeHint', { defaultValue: 'Wurdest du von einem Freund eingeladen? Gib seinen Code ein und ihr bekommt beide 20€ Guthaben.' })}
               </p>
             </div>
+            {/*
+              * Ausdrückliche Zustimmung zu den AGB (Einbeziehung nach § 864a ABGB,
+              * § 6 Abs. 3 KSchG). Die Datenschutzerklärung wird nur zur Kenntnis
+              * genommen — sie ist eine Information, keine Vereinbarung.
+              */}
+            <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
+                aria-required="true"
+              />
+              <span>
+                {t('auth.acceptTermsBefore', { defaultValue: 'Ich akzeptiere die' })}{' '}
+                <Link href={localePath('/terms')} target="_blank" className="text-primary hover:underline">
+                  {t('legal.terms', { defaultValue: 'AGB' })}
+                </Link>{' '}
+                {t('auth.acceptTermsMiddle', { defaultValue: 'und habe die' })}{' '}
+                <Link href={localePath('/privacy')} target="_blank" className="text-primary hover:underline">
+                  {t('auth.privacyLink', { defaultValue: 'Datenschutzerklärung' })}
+                </Link>{' '}
+                {t('auth.acceptTermsAfter', { defaultValue: 'zur Kenntnis genommen. Ich bin mindestens 18 Jahre alt.' })}
+              </span>
+            </label>
             <Button type="submit" variant="gradient" className="w-full" loading={isLoading}>
               {t('auth.register', { defaultValue: 'Join now' })}
             </Button>
@@ -361,7 +417,8 @@ export default function Register() {
                   window.dataLayer = window.dataLayer || []
                   window.dataLayer.push({ event: 'sign_up', method: 'google' })
 
-                  // Fingerprint nachreichen
+                  // Fingerprint nachreichen — erst jetzt erhoben (M4)
+                  const fingerprint = await getFingerprint()
                   if (fingerprint) {
                     try {
                       await apiClient.patch('/auth/device-fingerprint', { fingerprint })
@@ -409,16 +466,17 @@ export default function Register() {
             </Link>
           </p>
 
+          {/* Für den Google-Weg gibt es keine Checkbox — hier steht der Hinweis, der die AGB einbezieht. */}
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            {t('auth.termsPrefix', { defaultValue: 'By registering you agree to our' })}{' '}
-            <Link href="/terms" className="text-primary hover:underline">
-              {t('auth.termsLink', { defaultValue: 'Terms & Conditions' })}
+            {t('auth.termsPrefixSocial', { defaultValue: 'Mit der Anmeldung über Google akzeptierst du unsere' })}{' '}
+            <Link href={localePath('/terms')} className="text-primary hover:underline">
+              {t('auth.termsLink', { defaultValue: 'AGB' })}
             </Link>{' '}
-            {t('common.and', { defaultValue: 'and' })}{' '}
-            <Link href="/privacy" className="text-primary hover:underline">
-              {t('auth.privacyLink', { defaultValue: 'Privacy Policy' })}
-            </Link>
-            {'.'}
+            {t('auth.termsPrefixSocialPrivacy', { defaultValue: 'und nimmst die' })}{' '}
+            <Link href={localePath('/privacy')} className="text-primary hover:underline">
+              {t('auth.privacyLink', { defaultValue: 'Datenschutzerklärung' })}
+            </Link>{' '}
+            {t('auth.termsPrefixSocialEnd', { defaultValue: 'zur Kenntnis. Die Registrierung ist ab 18 Jahren möglich.' })}
           </p>
           </>
           )}

@@ -148,8 +148,17 @@
     "dateOfBirth": "Geburtsdatum",
     "loginNow": "Jetzt einloggen",
     "termsPrefix": "Mit der Registrierung stimmst du unseren",
-    "termsLink": "Nutzungsbedingungen",
+    "termsPrefixSocial": "Mit der Anmeldung über Google akzeptierst du unsere",
+    "termsPrefixSocialPrivacy": "und nimmst die",
+    "termsPrefixSocialEnd": "zur Kenntnis. Die Registrierung ist ab 18 Jahren möglich.",
+    "termsLink": "AGB",
     "privacyLink": "Datenschutzerklärung",
+    "acceptTermsBefore": "Ich akzeptiere die",
+    "acceptTermsMiddle": "und habe die",
+    "acceptTermsAfter": "zur Kenntnis genommen. Ich bin mindestens 18 Jahre alt.",
+    "acceptTermsAfterBrand": "zur Kenntnis genommen.",
+    "termsRequired": "Bitte akzeptiere die AGB, um fortzufahren.",
+    "ageRequired": "Du musst mindestens 18 Jahre alt sein.",
     "namePlaceholder": "Max Mustermann",
     "verificationSent": "Wir haben einen Bestätigungscode an {{email}} gesendet.",
     "verificationCode": "Bestätigungscode",
@@ -264,7 +273,8 @@
     "deleteEventTitle": "Event löschen?",
     "deleteEventMessage": "Möchtest du dieses Event wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteSuccess": "Event wurde gelöscht",
-    "deleteFailed": "Event konnte nicht gelöscht werden"
+    "deleteFailed": "Event konnte nicht gelöscht werden",
+    "sponsored": "Anzeige"
   },
   "signupChoice": {
     "title": "Wie willst du dabei sein?",
@@ -1393,7 +1403,12 @@
     "myLocation": "Mein Standort",
     "newUser": "Neuer Benutzer",
     "openFailed": "Öffnen fehlgeschlagen",
-    "replyTo": "Antwort auf"
+    "replyTo": "Antwort auf",
+    "moreActions": "Weitere Aktionen",
+    "blockUser": "Blockieren",
+    "blockConfirmTitle": "{{name}} blockieren?",
+    "blockConfirmDesc": "Ihr könnt euch keine Nachrichten mehr schicken. Du kannst die Sperre in den Einstellungen unter „Blockierte Benutzer“ wieder aufheben.",
+    "userBlocked": "Nutzer blockiert"
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -1740,7 +1755,21 @@
       "title": "Auszahlungskonto",
       "description": "Verbinde dein Stripe-Konto, damit wir deine Vergütung aus Brand-Aufträgen nach dem Event auszahlen können.",
       "notConnected": "Noch kein Auszahlungskonto. Die Einrichtung bei Stripe dauert nur wenige Minuten – danach landet deine Vergütung direkt auf deinem Bankkonto."
-    }
+    },
+    "marketingPush": "Werbliche Push-Nachrichten",
+    "marketingPushDesc": "Neuigkeiten und Aktionen von Share Your Party. Freiwillig, jederzeit hier abschaltbar.",
+    "marketingPushOn": "Werbliche Push-Nachrichten aktiviert",
+    "marketingPushOff": "Werbliche Push-Nachrichten deaktiviert",
+    "exportData": "Meine Daten exportieren",
+    "exportDone": "Datenexport heruntergeladen",
+    "exportFailed": "Export fehlgeschlagen",
+    "deleteRequestCode": "Code anfordern",
+    "deleteCodeSent": "Code gesendet",
+    "deleteCodeSentDesc": "Wir haben dir einen Bestätigungscode an {{email}} geschickt.",
+    "deleteCodeLabel": "Bestätigungscode aus der E-Mail",
+    "deleteCodeResend": "Code erneut senden",
+    "deleteCodeInvalid": "Der Code ist falsch oder abgelaufen.",
+    "deleteRetentionNote": "Zahlungs- und Ticketdaten müssen wir aus steuerrechtlichen Gründen 7 Jahre aufbewahren (§ 132 BAO). Sie werden pseudonymisiert und nicht mehr mit deinem Namen oder deiner E-Mail-Adresse verknüpft."
   },
   "spotify": {
     "searchSong": "Song suchen",
@@ -1756,6 +1785,21 @@
     "impressum": "Impressum",
     "contact": "Kontakt",
     "cookieSettings": "Cookie-Einstellungen"
+  },
+  "cookie": {
+    "title": "Datenschutz-Einstellungen",
+    "description": "Wir verwenden technisch notwendige Cookies. Mit deiner Zustimmung setzen wir außerdem Analyse-Dienste (Google Analytics) und Marketing-Dienste (Google Ads, Meta Pixel, AdSense) ein, auch mit Datenübermittlung in die USA. Du kannst deine Auswahl jederzeit über „Cookie-Einstellungen“ im Footer ändern.",
+    "settings": "Einstellungen",
+    "rejectOptional": "Nur notwendige",
+    "acceptAll": "Alle akzeptieren",
+    "save": "Auswahl speichern",
+    "necessary": "Notwendig",
+    "required": "erforderlich",
+    "necessaryDesc": "Anmeldung, Sprache, Sicherheit und das Speichern deiner Auswahl. Ohne diese Cookies funktioniert die Plattform nicht.",
+    "analytics": "Analyse",
+    "analyticsDesc": "Google Analytics 4: Nutzungsstatistiken mit gekürzter IP-Adresse, Übermittlung an Google (auch USA).",
+    "marketing": "Marketing",
+    "marketingDesc": "Google Ads, Meta Pixel und AdSense: Messung unserer Werbung und personalisierte Anzeigen, Übermittlung an Google und Meta (auch USA)."
   },
   "time": {
     "justNow": "Gerade eben",
@@ -1793,7 +1837,19 @@
       "nudity": "Nacktheit",
       "copyright": "Urheberrecht",
       "other": "Sonstiges"
-    }
+    },
+    "userTitle": "Nutzer melden",
+    "storyTitle": "Story melden",
+    "titles": {
+      "memory": "Foto/Video melden",
+      "comment": "Kommentar melden",
+      "post": "Beitrag melden",
+      "user": "Nutzer melden",
+      "event": "Event melden",
+      "story": "Story melden"
+    },
+    "selfReport": "Du kannst dich nicht selbst melden.",
+    "emailAlternative": "Alternativ per E-Mail an"
   },
   "qrScanner": {
     "title": "QR-Code Scanner",
@@ -1889,6 +1945,10 @@
   },
   "payment": {
     "title": "Zahlung",
+    "payBinding": "Zahlungspflichtig buchen",
+    "totalHint": "inkl. USt. und Gästegebühr",
+    "legalNoteBefore": "Mit der Buchung akzeptierst du die",
+    "legalNoteAfter": "Für Tickets besteht kein gesetzliches Rücktrittsrecht (§ 18 Abs. 1 Z 10 FAGG). Du kannst dein Ticket bis zum Eventbeginn freiwillig stornieren, solange es nicht entwertet wurde. Der Ticketvertrag kommt mit dem Veranstalter zustande.",
     "success": "Zahlung erfolgreich!",
     "successTitle": "Zahlung erfolgreich!",
     "failed": "Zahlung fehlgeschlagen",
@@ -2163,7 +2223,9 @@
     "promoPrize": "Gewinne: {{prize}}",
     "promoGeneric": "Gewinnspiel — Tolle Preise zu gewinnen!",
     "promoFree": "Kostenlos teilnehmen",
-    "promoButton": "Teilnehmen →"
+    "promoButton": "Teilnehmen →",
+    "partnerConsent": "Ich bin einverstanden, dass mein Name und meine E-Mail-Adresse an {{partner}} zu Werbezwecken weitergegeben werden (freiwillig, jederzeit widerrufbar unter office@shareyourparty.de).",
+    "partnerConsentOptional": "Für die Teilnahme am Gewinnspiel ist das nicht erforderlich."
   },
   "raffleTerms": {
     "title": "Gewinnspiel-Teilnahmebedingungen",
@@ -2924,5 +2986,39 @@
     "copyCode": "Code kopieren",
     "codeCopied": "Code kopiert",
     "toEvent": "Zum Event"
+  },
+  "accountGate": {
+    "dobTitle": "Geburtsdatum angeben",
+    "dobDesc": "Share Your Party ist erst ab 18 Jahren nutzbar. Bitte gib dein Geburtsdatum an, um fortzufahren.",
+    "dobHint": "Nur für Personen ab 18 Jahren. Das Datum wird nicht öffentlich angezeigt.",
+    "tooYoung": "Du musst mindestens 18 Jahre alt sein.",
+    "retry": "Datum korrigieren",
+    "logout": "Abmelden",
+    "termsTitle": "Unsere AGB und Datenschutzerklärung wurden aktualisiert",
+    "termsDesc": "Bitte lies die aktuellen Fassungen und bestätige sie, um Share Your Party weiter zu nutzen.",
+    "termsCheckbox": "Ich akzeptiere die aktuellen AGB und habe die Datenschutzerklärung zur Kenntnis genommen.",
+    "termsConfirm": "Zustimmen und fortfahren"
+  },
+  "organizerStatus": {
+    "title": "Veranstalter-Status",
+    "business": "Ich trete als Unternehmer auf",
+    "private": "Ich trete als Privatperson auf",
+    "privateHint": "Gästen wird angezeigt, dass du privat veranstaltest und ihnen gegenüber keine Verbraucherschutzrechte (z. B. Rücktrittsrecht) gelten.",
+    "imprint": "Impressum",
+    "imprintPlaceholder": "Max Muster GmbH\nMusterstraße 1, 1010 Wien\nkontakt@example.com\nUID: ATU12345678",
+    "imprintHint": "Name bzw. Firma, Anschrift, E-Mail-Adresse und ggf. UID-Nummer. Wird auf deinen Eventseiten angezeigt.",
+    "required": "Bitte gib an, ob du als Unternehmer oder als Privatperson auftrittst.",
+    "imprintRequired": "Als Unternehmer musst du ein Impressum angeben.",
+    "imprintTooLong": "Das Impressum darf höchstens 1000 Zeichen lang sein.",
+    "profileHint": "Nur relevant, wenn du Events veranstaltest. Die Angabe wird auf deinen Eventseiten angezeigt.",
+    "createEventHint": "Bevor du dein erstes Event veröffentlichst, gib bitte an, ob du als Unternehmer oder als Privatperson veranstaltest. Gäste sehen diese Angabe auf der Eventseite und beim Ticketkauf. Du kannst sie später im Profil ändern.",
+    "saveFailed": "Der Veranstalter-Status konnte nicht gespeichert werden.",
+    "badgeBusiness": "Unternehmer",
+    "showImprint": "Impressum anzeigen",
+    "hideImprint": "Impressum ausblenden",
+    "badgePrivate": "Privatperson – es gelten keine Verbraucherschutzrechte gegenüber dem Veranstalter"
+  },
+  "upload": {
+    "rightsNotice": "Lade nur Fotos/Videos hoch, mit deren Veröffentlichung die abgebildeten Personen einverstanden sind und an denen du die Rechte hast."
   }
 }

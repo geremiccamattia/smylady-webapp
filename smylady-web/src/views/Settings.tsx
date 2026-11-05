@@ -19,6 +19,7 @@ import { TutorialsCard } from '@/components/settings/TutorialsCard'
 import { BrandCard } from '@/components/settings/BrandCard'
 import { BrandInvitationsCard } from '@/components/settings/BrandInvitationsCard'
 import { CreatorCard } from '@/components/settings/CreatorCard'
+import { openCookieSettings } from '@/components/CookieConsent'
 import {
   MapPin,
   Ticket,
@@ -32,7 +33,10 @@ import {
   Lock,
   Trash2,
   User,
+  Download,
+  Loader2,
 } from 'lucide-react'
+import { authService } from '@/services/auth'
 import {
   isLiveLocationEnabled,
   setLiveLocationEnabled,
@@ -75,7 +79,7 @@ function ToggleSwitch({
 function SettingsContent() {
   const { t } = useTranslation()
   const { toast } = useToast()
-  const { user, refreshUser } = useAuth()
+  const { user, refreshUser, updateUser } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -83,8 +87,68 @@ function SettingsContent() {
   // Settings state
   const [liveLocation, setLiveLocation] = useState(false)
   const [ticketmaster, setTicketmaster] = useState(false)
-  const [notifications, setNotifications] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  // Werbe-Push: Zustand aus GET /users/me, Default aus
+  const [marketingPush, setMarketingPush] = useState(false)
+  const [marketingPushSaving, setMarketingPushSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    setMarketingPush(user?.marketingPushConsent === true)
+  }, [user?.marketingPushConsent])
+
+  const handleMarketingPushToggle = async (enabled: boolean) => {
+    const previous = marketingPush
+    setMarketingPush(enabled)
+    setMarketingPushSaving(true)
+    try {
+      const result = await authService.setMarketingPushConsent(enabled)
+      const saved = typeof result?.marketingPushConsent === 'boolean' ? result.marketingPushConsent : enabled
+      setMarketingPush(saved)
+      if (user) {
+        updateUser({
+          ...user,
+          marketingPushConsent: saved,
+          marketingPushConsentAt: result?.marketingPushConsentAt ?? user.marketingPushConsentAt,
+        })
+      }
+      toast({
+        title: saved
+          ? t('settings.marketingPushOn', { defaultValue: 'Werbliche Push-Nachrichten aktiviert' })
+          : t('settings.marketingPushOff', { defaultValue: 'Werbliche Push-Nachrichten deaktiviert' }),
+      })
+    } catch {
+      setMarketingPush(previous)
+      toast({ variant: 'destructive', title: t('errors.general'), description: t('errors.tryAgain') })
+    } finally {
+      setMarketingPushSaving(false)
+    }
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const { blob, fileName } = await authService.exportData()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // Kurz warten, sonst bricht manch ein Browser den Download ab.
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      toast({ title: t('settings.exportDone', { defaultValue: 'Datenexport heruntergeladen' }) })
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: t('settings.exportFailed', { defaultValue: 'Export fehlgeschlagen' }),
+        description: t('errors.tryAgain'),
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   // Modal states
   const [showChangeEmail, setShowChangeEmail] = useState(false)
@@ -278,6 +342,19 @@ function SettingsContent() {
             </span>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          {/* Auskunft / Datenübertragbarkeit (Art. 15, 20 DSGVO) */}
+          <Button
+            variant="ghost"
+            className="w-full justify-between"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            <span className="flex items-center gap-2">
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {t('settings.exportData', { defaultValue: 'Meine Daten exportieren' })}
+            </span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             className="w-full justify-between text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -319,16 +396,27 @@ function SettingsContent() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          {/*
+            * Werbe-Push nur mit Opt-in (H3, § 174 TKG / Art. 6 Abs. 1 lit. a DSGVO).
+            * Ersetzt den früheren Schalter, der nichts gespeichert hat. Admin-
+            * Ankündigungen gehen serverseitig nur an marketingPushConsent: true;
+            * Push zu Tickets, Nachrichten usw. bleibt davon unberührt.
+            */}
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="font-medium">{t('settings.pushNotifications')}</p>
+              <p className="font-medium">
+                {t('settings.marketingPush', { defaultValue: 'Werbliche Push-Nachrichten' })}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {t('settings.pushNotificationsDesc')}
+                {t('settings.marketingPushDesc', {
+                  defaultValue: 'Neuigkeiten und Aktionen von Share Your Party. Freiwillig, jederzeit hier abschaltbar.',
+                })}
               </p>
             </div>
             <ToggleSwitch
-              enabled={notifications}
-              onChange={setNotifications}
+              enabled={marketingPush}
+              onChange={handleMarketingPushToggle}
+              disabled={marketingPushSaving || !user}
             />
           </div>
         </CardContent>
@@ -400,6 +488,10 @@ function SettingsContent() {
               {t('settings.impressum')}
               <ChevronRight className="h-4 w-4" />
             </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-between" onClick={() => openCookieSettings()}>
+            {t('legal.cookieSettings', { defaultValue: 'Cookie-Einstellungen' })}
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </CardContent>
       </Card>

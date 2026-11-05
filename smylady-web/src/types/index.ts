@@ -45,6 +45,24 @@ export interface User {
    * dem localStorage kann das Feld nicht haben — dann gilt es als false.
    */
   isBrand?: boolean
+  /*
+   * DSGVO/AGB-Felder aus GET /users/me (bzw. Login-Antwort). Alle optional:
+   * ein älteres Objekt aus dem localStorage oder ein noch nicht aktualisiertes
+   * Backend liefert sie nicht — dann gilt „unbekannt", kein Pflichtdialog.
+   */
+  term_and_condition?: boolean
+  /** false → Pflichtdialog „AGB/DSE aktualisiert". */
+  termsUpToDate?: boolean
+  termsVersion?: string | null
+  privacyVersion?: string | null
+  termsAcceptedAt?: string | null
+  /** true → Pflichtdialog „Geburtsdatum" (Social-Login ohne Geburtsdatum). */
+  needsDateOfBirth?: boolean
+  marketingPushConsent?: boolean
+  marketingPushConsentAt?: string | null
+  /** Veranstalter-Status für Verbraucherschutz-Hinweise; null = noch nicht angegeben. */
+  organizerType?: 'business' | 'private' | null
+  organizerImprint?: string
 }
 
 // Auth Types
@@ -65,12 +83,17 @@ export interface RegisterCredentials {
   isAdultConfirmed?: true
   referralCode?: string
   deviceFingerprint?: string
+  /** Zustimmung zu AGB/DSE (Pflicht-Checkbox); setzt die Zustimmungsfelder serverseitig. */
+  termsAccepted?: boolean
 }
 
 export interface AuthResponse {
   token: string
   user: User
   message?: string
+  /** Login-/Social-Antwort: AGB-Stand und fehlendes Geburtsdatum. */
+  termsUpToDate?: boolean
+  needsDateOfBirth?: boolean
   // Additional fields for OTP verification
   userId?: string
   email?: string
@@ -249,6 +272,12 @@ export interface Event {
     count?: number
     display?: boolean
   }
+  /** Veranstalter-Status des Veranstalters (top-level, aus dem populierten userId). */
+  organizerType?: 'business' | 'private' | null
+  organizerImprint?: string
+  /** Bezahlte Platzierung (Boost/Spotlight/Partner) → Badge „Anzeige". */
+  sponsored?: boolean
+  sponsoredReason?: 'boost' | 'spotlight' | 'partner' | null
 }
 
 export interface EventFilters {

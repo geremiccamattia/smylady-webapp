@@ -10,8 +10,10 @@ interface LoginWithCredentials {
   (email: string, password: string): Promise<void>
 }
 
+type LoginResponseLike = { token: string; user: User; termsUpToDate?: boolean; needsDateOfBirth?: boolean }
+
 interface LoginWithResponse {
-  (response: { token: string; user: User }): Promise<void>
+  (response: LoginResponseLike): Promise<void>
 }
 
 interface AuthContextType {
@@ -28,6 +30,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+/*
+ * Datenminimierung (M6): Im localStorage steht nur noch, was ohne Server
+ * gebraucht wird — die ID (Socket-Verbindung, siehe services/socket.ts),
+ * Rolle und Name. E-Mail, Geburtsdatum, Standort usw. bleiben im Speicher
+ * (Context) und kommen bei jedem Start frisch aus GET /users/me.
+ */
+type StoredUser = Pick<User, 'id' | '_id' | 'role' | 'name'>
+
+function persistUser(u: User | null | undefined): void {
+  if (!u) return
+  const minimal: StoredUser = { id: u.id, _id: u._id, role: u.role, name: u.name }
+  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(minimal))
+}
+
+/*
+ * Die Login-Antwort trägt termsUpToDate/needsDateOfBirth teils neben `user`
+ * statt darin. Damit die Pflichtdialoge (AccountGate) auch dann sofort
+ * greifen, wenn /users/me danach scheitert, hier in den User übernehmen.
+ */
+function withLoginFlags(u: User, flags: { termsUpToDate?: boolean; needsDateOfBirth?: boolean }): User {
+  return {
+    ...u,
+    termsUpToDate: u.termsUpToDate ?? flags.termsUpToDate,
+    needsDateOfBirth: u.needsDateOfBirth ?? flags.needsDateOfBirth,
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
@@ -35,28 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     /*
-     * Der Cache im localStorage stammt vom Login-Zeitpunkt. Kennzeichen wie
-     * isBrand oder isCreator setzt der Admin serverseitig (Freischaltung),
-     * ohne dass sich der Nutzer neu anmeldet — die Brand-Links im Header und
-     * in den Einstellungen blieben deshalb bis zum nächsten Login weg
-     * (Testlauf-Schritt A8). Darum nach dem Start /users/me nachladen.
-     *
-     * Im Hintergrund, nicht davor: Der Cache bleibt sofort sichtbar, die
-     * Seite erscheint nicht erst leer. Scheitert der Abruf, bleibt der Cache;
-     * ein 401 landet ohnehin im Interceptor (lib/api.ts), der abmeldet.
+     * Kennzeichen wie isBrand oder isCreator setzt der Admin serverseitig
+     * (Freischaltung), ohne dass sich der Nutzer neu anmeldet (Testlauf-
+     * Schritt A8) — darum kommt der User beim Start immer frisch aus
+     * /users/me. Ein 401 landet im Interceptor (lib/api.ts), der abmeldet.
      */
-    const refreshUserInBackground = async () => {
-      try {
-        const freshUser = await authService.getCurrentUser()
-        if (freshUser && (freshUser._id || freshUser.id)) {
-          setUser(freshUser)
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(freshUser))
-        }
-      } catch {
-        // Nicht kritisch, siehe oben.
-      }
-    }
-
     const initAuth = async () => {
       try {
         const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
@@ -65,31 +77,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (storedToken) {
           setToken(storedToken)
 
-          // Try to parse stored user
+          let parsedUser: User | null = null
           if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
             try {
-              const parsedUser = JSON.parse(storedUser)
-              // Check for _id OR id (backend may return either)
-              if (parsedUser && (parsedUser._id || parsedUser.id)) {
-                setUser(parsedUser)
-                void refreshUserInBackground()
-              } else {
-                // Invalid user data - fetch from API
-                const freshUser = await authService.getCurrentUser()
+              parsedUser = JSON.parse(storedUser)
+            } catch {
+              parsedUser = null
+            }
+          }
+
+          // Check for _id OR id (backend may return either)
+          if (parsedUser && (parsedUser._id || parsedUser.id)) {
+            /*
+             * Der Cache enthält seit M6 nur noch id/role/name. Seiten, die beim
+             * ersten Rendern Felder wie E-Mail oder Bio übernehmen, brauchen den
+             * vollständigen User — deshalb hier auf /users/me warten. Scheitert
+             * der Abruf (offline), bleibt der Minimal-Cache, damit die Sitzung
+             * nicht verloren geht; ein 401 meldet der Interceptor ohnehin ab.
+             */
+            try {
+              const freshUser = await authService.getCurrentUser()
+              if (freshUser && (freshUser._id || freshUser.id)) {
                 setUser(freshUser)
-                localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(freshUser))
+                persistUser(freshUser)
+              } else {
+                setUser(parsedUser)
               }
             } catch {
-              // Parse failed - fetch from API
-              const freshUser = await authService.getCurrentUser()
-              setUser(freshUser)
-              localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(freshUser))
+              setUser(parsedUser)
             }
           } else {
-            // No stored user - fetch from API
+            // No/invalid stored user - fetch from API
             const freshUser = await authService.getCurrentUser()
             setUser(freshUser)
-            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(freshUser))
+            persistUser(freshUser)
           }
         }
       } catch (e) {
@@ -107,27 +128,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Login can be called with credentials or with auth response (for OTP flow)
   // Overloaded to accept (email, password) or ({ token, user })
-  const login = async (emailOrUsernameOrResponse: string | { token: string; user: User }, password?: string): Promise<void> => {
+  const login = async (
+    emailOrUsernameOrResponse: string | LoginResponseLike,
+    password?: string,
+  ): Promise<void> => {
     let authToken: string
     let authUser: User
 
     if (typeof emailOrUsernameOrResponse === 'object') {
-      // Direct login with auth response (from OTP verification)
+      // Direct login with auth response (from OTP verification / social login)
       const response = emailOrUsernameOrResponse
       authToken = response.token
-      authUser = response.user
+      authUser = withLoginFlags(response.user, response)
     } else {
       // Login with credentials
       const response = await authService.login({ emailOrUsername: emailOrUsernameOrResponse, password: password! })
       authToken = response.token
-      authUser = response.user
+      authUser = withLoginFlags(response.user, response)
     }
 
     // Set token and initial user data immediately so UI updates right away
     setToken(authToken)
     setUser(authUser)
     localStorage.setItem(STORAGE_KEYS.TOKEN, authToken)
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authUser))
+    persistUser(authUser)
 
     // Fetch the complete user profile (with profileImage etc.) in background
     // The login response may not include all fields
@@ -135,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const freshUser = await authService.getCurrentUser()
       if (freshUser) {
         setUser(freshUser)
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(freshUser))
+        persistUser(freshUser)
       }
     } catch (e) {
       // Not critical - we already have the basic user data from login response
@@ -159,14 +183,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser)
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser))
+    persistUser(updatedUser)
   }
 
   const refreshUser = async () => {
     try {
       const freshUser = await authService.getCurrentUser()
       setUser(freshUser)
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(freshUser))
+      persistUser(freshUser)
     } catch (error) {
       console.error('Failed to refresh user:', error)
     }

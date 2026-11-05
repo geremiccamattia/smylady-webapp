@@ -19,6 +19,11 @@ import { ImageViewer } from '@/components/ImageViewer'
 import InviteButton from '@/components/InviteButton'
 import { PromoCodeCard } from '@/components/promo/PromoCodeCard'
 import {
+  OrganizerStatusFields,
+  validateOrganizerStatus,
+  type OrganizerType,
+} from '@/components/profile/OrganizerStatusFields'
+import {
   User,
   Mail,
   MapPin,
@@ -66,9 +71,13 @@ export default function Profile() {
     name: user?.name || '',
     bio: user?.bio || '',
     age: user?.age?.toString() || '',
-    showAge: user?.showAge ?? true,
-    showLocation: user?.showLocation ?? true,
+    // Backend-Default seit 05.11.2026: false (Datenminimierung)
+    showAge: user?.showAge ?? false,
+    showLocation: user?.showLocation ?? false,
   })
+  // Veranstalter-Status (H4) — am User gespeichert, über PATCH /users/profile
+  const [organizerType, setOrganizerType] = useState<OrganizerType | null>(user?.organizerType ?? null)
+  const [organizerImprint, setOrganizerImprint] = useState(user?.organizerImprint ?? '')
 
   // Sync formData when user data changes (e.g. after profile update)
   useEffect(() => {
@@ -77,9 +86,11 @@ export default function Profile() {
         name: user.name || '',
         bio: user.bio || '',
         age: user.age?.toString() || '',
-        showAge: user.showAge ?? true,
-        showLocation: user.showLocation ?? true,
+        showAge: user.showAge ?? false,
+        showLocation: user.showLocation ?? false,
       })
+      setOrganizerType(user.organizerType ?? null)
+      setOrganizerImprint(user.organizerImprint ?? '')
     }
   }, [user])
 
@@ -108,12 +119,29 @@ export default function Profile() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Veranstalter-Status ist optional, solange nichts gewählt ist; wer
+    // „Unternehmer" wählt, braucht ein Impressum.
+    if (organizerType) {
+      const invalid = validateOrganizerStatus(organizerType, organizerImprint)
+      if (invalid) {
+        toast({ variant: 'destructive', title: t('common.error', { defaultValue: 'Fehler' }), description: t(invalid.key, { defaultValue: invalid.defaultValue }) })
+        return
+      }
+    }
+
     setIsLoading(true)
 
     try {
       const updateData = {
         ...formData,
         age: formData.age ? parseInt(formData.age, 10) : undefined,
+        ...(organizerType
+          ? {
+              organizerType,
+              organizerImprint: organizerType === 'business' ? organizerImprint.trim() : '',
+            }
+          : {}),
       }
       await authService.updateProfile(updateData)
       // Reload full user data from server to preserve profileImage and other fields
@@ -427,6 +455,27 @@ export default function Profile() {
                         />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Veranstalter-Status (Unternehmer/Privatperson) + Impressum */}
+                  <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      {t('organizerStatus.title', { defaultValue: 'Veranstalter-Status' })}
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      {t('organizerStatus.profileHint', {
+                        defaultValue: 'Nur relevant, wenn du Events veranstaltest. Die Angabe wird auf deinen Eventseiten angezeigt.',
+                      })}
+                    </p>
+                    <OrganizerStatusFields
+                      idPrefix="profile-organizer"
+                      type={organizerType}
+                      imprint={organizerImprint}
+                      onTypeChange={setOrganizerType}
+                      onImprintChange={setOrganizerImprint}
+                      disabled={isLoading}
+                    />
                   </div>
                 </div>
               </div>

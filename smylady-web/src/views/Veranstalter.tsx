@@ -2,6 +2,16 @@
 
 import { useEffect } from "react";
 import { useTranslation } from 'react-i18next'
+import { DM_Sans, Unbounded } from 'next/font/google'
+
+/*
+ * Schriften über next/font: Next lädt sie beim Build herunter und liefert sie
+ * von der eigenen Domain aus. Vorher hing ein <link> auf fonts.googleapis.com
+ * im Head, wodurch bei jedem Aufruf die IP-Adresse an Google ging — ohne
+ * Einwilligung (vgl. LG München I, 3 O 17493/20; § 165 Abs. 3 TKG 2021).
+ */
+const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500'], style: ['normal', 'italic'], display: 'swap' })
+const unbounded = Unbounded({ subsets: ['latin'], weight: ['700', '900'], display: 'swap' })
 
 const PINK = "#e9548c";
 const PINK_LIGHT = "#fdf0f5";
@@ -49,10 +59,6 @@ export default function VeranstalterPage() {
   const steps = isEnglish ? stepsEN : stepsDE
 
   useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap";
-    document.head.appendChild(link);
     const title = document.querySelector("title");
     if (title) title.textContent = isEnglish
       ? "Create Events & Sell Tickets | Share Your Party"
@@ -61,11 +67,10 @@ export default function VeranstalterPage() {
     if (desc) desc.setAttribute("content", isEnglish
       ? "Share Your Party is more than ticketing. Create events, promote them directly and build your own community around your events."
       : "Share Your Party ist mehr als Ticketing. Erstelle Events, bewirb sie gezielt und baue eine eigene Community rund um deine Veranstaltungen auf.");
-    return () => { document.head.removeChild(link); };
   }, [isEnglish]);
 
   return (
-    <div style={{ background: "#fff", color: DARK, fontFamily: "'DM Sans', sans-serif", overflowX: "hidden" }}>
+    <div style={{ background: "#fff", color: DARK, fontFamily: dmSans.style.fontFamily, overflowX: "hidden" }}>
 
       {/* HERO */}
       <section style={{ padding: "5rem 2rem 4rem", background: `linear-gradient(180deg, ${PINK_LIGHT} 0%, #fff 100%)` }}>
@@ -77,7 +82,7 @@ export default function VeranstalterPage() {
           {/* LEFT: Text */}
           <div style={{ flex: "1 1 400px", textAlign: "left" }}>
             <h1 style={{
-              fontFamily: "'Unbounded', sans-serif",
+              fontFamily: unbounded.style.fontFamily,
               fontSize: "clamp(1.75rem, 4.5vw, 3rem)",
               fontWeight: 900, lineHeight: 1.15,
               margin: "0 0 1.25rem", color: DARK,
@@ -101,7 +106,7 @@ export default function VeranstalterPage() {
               display: "inline-block", background: PINK, color: "#fff",
               textDecoration: "none", padding: "0.9rem 2.25rem",
               borderRadius: "100px", fontSize: "1rem", fontWeight: 500,
-              fontFamily: "'DM Sans', sans-serif", marginBottom: "1.25rem",
+              fontFamily: dmSans.style.fontFamily, marginBottom: "1.25rem",
             }}>
               {isEnglish ? "Create event now →" : "Jetzt Event erstellen →"}
             </a></div>
@@ -138,7 +143,7 @@ export default function VeranstalterPage() {
       <section style={{ padding: "5rem 2rem", maxWidth: "1100px", margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <SectionLabel>Features</SectionLabel>
-          <h2 style={{ fontFamily: "'Unbounded', sans-serif", fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", fontWeight: 700, margin: "0.75rem 0 0", lineHeight: 1.25 }}>
+          <h2 style={{ fontFamily: unbounded.style.fontFamily, fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", fontWeight: 700, margin: "0.75rem 0 0", lineHeight: 1.25 }}>
             {isEnglish ? "What Share Your Party offers" : "Was Share Your Party bietet"}
           </h2>
           <p style={{ fontSize: "1.1rem", color: MUTED, margin: "1.5rem 0 1.5rem" }}>
@@ -158,7 +163,7 @@ export default function VeranstalterPage() {
       <section style={{ padding: "5rem 2rem", maxWidth: "700px", margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <SectionLabel>{isEnglish ? "How it works" : "So einfach geht's"}</SectionLabel>
-          <h2 style={{ fontFamily: "'Unbounded', sans-serif", fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", fontWeight: 700, margin: "0.75rem 0 0", lineHeight: 1.25 }}>
+          <h2 style={{ fontFamily: unbounded.style.fontFamily, fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", fontWeight: 700, margin: "0.75rem 0 0", lineHeight: 1.25 }}>
             {isEnglish ? "Live in 3 steps" : "In 3 Schritten live"}
           </h2>
         </div>
@@ -181,7 +186,7 @@ export default function VeranstalterPage() {
       {/* CTA */}
       <section style={{ padding: "5rem 2rem 6rem", textAlign: "center" }}>
         <div style={{ maxWidth: "560px", margin: "0 auto" }}>
-          <h2 style={{ fontFamily: "'Unbounded', sans-serif", fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", fontWeight: 700, margin: "0 0 1rem", lineHeight: 1.25 }}>
+          <h2 style={{ fontFamily: unbounded.style.fontFamily, fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", fontWeight: 700, margin: "0 0 1rem", lineHeight: 1.25 }}>
             {isEnglish ? "Ready to launch your next event?" : "Bereit dein nächstes Event zu starten?"}
           </h2>
           <p style={{ color: MUTED, marginBottom: "2rem", lineHeight: 1.75 }}>
@@ -189,7 +194,7 @@ export default function VeranstalterPage() {
               ? "Sign up for free, create your event and reach the Share Your Party community directly."
               : "Kostenlos registrieren, Event anlegen und direkt die Share Your Party Community erreichen."}
           </p>
-          <a href={CREATE_URL} style={{ display: "inline-block", background: PINK, color: "#fff", textDecoration: "none", padding: "0.9rem 2.5rem", borderRadius: "100px", fontSize: "1rem", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+          <a href={CREATE_URL} style={{ display: "inline-block", background: PINK, color: "#fff", textDecoration: "none", padding: "0.9rem 2.5rem", borderRadius: "100px", fontSize: "1rem", fontWeight: 500, fontFamily: dmSans.style.fontFamily }}>
             {isEnglish ? "Create event →" : "Event erstellen →"}
           </a>
           <p style={{ marginTop: "1.25rem", fontSize: "0.8rem", color: MUTED }}>
@@ -212,7 +217,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function AppLink({ href, label }: { href: string; label: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: "#fff", color: DARK, border: `1px solid ${BORDER}`, textDecoration: "none", padding: "0.55rem 1.25rem", borderRadius: "100px", fontSize: "0.85rem", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: "#fff", color: DARK, border: `1px solid ${BORDER}`, textDecoration: "none", padding: "0.55rem 1.25rem", borderRadius: "100px", fontSize: "0.85rem", fontWeight: 500, fontFamily: dmSans.style.fontFamily }}>
       {label}
     </a>
   );
@@ -227,7 +232,7 @@ function FeatureCard({ icon, title, desc, tag, highlight = false }: { icon: stri
           {tag}
         </span>
       </div>
-      <h3 style={{ fontFamily: "'Unbounded', sans-serif", fontSize: "0.9rem", fontWeight: 700, margin: 0, color: DARK, lineHeight: 1.3 }}>{title}</h3>
+      <h3 style={{ fontFamily: unbounded.style.fontFamily, fontSize: "0.9rem", fontWeight: 700, margin: 0, color: DARK, lineHeight: 1.3 }}>{title}</h3>
       <p style={{ color: MUTED, fontSize: "0.875rem", margin: 0, lineHeight: 1.75 }}>{desc}</p>
     </div>
   );
@@ -237,13 +242,13 @@ function StepRow({ n, title, desc, last }: { n: string; title: string; desc: str
   return (
     <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-        <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: PINK_LIGHT, border: `1px solid ${PINK_MID}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Unbounded', sans-serif", fontSize: "0.65rem", fontWeight: 700, color: PINK }}>
+        <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: PINK_LIGHT, border: `1px solid ${PINK_MID}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: unbounded.style.fontFamily, fontSize: "0.65rem", fontWeight: 700, color: PINK }}>
           {n}
         </div>
         {!last && <div style={{ width: "1px", height: "2.5rem", background: BORDER, margin: "0.4rem 0" }} />}
       </div>
       <div style={{ paddingTop: "0.6rem", paddingBottom: last ? 0 : "0.75rem" }}>
-        <h3 style={{ fontFamily: "'Unbounded', sans-serif", fontSize: "0.95rem", fontWeight: 700, margin: "0 0 0.35rem", color: DARK }}>{title}</h3>
+        <h3 style={{ fontFamily: unbounded.style.fontFamily, fontSize: "0.95rem", fontWeight: 700, margin: "0 0 0.35rem", color: DARK }}>{title}</h3>
         <p style={{ color: MUTED, fontSize: "0.9rem", margin: 0, lineHeight: 1.7 }}>{desc}</p>
       </div>
     </div>

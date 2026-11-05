@@ -13,6 +13,7 @@ import { useGetConnectedAccount } from '@/hooks/useStripe'
 import { eventsService } from '@/services/events'
 import { EVENT_CATEGORIES, AGE_RESTRICTIONS } from '@/lib/constants'
 import { resolveImageUrl, isMultiDayEvent } from '@/lib/utils'
+import { UploadRightsNotice } from '@/components/UploadRightsNotice'
 import { isHeicFile } from '@/lib/heic'
 import { useTranslation } from 'react-i18next'
 import { useState, useEffect } from 'react'
@@ -1955,6 +1956,7 @@ export default function EditEvent() {
             <p className="text-xs text-muted-foreground">
               {t('createEvent.imageHint', { defaultValue: 'Ideales Format: 16:9 (z.B. 1920 × 1080 px)' })}
             </p>
+            <UploadRightsNotice className="mt-1" />
 
             {/* KI-Kennzeichnung */}
             <div className="flex items-center justify-between mt-3 p-3 bg-muted/30 rounded-lg">

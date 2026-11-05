@@ -1,7 +1,6 @@
 'use client'
 
 import { apiClient } from './api'
-import { STORAGE_KEYS } from '@/lib/constants'
 
 export const userSettingsService = {
   /**
@@ -23,16 +22,8 @@ export const userSettingsService = {
       otp,
     })
 
-    // Update stored email if successful
-    if (response.data?.data?.email) {
-      const userJson = localStorage.getItem(STORAGE_KEYS.USER)
-      if (userJson) {
-        const user = JSON.parse(userJson)
-        user.email = response.data.data.email
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user))
-      }
-    }
-
+    // Die E-Mail steht seit M6 nicht mehr im localStorage-Cache (nur id/role/name).
+    // Der Aufrufer (ChangeEmailModal → onSuccess) lädt den User per refreshUser neu.
     return response.data
   },
 

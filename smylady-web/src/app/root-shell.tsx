@@ -12,14 +12,27 @@ import { SITE_URL } from '@/lib/seo'
 
 const GTM_ID = 'GTM-K5G6QX8F'
 
-/** Gehört in den <head>. */
+/**
+ * Gehört in den <head>.
+ *
+ * Consent Mode v2: Vor dem Laden des Containers wird jede Einwilligung auf
+ * „denied" gesetzt. Google-Tags (GA4, Ads) senden dann keine Cookies und
+ * keine personenbezogenen Signale, bis CookieConsent.tsx per
+ * `gtag('consent','update', …)` freischaltet. Tags von Dritten im Container
+ * (z. B. Meta Pixel) müssen zusätzlich auf das Event `cookie_consent_update`
+ * mit `marketing_granted = true` getriggert sein — das ist Container-Konfig,
+ * nicht Code.
+ */
 export function GtmScript() {
   return (
     <Script
       id="gtm"
       strategy="afterInteractive"
       dangerouslySetInnerHTML={{
-        __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=window.gtag||gtag;
+gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',functionality_storage:'granted',security_storage:'granted',wait_for_update:500});
+gtag('set','url_passthrough',false);
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);

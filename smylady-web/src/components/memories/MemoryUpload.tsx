@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast'
 import MentionInput, { type MentionUser } from '@/components/mentionInput/MentionInput'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials, resolveImageUrl, cn } from '@/lib/utils'
+import { UploadRightsNotice } from '@/components/UploadRightsNotice'
 
 interface MemoryUploadProps {
   ticketId: string
@@ -291,6 +292,7 @@ export default function MemoryUpload({ ticketId, eventId, onClose, onSuccess, is
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <UploadRightsNotice />
           {/* File Input */}
           <div>
             <input

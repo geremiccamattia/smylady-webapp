@@ -8,6 +8,7 @@ export type ReportType =
   | 'post'
   | 'post_comment'
   | 'user'
+  | 'story'
   | 'event'
 
 export type ReportReason =
@@ -33,6 +34,8 @@ export interface CreateReportPayload {
   postId?: string
   // For user reports
   reportedUserId?: string
+  // For story reports
+  storyId?: string
 }
 
 export interface Report {
@@ -47,6 +50,7 @@ export interface Report {
   commentId?: string
   postId?: string
   reportedUserId?: string
+  storyId?: string
   status: 'pending' | 'reviewed' | 'resolved' | 'dismissed'
   createdAt: string
   updatedAt: string

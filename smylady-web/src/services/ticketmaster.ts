@@ -2,7 +2,7 @@
 
 import { apiClient } from './api'
 import { Event } from '@/types'
-import { getCurrentLocation, getManualLocation } from './location'
+import { getCurrentLocation, getManualLocation, isLiveLocationEnabled } from './location'
 
 // Default location: Vienna, Austria (used when no location is available)
 const DEFAULT_LOCATION = {
@@ -36,8 +36,9 @@ export const ticketmasterService = {
           params.append('latitude', String(manualLocation.lat))
           params.append('longitude', String(manualLocation.lng))
         } else {
-          // Try browser geolocation
+          // Browser-Standort nur bei eingeschaltetem Live-Standort (M5)
           try {
+            if (!isLiveLocationEnabled()) throw new Error('live location off')
             const currentLocation = await getCurrentLocation()
             params.append('latitude', String(currentLocation.latitude))
             params.append('longitude', String(currentLocation.longitude))

@@ -54,18 +54,21 @@ export default function CommunityEventsPage({ communityId }: CommunityEventsPage
           return
         }
 
-        try {
-          const current = await getCurrentLocation()
-          setSelectedLocation({
-            place_id: 'current',
-            description: `Aktueller Standort (${current.latitude.toFixed(4)}, ${current.longitude.toFixed(4)})`,
-            lat: current.latitude,
-            lng: current.longitude,
-          })
-          setLocationLoaded(true)
-          return
-        } catch {
-          // Geolocation denied or unavailable - fall through to fallback
+        // Browser-Standort nur bei eingeschaltetem Live-Standort (M5)
+        if (isLiveLocationEnabled()) {
+          try {
+            const current = await getCurrentLocation()
+            setSelectedLocation({
+              place_id: 'current',
+              description: `Aktueller Standort (${current.latitude.toFixed(4)}, ${current.longitude.toFixed(4)})`,
+              lat: current.latitude,
+              lng: current.longitude,
+            })
+            setLocationLoaded(true)
+            return
+          } catch {
+            // Geolocation denied or unavailable - fall through to fallback
+          }
         }
 
         setSelectedLocation(FALLBACK_LOCATION)

@@ -3,16 +3,19 @@
 import { useState } from 'react'
 import { ArrowLeft, Mail, Send } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { useLocalePath } from '@/hooks/useLocalePath'
 
 export default function Contact() {
   const { toast } = useToast()
   const router = useRouter()
   const { t } = useTranslation()
+  const localePath = useLocalePath()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -146,6 +149,18 @@ export default function Contact() {
               className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
+
+          {/* Informationspflicht nach Art. 13 DSGVO bei der Datenerhebung. */}
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {t('contact.privacyNote', {
+              defaultValue:
+                'Deine Angaben werden nur zur Beantwortung deiner Anfrage verwendet und zwölf Monate nach Abschluss gelöscht. Das Formular öffnet dein E-Mail-Programm; die Nachricht wird nicht über unsere Server versendet. Mehr dazu in der',
+            })}{' '}
+            <Link href={localePath('/privacy')} className="text-primary hover:underline">
+              {t('legal.privacy', { defaultValue: 'Datenschutzerklärung' })}
+            </Link>
+            .
+          </p>
 
           {/* Submit Button */}
           <Button

@@ -18,7 +18,7 @@ import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { apiClient } from '@/services/api'
 import { authService } from '@/services/auth'
-import { useFingerprint } from '@/hooks/useFingerprint'
+import { getFingerprint } from '@/hooks/useFingerprint'
 
 /*
  * Registrierung für Marken.
@@ -67,7 +67,6 @@ export default function BrandRegister() {
   const { t } = useTranslation()
   const localePath = useLocalePath()
   const { login, isAuthenticated, isLoading: authLoading } = useAuth()
-  const fingerprint = useFingerprint()
   const queryClient = useQueryClient()
   // Ein Konto gehört zu höchstens einer Brand: Mitgliedern kein zweites Profil anbieten.
   const { role: brandRole } = useBrandProfile()
@@ -101,6 +100,7 @@ export default function BrandRegister() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isAdultConfirmed, setIsAdultConfirmed] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState('')
 
@@ -183,15 +183,27 @@ export default function BrandRegister() {
       return
     }
 
+    if (!acceptedTerms) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('auth.termsRequired', { defaultValue: 'Bitte akzeptiere die AGB, um fortzufahren.' }),
+      })
+      return
+    }
+
     setIsSubmitting(true)
     try {
       // Volljährigkeit per Haken statt per Geburtsdatum — Register.tsx sendet weiter dateOfBirth.
+      // Fingerprint erst beim Absenden (M4).
+      const fingerprint = await getFingerprint()
       await authService.register({
         name,
         email,
         password,
         isAdultConfirmed: true,
         deviceFingerprint: fingerprint || undefined,
+        termsAccepted: acceptedTerms,
       })
       window.dataLayer = window.dataLayer || []
       window.dataLayer.push({ event: 'sign_up', method: 'email' })
@@ -450,6 +462,27 @@ export default function BrandRegister() {
                     })}
                   </Label>
                 </div>
+                {/* AGB-Einbeziehung für Unternehmer (Teil E der AGB) und Kenntnisnahme der Datenschutzerklärung. */}
+                <div className="flex items-start gap-2">
+                  <input
+                    id="brandAcceptTerms"
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={e => setAcceptedTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <Label htmlFor="brandAcceptTerms" className="text-sm font-normal leading-snug">
+                    {t('auth.acceptTermsBefore', { defaultValue: 'Ich akzeptiere die' })}{' '}
+                    <Link href={localePath('/terms')} target="_blank" className="text-primary hover:underline">
+                      {t('legal.terms', { defaultValue: 'AGB' })}
+                    </Link>{' '}
+                    {t('auth.acceptTermsMiddle', { defaultValue: 'und habe die' })}{' '}
+                    <Link href={localePath('/privacy')} target="_blank" className="text-primary hover:underline">
+                      {t('auth.privacyLink', { defaultValue: 'Datenschutzerklärung' })}
+                    </Link>{' '}
+                    {t('auth.acceptTermsAfterBrand', { defaultValue: 'zur Kenntnis genommen.' })}
+                  </Label>
+                </div>
                 <Button type="submit" variant="gradient" className="w-full" loading={isSubmitting}>
                   {t('auth.register', { defaultValue: 'Join now' })}
                 </Button>
@@ -477,6 +510,7 @@ export default function BrandRegister() {
                     onSuccess={async () => {
                       window.dataLayer = window.dataLayer || []
                       window.dataLayer.push({ event: 'sign_up', method: 'google' })
+                      const fingerprint = await getFingerprint()
                       if (fingerprint) {
                         try {
                           await apiClient.patch('/auth/device-fingerprint', { fingerprint })
