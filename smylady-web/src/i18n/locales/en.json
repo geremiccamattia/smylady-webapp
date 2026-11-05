@@ -429,7 +429,9 @@
     "payoutAfterReviewHint": "After the event the brand confirms your performance (or the period ends) – then we pay your fee to your Stripe payout account.",
     "payoutBlockedHint": "The payout waits for the decision on the brand's report (see performance review).",
     "payoutDecidedHint": "After the decision we pay {{amount}} to your Stripe payout account.",
-    "compensationAfterReview": "after performance review"
+    "compensationAfterReview": "after performance review",
+    "earningsWithheldBadge": "withheld",
+    "payoutWithheld": "Withheld"
   },
   "review": {
     "reasonNoShow": "Did not show up",
@@ -2123,7 +2125,15 @@
     "weeklyX": "Weekly · {{count}}x",
     "monthlyX": "Monthly · {{count}}x",
     "oneTime": "One-time",
-    "setup": "Set up"
+    "setup": "Set up",
+    "selectDate": "Please choose a date.",
+    "selectStartTime": "Please choose a start time.",
+    "selectPartyType": "Please choose the type of party.",
+    "selectCategory": "Please choose a category.",
+    "selectMusicType": "Please choose a music genre.",
+    "selectOfferings": "Please choose what is on offer.",
+    "enterEventName": "Please enter an event name.",
+    "enterDescription": "Please enter a description."
   },
   "editEvent": {
     "addImage": "Add image",

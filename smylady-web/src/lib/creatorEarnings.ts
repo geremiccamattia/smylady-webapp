@@ -19,6 +19,7 @@ import { VIENNA_TIME_ZONE } from '@/lib/eventSchedule'
 
 export interface EarningEntry {
   assignment: CreatorAssignment
+  /** Was dem Creator zusteht: die Vergütung, nach einer Entscheidung der entschiedene Betrag. */
   amount: number
   /** Datum, nach dem der Auftrag einem Monat zugeordnet wird. */
   date: Date | null
@@ -26,6 +27,8 @@ export interface EarningEntry {
   earned: boolean
   /** Die Vergütung ist beim Creator angekommen. */
   paid: boolean
+  /** Nach der Leistungsprüfung einbehalten — es kommt nichts mehr. */
+  withheld: boolean
 }
 
 export interface EarningsMonth {
@@ -84,9 +87,28 @@ export function countsAsEarning(assignment: CreatorAssignment): boolean {
   )
 }
 
-/** Was tatsächlich beim Creator angekommen ist — der vermerkte Betrag, sonst die Vergütung. */
-const paidAmount = (assignment: CreatorAssignment): number =>
-  assignment.payout?.amount ?? (assignment.compensation as number)
+/**
+ * Was dem Creator aus dem Auftrag zusteht: die Vergütung — oder, wenn
+ * Share Your Party nach einer Meldung entschieden hat, der entschiedene
+ * Betrag (gekürzt oder 0 bei „einbehalten"). Die ungekürzte Vergütung
+ * zählte sonst dauerhaft als „offen", obwohl sie nie kommt.
+ */
+export function earningAmount(assignment: Pick<CreatorAssignment, 'compensation' | 'review'>): number {
+  const review = assignment.review
+  if (review?.status === 'decided' && review.decision && review.decision.amount !== null) {
+    return review.decision.amount
+  }
+  return assignment.compensation ?? 0
+}
+
+/** Einbehalten: entschieden, und es bleibt nichts für den Creator. */
+export function isWithheld(assignment: Pick<CreatorAssignment, 'compensation' | 'review'>): boolean {
+  const review = assignment.review
+  return review?.status === 'decided' && Boolean(review.decision) && earningAmount(assignment) <= 0
+}
+
+/** Was tatsächlich beim Creator angekommen ist — der vermerkte Betrag, sonst der zustehende. */
+const paidAmount = (assignment: CreatorAssignment): number => assignment.payout?.amount ?? earningAmount(assignment)
 
 export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Date = new Date()): CreatorEarnings {
   const byMonth = new Map<string, EarningsMonth>()
@@ -105,7 +127,8 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
     // Vorbei ist das Event mit seinem Ende, sonst mit seinem Beginn.
     const earned =
       paid || (assignment.eventDate ? isEventOver(assignment.eventEndDate || null, assignment.eventDate) : false)
-    const amount = assignment.compensation as number
+    const amount = earningAmount(assignment)
+    const withheld = isWithheld(assignment)
     const key = date ? monthKey(date) : ''
 
     let month = byMonth.get(key)
@@ -122,7 +145,7 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
       byMonth.set(key, month)
     }
 
-    month.entries.push({ assignment, amount, date, earned, paid })
+    month.entries.push({ assignment, amount, date, earned, paid, withheld })
     month.total += amount
     if (earned) month.earned += amount
     else month.upcoming += amount

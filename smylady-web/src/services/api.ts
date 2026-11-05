@@ -39,6 +39,48 @@ const apiClient: AxiosInstance = axios.create({
   },
 })
 
+/**
+ * Seiten, die ohne Login funktionieren. Ein 401 einer Nebenanfrage (z.B.
+ * getCurrentUser mit abgelaufenem Token im localStorage) oder ein
+ * Socket-Auth-Fehler darf einen Gast dort NICHT auf /login werfen. Gilt für
+ * den REST-Interceptor unten und für socket.ts — eine Liste, nicht zwei.
+ */
+const PUBLIC_PATHS = [
+  // '/register' deckt auch /register/brand ab — die Markenregistrierung
+  // liegt genau deshalb dort und nicht unter einem eigenen Zweig.
+  // '/join' ist die Auswahlseite davor und muss für Gäste erreichbar
+  // bleiben, sonst wirft eine beliebige 401-Nebenanfrage sie auf /login.
+  '/explore', '/login', '/register', '/join', '/event/', '/user/', '/feed', '/post/',
+  // '/influencer' bleibt zusaetzlich drin, solange die 308-Weiterleitungen
+  // in next.config.ts auf die alten URLs zeigen (Instagram, Mails, Google).
+  // '/creator-' mit Bindestrich, NICHT '/creator': Sonst gälte per
+  // startsWith auch /creator/apply als öffentlich, und ein Gast bliebe
+  // dort auf einer Seite stehen, die ohne Token nichts laden kann.
+  // Gemeint sind die Landingpages /creator-club und /creator-events.
+  '/creator-', '/influencer', '/api', '/communities',
+  // Scan-Zugang für Personal ohne Konto. Muss hier stehen, sonst wirft eine
+  // beliebige 401-Nebenanfrage das Einlasspersonal auf /login — wo es sich
+  // mangels Konto nicht anmelden könnte. Mit Schrägstrich, damit /settings,
+  // /stories und /subscribers nicht mitmatchen.
+  '/s/',
+  // Die Vorschau einer Brand-Einladung braucht keinen Login. Nur dieser
+  // Pfad: /brand und /brand/team bleiben geschützt.
+  '/brand/invite',
+  // Die Seite nach dem Scan des QR-Codes am Event (Rabattcode) — ohne
+  // Login. Mit Schrägstrich, damit nur /qr/<token> matcht. Sonst wirft
+  // ein abgelaufener Token im localStorage den Gast vom Rabattcode auf /login.
+  '/qr/',
+]
+
+/** Ist dieser Pfad (mit oder ohne /en- bzw. /de-Präfix) ohne Login erreichbar? */
+export function isPublicPath(pathname: string): boolean {
+  // Locale-Prefix abschneiden, sonst gilt /en/explore nicht als public und ein 401
+  // einer Nebenanfrage wirft den Besucher von einer öffentlichen Seite auf /login.
+  // Lookahead, damit nur ein echtes Segment matcht (/en/... oder /en), nicht /events.
+  const pathWithoutLocale = pathname.replace(/^\/(en|de)(?=\/|$)/, '') || '/'
+  return pathWithoutLocale === '/' || PUBLIC_PATHS.some((path) => pathWithoutLocale.startsWith(path))
+}
+
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -83,37 +125,7 @@ apiClient.interceptors.response.use(
       }
       // Redirect-Logik bleibt bewusst UNABHÄNGIG von hadAuthHeader: ein Gast auf
       // einer geschützten (nicht-öffentlichen) Seite soll weiterhin zu /login.
-      const publicPaths = [
-        // '/register' deckt auch /register/brand ab — die Markenregistrierung
-        // liegt genau deshalb dort und nicht unter einem eigenen Zweig.
-        // '/join' ist die Auswahlseite davor und muss für Gäste erreichbar
-        // bleiben, sonst wirft eine beliebige 401-Nebenanfrage sie auf /login.
-        '/explore', '/login', '/register', '/join', '/event/', '/user/', '/feed', '/post/',
-        // '/influencer' bleibt zusaetzlich drin, solange die 308-Weiterleitungen
-        // in next.config.ts auf die alten URLs zeigen (Instagram, Mails, Google).
-        // '/creator-' mit Bindestrich, NICHT '/creator': Sonst gälte per
-        // startsWith auch /creator/apply als öffentlich, und ein Gast bliebe
-        // dort auf einer Seite stehen, die ohne Token nichts laden kann.
-        // Gemeint sind die Landingpages /creator-club und /creator-events.
-        '/creator-', '/influencer', '/api', '/communities',
-        // Scan-Zugang für Personal ohne Konto. Muss hier stehen, sonst wirft eine
-        // beliebige 401-Nebenanfrage (z.B. getCurrentUser mit abgelaufenem Token
-        // im localStorage) das Einlasspersonal auf /login — wo es sich mangels
-        // Konto nicht anmelden könnte. Mit Schrägstrich, damit /settings,
-        // /stories und /subscribers nicht mitmatchen.
-        '/s/',
-        // Die Vorschau einer Brand-Einladung braucht keinen Login. Nur dieser
-        // Pfad: /brand und /brand/team bleiben geschützt.
-        '/brand/invite',
-      ]
-      // Locale-Prefix abschneiden, sonst gilt /en/explore nicht als public und ein 401
-      // einer Nebenanfrage wirft den Besucher von einer öffentlichen Seite auf /login.
-      // Lookahead, damit nur ein echtes Segment matcht (/en/... oder /en), nicht /events.
-      const pathWithoutLocale = window.location.pathname.replace(/^\/(en|de)(?=\/|$)/, '') || '/'
-      const isPublicPath =
-        pathWithoutLocale === '/' ||
-        publicPaths.some(path => pathWithoutLocale.startsWith(path))
-      if (!isPublicPath) {
+      if (!isPublicPath(window.location.pathname)) {
         // Sprache beim Redirect halten — sonst landen EN-Nutzer auf der deutschen Seite
         const localePrefix = /^\/en(?=\/|$)/.test(window.location.pathname) ? '/en' : ''
         // Rücksprung auf die aktuelle Seite samt Query (?next=): Eine Brand,

@@ -15,6 +15,7 @@ import { useCreatorProfile, type CreatorProfileStanding } from '@/hooks/useCreat
 import { LoadingBars, StatusPanel } from '@/components/brand/brandShared'
 import { CATEGORY_OPTIONS, FOLLOWER_OPTIONS, OTHER_PLATFORMS } from '@/components/creator/CreatorApplicationForm'
 import { isPaidOut, type AssignmentPhase, type AssignmentResponse, type CreatorAssignment, type CreatorProfileStatus } from '@/services/creator'
+import { isWithheld } from '@/lib/creatorEarnings'
 import { formatDate } from '@/lib/utils'
 
 /** Gemeinsame Bausteine der Creator-Seiten: Zugangsprüfung, Badges, Beschriftungen. */
@@ -147,11 +148,18 @@ export function PhaseBadge({
 export function PayoutBadge({
   assignment,
 }: {
-  assignment: Pick<CreatorAssignment, 'payout' | 'phase' | 'response' | 'eventDate' | 'eventEndDate' | 'orderStatus' | 'cancelledAt'>
+  assignment: Pick<
+    CreatorAssignment,
+    'payout' | 'phase' | 'response' | 'eventDate' | 'eventEndDate' | 'orderStatus' | 'cancelledAt' | 'compensation' | 'review'
+  >
 }) {
   const { t } = useTranslation()
   if (assignment.phase !== 'booked' || assignment.response !== 'accepted') return null
   if (assignment.cancelledAt || assignment.orderStatus === 'cancelled') return null
+  // Einbehalten: Es kommt keine Auszahlung mehr — „Auszahlung offen" wäre falsch.
+  if (!isPaidOut(assignment) && isWithheld(assignment)) {
+    return <Badge variant="secondary">{t('creatorDashboard.payoutWithheld', { defaultValue: 'Einbehalten' })}</Badge>
+  }
   if (isPaidOut(assignment)) {
     return (
       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">

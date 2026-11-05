@@ -11,6 +11,7 @@ import BulkUpload from '@/views/BulkUpload'
 import { Button } from '@/components/ui/button'
 import { useBrandProfile } from '@/hooks/useBrandProfile'
 import { useLocalePath } from '@/hooks/useLocalePath'
+import { formatDate } from '@/lib/utils'
 import { brandService, canCreateCreatorEvent, type BrandOrder } from '@/services/brand'
 
 type Choice = null | 'single' | 'bulk' | 'creator'
@@ -31,7 +32,7 @@ function CreateEventChooserContent() {
   const orderFromUrl = searchParams.get('brandOrder')
   const [choice, setChoice] = useState<Choice>(orderFromUrl ? 'creator' : null)
   const [orderId, setOrderId] = useState<string | null>(orderFromUrl)
-  const { standing, role } = useBrandProfile()
+  const { standing, role, isLoading: brandLoading } = useBrandProfile()
   const isBrand = standing === 'active' || standing === 'pending'
   const isBrandOwner = isBrand && role === 'owner'
 
@@ -39,12 +40,18 @@ function CreateEventChooserContent() {
     queryKey: ['brand', 'orders'],
     queryFn: () => brandService.getMyOrders(),
     enabled: choice === 'creator' && isBrandOwner,
+    retry: false,
   })
 
   const orderQuery = useQuery<BrandOrder>({
     queryKey: ['brand', 'order', orderId],
     queryFn: () => brandService.getMyOrder(orderId as string),
-    enabled: choice === 'creator' && Boolean(orderId),
+    // Nur der Inhaber darf das Event anlegen (order.createEvent). Ein
+    // Mitglied bekäme sonst das ganze Formular und erst beim Absenden 403.
+    enabled: choice === 'creator' && Boolean(orderId) && isBrandOwner,
+    // 403/404 sind endgültig — drei Wiederholungen hielten die Seite ~7 s
+    // im Ladezustand.
+    retry: false,
   })
 
   if (choice === 'bulk') {
@@ -54,11 +61,33 @@ function CreateEventChooserContent() {
     return <CreateEvent />
   }
 
+  const spinner = (
+    <div className="flex justify-center py-16">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  )
+  const ownerOnlyHint = (
+    <p className="text-sm text-muted-foreground">
+      {t('creatorEvent.ownerOnly', {
+        defaultValue: 'Creator-Events legt der Inhaber einer Brand zu einem Brand-Auftrag an.',
+      })}
+    </p>
+  )
+
   if (choice === 'creator' && orderId) {
-    if (orderQuery.isLoading) {
+    // Erst wissen, wer da ist: Sonst sähe der Inhaber für einen Moment den
+    // Hinweis „nur der Inhaber“, solange das Brand-Profil noch lädt.
+    if (brandLoading || (isBrandOwner && orderQuery.isLoading)) {
+      return spinner
+    }
+    if (!isBrandOwner) {
       return (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="max-w-2xl mx-auto px-4 py-12 space-y-4">
+          <h1 className="text-2xl font-bold">{t('creatorEvent.title', { defaultValue: 'Creator-Event anlegen' })}</h1>
+          {ownerOnlyHint}
+          <Link href={localePath(`/brand/orders/${orderId}`)}>
+            <Button variant="outline">{t('creatorEvent.toOrder', { defaultValue: 'Zum Auftrag' })}</Button>
+          </Link>
         </div>
       )
     }
@@ -107,12 +136,10 @@ function CreateEventChooserContent() {
             })}
           </p>
         </div>
-        {!isBrandOwner ? (
-          <p className="text-sm text-muted-foreground">
-            {t('creatorEvent.ownerOnly', {
-              defaultValue: 'Creator-Events legt der Inhaber einer Brand zu einem Brand-Auftrag an.',
-            })}
-          </p>
+        {brandLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        ) : !isBrandOwner ? (
+          ownerOnlyHint
         ) : ordersQuery.isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         ) : orders.length === 0 ? (
@@ -137,7 +164,7 @@ function CreateEventChooserContent() {
               >
                 <p className="font-semibold">{order.title}</p>
                 <p className="text-sm text-muted-foreground">
-                  {[order.eventName, order.eventDate ? new Date(order.eventDate).toLocaleDateString('de-AT', { timeZone: 'Europe/Vienna' }) : '', order.eventLocation]
+                  {[order.eventName, order.eventDate ? formatDate(order.eventDate) : '', order.eventLocation]
                     .filter(Boolean)
                     .join(' · ')}
                 </p>

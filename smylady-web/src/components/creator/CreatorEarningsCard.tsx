@@ -133,6 +133,10 @@ export function CreatorEarningsCard({ assignments }: { assignments: CreatorAssig
                               <Badge className="bg-green-100 text-green-800 hover:bg-green-100 font-normal shrink-0">
                                 {t('creatorDashboard.earningsPaidBadge', { defaultValue: 'ausgezahlt' })}
                               </Badge>
+                            ) : entry.withheld ? (
+                              <Badge variant="secondary" className="font-normal shrink-0">
+                                {t('creatorDashboard.earningsWithheldBadge', { defaultValue: 'einbehalten' })}
+                              </Badge>
                             ) : entry.earned ? (
                               <Badge variant="outline" className="font-normal shrink-0">
                                 {t('creatorDashboard.earningsOpenBadge', { defaultValue: 'offen' })}

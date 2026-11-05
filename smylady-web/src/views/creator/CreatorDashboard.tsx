@@ -17,6 +17,7 @@ import { creatorAreaService, isPaidOut, isResponseOverdue, readCreatorError, typ
 import { formatDate, formatDateTime, formatPrice, isEventOver } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
 import { CreatorEarningsCard } from '@/components/creator/CreatorEarningsCard'
+import { earningAmount } from '@/lib/creatorEarnings'
 import {
   CreatorGate,
   CreatorStatusBadge,
@@ -313,14 +314,23 @@ function DashboardContent() {
                     </div>
                     {entry.compensation !== null && (
                       <div className="text-right text-sm shrink-0">
-                        {/* Abgelehnt: Betrag bleibt sichtbar, zählt aber nicht zu den Einnahmen. */}
-                        <div
-                          className={
-                            entry.response === 'declined' ? 'font-medium line-through text-muted-foreground' : 'font-medium'
-                          }
-                        >
-                          {formatPrice(entry.compensation)}
-                        </div>
+                        {/* Abgelehnt: Betrag bleibt sichtbar, zählt aber nicht zu den Einnahmen.
+                            Nach einer Entscheidung der Leistungsprüfung: der entschiedene
+                            Betrag, die ursprüngliche Vergütung durchgestrichen. */}
+                        {earningAmount(entry) !== entry.compensation ? (
+                          <div className="font-medium">
+                            <span className="line-through text-muted-foreground mr-1">{formatPrice(entry.compensation)}</span>
+                            {formatPrice(earningAmount(entry))}
+                          </div>
+                        ) : (
+                          <div
+                            className={
+                              entry.response === 'declined' ? 'font-medium line-through text-muted-foreground' : 'font-medium'
+                            }
+                          >
+                            {formatPrice(entry.compensation)}
+                          </div>
+                        )}
                         <div className="text-xs text-muted-foreground">
                           {t('creatorDashboard.compensation', { defaultValue: 'Vergütung' })}
                         </div>

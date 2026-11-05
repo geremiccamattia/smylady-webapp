@@ -241,7 +241,12 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
       setEventEndTimeValue(end.time)
     }
     if (brandOrder.eventLocation) {
-      prefilledLocationRef.current = brandOrder.eventLocation
+      // Mit Koordinaten ist der Ort gesetzt, die Suche bleibt still. Ohne
+      // Koordinaten (frei getippte Adresse im Auftrag) zeigt das Feld den
+      // Text, der Ort ist aber noch nicht gewählt — dann läuft die Suche
+      // an, damit die Brand einen Vorschlag auswählen kann, statt an
+      // „Ort angeben“ zu scheitern, obwohl das Feld ausgefüllt aussieht.
+      prefilledLocationRef.current = brandOrder.eventCoordinates ? brandOrder.eventLocation : ''
       setLocationQuery(brandOrder.eventLocation)
     }
   }, [brandOrder])
@@ -805,16 +810,18 @@ function CreateEventContent({ brandOrder }: { brandOrder?: BrandOrder }) {
       if (brandOrder) {
         // Genau ein Event je Auftrag: keine Serie.
         await brandService.createEventForOrder(brandOrder.id, eventFormData)
-        // Auftrag, Liste und Event neu laden: Die Auftragsseite zeigt sonst noch
-        // „Event anlegen“ aus dem Zwischenspeicher.
-        await queryClient.invalidateQueries({ queryKey: ['brand'] })
         toast({
           title: t('creatorEvent.created', { defaultValue: 'Creator-Event angelegt' }),
           description: t('creatorEvent.createdDesc', {
             defaultValue: 'Es ist mit deinem Auftrag verknüpft. Wir prüfen es und schalten es frei.',
           }),
         })
+        // Erst weg von hier, dann Auftrag, Liste und Event neu laden: Die
+        // Auftragsseite zeigt sonst noch „Event anlegen“ aus dem
+        // Zwischenspeicher. Nicht abwarten — ein abgewarteter Refetch liess
+        // den Chooser vor der Navigation „schon angelegt“ einblenden.
         router.push(localePath(`/brand/orders/${brandOrder.id}`))
+        void queryClient.invalidateQueries({ queryKey: ['brand'] })
         return
       }
 

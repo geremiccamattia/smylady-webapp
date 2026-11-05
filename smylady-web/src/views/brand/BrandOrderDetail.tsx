@@ -843,8 +843,9 @@ function OrderDetail() {
       />
 
       {/* Noch kein Event: die Brand legt es selbst an (Creator-Event, bis zur
-          Zahlung). */}
-      {canCreateCreatorEvent(order) && (
+          Zahlung). Steht der Hinweis schon in der Angebotskarte („Lege zuerst
+          das Event an“), entfällt die zweite Karte mit demselben Knopf. */}
+      {canCreateCreatorEvent(order) && !(payable && isOwner && eventMissing) && (
         <Card className={isOwner ? 'border-amber-200 bg-amber-50/40' : undefined}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

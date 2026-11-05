@@ -3,6 +3,7 @@
 import { io, Socket } from 'socket.io-client'
 import { STORAGE_KEYS } from '@/lib/constants'
 import { replaceWithPath } from '@/lib/navigation'
+import { isPublicPath } from '@/services/api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app.shareyourparty.de'
 // Backend WebSocket Gateway uses namespace '/chat' - must append it to the URL
@@ -189,8 +190,13 @@ class SocketManager {
         this.disconnect()
         localStorage.removeItem(STORAGE_KEYS.TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER)
-        const localePrefix = /^\/en(?=\/|$)/.test(window.location.pathname) ? '/en' : ''
-        replaceWithPath(`${localePrefix}/login`)
+        // Auf öffentlichen Seiten (QR-Rabattcode, Scan-Zugang, Eventseite …)
+        // bleibt der Gast, wo er ist — wie beim REST-401. Sonst mit
+        // Rücksprung, damit die Seite nach dem Login wieder da ist.
+        const { pathname, search } = window.location
+        if (isPublicPath(pathname)) return
+        const localePrefix = /^\/en(?=\/|$)/.test(pathname) ? '/en' : ''
+        replaceWithPath(`${localePrefix}/login?next=${encodeURIComponent(pathname + search)}`)
         return
       }
 
