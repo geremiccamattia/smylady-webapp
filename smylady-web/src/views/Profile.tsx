@@ -17,6 +17,7 @@ import { authService } from '@/services/auth'
 import { userService } from '@/services/user'
 import { ImageViewer } from '@/components/ImageViewer'
 import InviteButton from '@/components/InviteButton'
+import { PromoCodeCard } from '@/components/promo/PromoCodeCard'
 import {
   User,
   Mail,
@@ -787,6 +788,9 @@ export default function Profile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Rabattcode für den QR-Code auf den eigenen Events */}
+      <PromoCodeCard />
 
       {/* Logout */}
       <Card className="border-destructive/50">

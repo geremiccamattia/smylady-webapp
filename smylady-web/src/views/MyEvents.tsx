@@ -5,13 +5,16 @@ import { useQuery } from '@tanstack/react-query'
 import { eventsService } from '@/services/events'
 import EventCard from '@/components/events/EventCard'
 import BoostModal from '@/components/events/BoostModal'
+import { EventQrDialog } from '@/components/promo/EventQrDialog'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, PartyPopper, Zap } from 'lucide-react'
+import { Plus, PartyPopper, QrCode, Zap } from 'lucide-react'
 import { Event } from '@/types'
 import { isEventOver } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 export default function MyEvents() {
+  const { t } = useTranslation()
   const { data: events, isLoading } = useQuery({
     queryKey: ['events', 'my-events'],
     queryFn: () => eventsService.getMyEvents(),
@@ -27,6 +30,8 @@ export default function MyEvents() {
     boostRadius?: number
     boostImpressions?: number
   } | null>(null)
+  // QR-Code zum Aufhängen: nur für freigegebene Events
+  const [qrTarget, setQrTarget] = useState<{ id: string; name: string } | null>(null)
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -58,6 +63,17 @@ export default function MyEvents() {
             return (
               <div key={eventId} className="flex flex-col gap-2">
                 <EventCard event={event} />
+                {event.status === 'Approved' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setQrTarget({ id: eventId, name: event.name })}
+                  >
+                    <QrCode className="h-3.5 w-3.5" />
+                    {t('promo.qrButton', { defaultValue: 'QR-Code zum Aufhängen' })}
+                  </Button>
+                )}
                 {!isEventOver(event.eventEndTime, event.eventStartTime || event.eventDate) && (
                   <Button
                     variant={event.boostStatus === 'active' ? 'outline' : 'ghost'}
@@ -96,6 +112,15 @@ export default function MyEvents() {
             </Button>
           </Link>
         </div>
+      )}
+
+      {qrTarget && (
+        <EventQrDialog
+          eventId={qrTarget.id}
+          eventName={qrTarget.name}
+          open={true}
+          onClose={() => setQrTarget(null)}
+        />
       )}
 
       {boostTarget && (
