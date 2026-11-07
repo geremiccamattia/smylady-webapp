@@ -203,6 +203,9 @@ function OrderDetail() {
   // Nach dem Klick auf „bezahlen" bleibt der Knopf im Ladezustand, bis die
   // Seite zu Stripe wechselt — sonst klickt jemand zweimal.
   const [redirecting, setRedirecting] = useState(false)
+  // Häkchen „Ich buche im Rahmen meiner unternehmerischen Tätigkeit." am
+  // Bezahlknopf — ohne kein Checkout (das Backend prüft es ebenfalls).
+  const [businessConfirmed, setBusinessConfirmed] = useState(false)
   // Zurück aus dem Checkout: 'success' lässt die Seite nachfragen, bis die
   // Zahlung angekommen ist.
   const [returnState, setReturnState] = useState<'success' | 'cancelled' | null>(null)
@@ -390,9 +393,19 @@ function OrderDetail() {
   // Annehmen und bezahlen in einem Schritt: Das Backend legt die
   // Stripe-Session an, die Brand wechselt zur Bezahlseite. Zurück geht es
   // auf diese Seite (returnPath, sprachabhängig).
+  // Der Wortlaut, den die Brand neben dem Häkchen liest, geht genau so mit:
+  // Das Backend speichert ihn am Auftrag (und kennt beide Fassungen).
+  const businessConfirmationText = t('brandDashboard.businessConfirmation', {
+    defaultValue: 'Ich buche im Rahmen meiner unternehmerischen Tätigkeit.',
+  })
   const checkout = useMutation({
     mutationFn: () =>
-      brandService.startCheckout(id, localePath(`/brand/orders/${id}`), i18n.language === 'en' ? 'en' : 'de'),
+      brandService.startCheckout(
+        id,
+        localePath(`/brand/orders/${id}`),
+        i18n.language === 'en' ? 'en' : 'de',
+        businessConfirmationText,
+      ),
     onSuccess: ({ url }) => {
       setRedirecting(true)
       if (!navigateToExternalUrl(url, STRIPE_HOSTS)) {
@@ -781,8 +794,31 @@ function OrderDetail() {
 
             {canPay && (
               <div className="pt-2">
+                <label className="mb-3 flex items-start gap-3 rounded-md border bg-background p-3 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    checked={businessConfirmed}
+                    disabled={busy}
+                    onChange={(e) => setBusinessConfirmed(e.target.checked)}
+                  />
+                  <span>{businessConfirmationText}</span>
+                </label>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="gradient" className="gap-2" loading={checkout.isPending || redirecting} disabled={busy} onClick={() => checkout.mutate()}>
+                  <Button
+                    variant="gradient"
+                    className="gap-2"
+                    loading={checkout.isPending || redirecting}
+                    disabled={busy || !businessConfirmed}
+                    title={
+                      businessConfirmed
+                        ? undefined
+                        : t('brandDashboard.businessConfirmationRequired', {
+                            defaultValue: 'Bitte bestätige zuerst, dass du im Rahmen deiner unternehmerischen Tätigkeit buchst.',
+                          })
+                    }
+                    onClick={() => checkout.mutate()}
+                  >
                     <CreditCard className="h-4 w-4" />
                     {payLabel}
                   </Button>

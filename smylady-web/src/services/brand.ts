@@ -801,15 +801,30 @@ export const brandService = {
    * danach auf 'awaiting_payment'; bestätigt wird er mit dem Zahlungseingang.
    * `returnPath` ist der (sprachabhängige) Pfad dieses Auftrags, auf den
    * Stripe zurückleitet. Nur aus 'offer_sent'/'awaiting_payment'; sonst 409.
+   *
+   * `businessConfirmationText` ist der Wortlaut, dem die Brand mit dem
+   * Häkchen zugestimmt hat („Ich buche im Rahmen meiner unternehmerischen
+   * Tätigkeit."). Das Backend speichert ihn mit Zeitpunkt am Auftrag und nimmt
+   * nur Texte an, die es kennt — ohne Bestätigung kein Checkout (400).
    */
-  async startCheckout(id: string, returnPath: string, locale: 'de' | 'en'): Promise<CheckoutStart> {
+  async startCheckout(
+    id: string,
+    returnPath: string,
+    locale: 'de' | 'en',
+    businessConfirmationText: string,
+  ): Promise<CheckoutStart> {
     // Die eigene Origin mitschicken (Vercel-Preview beim Testen); das Backend
     // übernimmt sie nur, wenn sie auf seiner Allowlist steht. Nur HTTPS: Eine
     // http://localhost-Origin wiese das Backend ohnehin ab, und Stripe leitet
     // nicht auf unverschlüsselte Seiten zurück.
     const returnOrigin =
       typeof window !== 'undefined' && window.location.protocol === 'https:' ? window.location.origin : undefined
-    const response = await apiClient.post(`/brand-orders/${id}/checkout`, { returnPath, locale, returnOrigin })
+    const response = await apiClient.post(`/brand-orders/${id}/checkout`, {
+      returnPath,
+      locale,
+      returnOrigin,
+      businessConfirmation: { accepted: true, text: businessConfirmationText },
+    })
     const data = unwrap(response) ?? {}
     return { url: str(data.url), sessionId: str(data.sessionId), expiresAt: str(data.expiresAt) }
   },
