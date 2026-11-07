@@ -112,6 +112,7 @@
     "invalidCode": "Invalid code",
     "invalidEmail": "Invalid email",
     "loginFailed": "Login failed",
+    "loginUnexpected": "Something went wrong while signing in. Please try again.",
     "loginSuccess": "Successfully logged in",
     "loginToDiscover": "Log in to discover events",
     "newPassword": "New password",

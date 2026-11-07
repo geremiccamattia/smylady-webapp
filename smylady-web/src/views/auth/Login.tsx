@@ -435,11 +435,19 @@ export default function Login() {
       // anderen wie bisher auf /explore (siehe lib/postLogin.ts). Meist hat
       // der Effekt oben schon navigiert, dann ist das hier ein No-op.
       await goAfterLogin()
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Nur eine Antwort des Backends ist eine abgelehnte Anmeldung. Alles
+      // andere (Fehler im Client, keine Verbindung) liegt nicht an den Zugangsdaten.
+      const rejected = axios.isAxiosError(error) && Boolean(error.response)
+      if (!rejected) console.error('Unerwarteter Fehler bei der Anmeldung:', error)
       toast({
         variant: 'destructive',
         title: t('auth.loginFailed'),
-        description: error.response?.data?.message || t('auth.checkCredentials'),
+        description: rejected
+          ? (error.response?.data as { message?: string } | undefined)?.message || t('auth.checkCredentials')
+          : t('auth.loginUnexpected', {
+              defaultValue: 'Bei der Anmeldung ist etwas schiefgelaufen. Bitte versuche es erneut.',
+            }),
       })
     } finally {
       setIsLoading(false)

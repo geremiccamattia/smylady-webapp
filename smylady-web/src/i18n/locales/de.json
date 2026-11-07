@@ -127,6 +127,7 @@
     "invalidCode": "Ungültiger Code",
     "invalidEmail": "Ungültige E-Mail",
     "loginFailed": "Anmeldung fehlgeschlagen",
+    "loginUnexpected": "Bei der Anmeldung ist etwas schiefgelaufen. Bitte versuche es erneut.",
     "loginSuccess": "Erfolgreich angemeldet",
     "loginToDiscover": "Melde dich an, um Events zu entdecken",
     "newPassword": "Neues Passwort",

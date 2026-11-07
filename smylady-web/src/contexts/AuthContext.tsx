@@ -5,12 +5,11 @@ import { User } from '@/types'
 import { authService } from '@/services/auth'
 import { STORAGE_KEYS } from '@/lib/constants'
 import { navigateToPath } from '@/lib/navigation'
+import { toLoginSession, type LoginResponseLike } from '@/lib/loginResponse'
 
 interface LoginWithCredentials {
   (email: string, password: string): Promise<void>
 }
-
-type LoginResponseLike = { token: string; user: User; termsUpToDate?: boolean; needsDateOfBirth?: boolean }
 
 interface LoginWithResponse {
   (response: LoginResponseLike): Promise<void>
@@ -42,19 +41,6 @@ function persistUser(u: User | null | undefined): void {
   if (!u) return
   const minimal: StoredUser = { id: u.id, _id: u._id, role: u.role, name: u.name }
   localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(minimal))
-}
-
-/*
- * Die Login-Antwort trägt termsUpToDate/needsDateOfBirth teils neben `user`
- * statt darin. Damit die Pflichtdialoge (AccountGate) auch dann sofort
- * greifen, wenn /users/me danach scheitert, hier in den User übernehmen.
- */
-function withLoginFlags(u: User, flags: { termsUpToDate?: boolean; needsDateOfBirth?: boolean }): User {
-  return {
-    ...u,
-    termsUpToDate: u.termsUpToDate ?? flags.termsUpToDate,
-    needsDateOfBirth: u.needsDateOfBirth ?? flags.needsDateOfBirth,
-  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -132,20 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emailOrUsernameOrResponse: string | LoginResponseLike,
     password?: string,
   ): Promise<void> => {
-    let authToken: string
-    let authUser: User
-
-    if (typeof emailOrUsernameOrResponse === 'object') {
-      // Direct login with auth response (from OTP verification / social login)
-      const response = emailOrUsernameOrResponse
-      authToken = response.token
-      authUser = withLoginFlags(response.user, response)
-    } else {
-      // Login with credentials
-      const response = await authService.login({ emailOrUsername: emailOrUsernameOrResponse, password: password! })
-      authToken = response.token
-      authUser = withLoginFlags(response.user, response)
-    }
+    // Direkt mit der Antwort (OTP, Social-Login) oder mit Zugangsdaten.
+    // Flache und verschachtelte Antwort gelten beide, siehe lib/loginResponse.ts.
+    const response =
+      typeof emailOrUsernameOrResponse === 'object'
+        ? emailOrUsernameOrResponse
+        : await authService.login({ emailOrUsername: emailOrUsernameOrResponse, password: password! })
+    const { token: authToken, user: authUser } = toLoginSession(response)
 
     // Set token and initial user data immediately so UI updates right away
     setToken(authToken)
