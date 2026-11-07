@@ -703,6 +703,8 @@
     "offerTitle": "Unser Angebot",
     "offerSentAt": "vom",
     "acceptAndPay": "Angebot annehmen und bezahlen",
+    "businessConfirmation": "Ich buche im Rahmen meiner unternehmerischen Tätigkeit.",
+    "businessConfirmationRequired": "Bitte bestätige zuerst, dass du im Rahmen deiner unternehmerischen Tätigkeit buchst.",
     "continuePayment": "Zahlung fortsetzen",
     "retryPayment": "Zahlung erneut versuchen",
     "checkoutHint": "Du wirst zu Stripe weitergeleitet: Karte, SEPA-Lastschrift oder Überweisung. Die Rechnung bekommst du per E-Mail. Mit dem Zahlungseingang sind die Creator verbindlich gebucht und dein Event ist angelegt.",

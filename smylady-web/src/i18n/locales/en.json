@@ -690,6 +690,8 @@
     "offerTitle": "Our offer",
     "offerSentAt": "from",
     "acceptAndPay": "Accept offer and pay",
+    "businessConfirmation": "I am making this booking in the course of my business activity.",
+    "businessConfirmationRequired": "Please confirm first that you are booking in the course of your business activity.",
     "continuePayment": "Continue payment",
     "retryPayment": "Retry payment",
     "checkoutHint": "You will be redirected to Stripe: card, SEPA direct debit or bank transfer. You receive the invoice by email. Once the payment has arrived, the creators are booked bindingly and your event is created.",
