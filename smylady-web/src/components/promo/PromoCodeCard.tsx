@@ -13,9 +13,10 @@ import { useToast } from '@/hooks/use-toast'
 import { PROMO_CODE_QUERY_KEY, PROMO_LIMITS, promoService, readPromoError, type PromoCode } from '@/services/promo'
 
 /**
- * „Rabattcode für deine Events“ im Profil: ein Code für alle eigenen Events.
- * Wer den QR-Code auf dem Event scannt, sieht ihn ohne Anmeldung. Eigenes
- * Speichern (PUT /promo/me), unabhängig vom Profilformular.
+ * „Rabattcode für deine Events“ im Profil: der Standardwert für alle eigenen
+ * Events ohne eigenen Code (den legt der QR-Dialog unter „Erstellte Events“
+ * fest). Wer den QR-Code scannt, sieht ihn ohne Anmeldung. Eigenes Speichern
+ * (PUT /promo/me), unabhängig vom Profilformular.
  */
 export function PromoCodeCard() {
   const { t } = useTranslation()
@@ -69,7 +70,7 @@ export function PromoCodeCard() {
         <p className="text-sm text-muted-foreground">
           {t('promo.cardDesc', {
             defaultValue:
-              'Gäste sehen diesen Code, wenn sie den QR-Code auf deinem Event scannen – ohne Anmeldung. Ohne Rabattcode führt der QR-Code zur Eventseite.',
+              'Standardwert für deine Events ohne eigenen Rabattcode: Gäste sehen ihn, wenn sie den QR-Code auf dem Event scannen – ohne Anmeldung. Einen eigenen Code pro Event legst du unter „Erstellte Events“ beim QR-Code fest.',
           })}
         </p>
         {query.isError ? (

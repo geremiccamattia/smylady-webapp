@@ -3,10 +3,11 @@
 /**
  * QR-Code zum Aufhängen auf dem Event und Rabattcode des Veranstalters.
  *
- * Der Veranstalter hinterlegt im Profil einen Rabattcode (nur Anzeige, kein
- * Rabatt im Ticketkauf). Jedes freigegebene Event hat einen QR-Code, der zu
- * /qr/<token> führt: ohne Login, mit Event und Rabattcode. Ohne Rabattcode
- * zeigt die Seite nur das Event. Das druckfertige PDF kommt vom Backend über
+ * Der Rabattcode gilt pro Event (nur Anzeige, kein Rabatt im Ticketkauf).
+ * Hat ein Event keinen eigenen, gilt der aus dem Profil des Veranstalters.
+ * Jedes freigegebene Event hat einen QR-Code, der zu /qr/<token> führt: ohne
+ * Login, mit Event und Rabattcode. Ohne Rabattcode zeigt die Seite nur das
+ * Event. Das druckfertige PDF kommt vom Backend über
  * einen kurzlebigen Link (wie die Belege, siehe billing.ts).
  */
 
@@ -23,6 +24,9 @@ export interface PromoCode {
   promoText: string
 }
 
+/** Woher der Rabattcode eines Events kommt; null ohne jeden Code. */
+export type PromoSource = 'event' | 'profile' | null
+
 export interface EventQrState {
   eventId: string
   status: string
@@ -31,6 +35,10 @@ export interface EventQrState {
   token: string | null
   url: string | null
   hasPromoCode: boolean
+  /** Der Code, der nach dem Scan erscheint: der des Events, sonst der aus dem Profil. */
+  promoCode: string
+  promoText: string
+  promoSource: PromoSource
 }
 
 export interface PromoPosterLink {
@@ -69,6 +77,11 @@ export const promoService = {
 
   async getEventQr(eventId: string): Promise<EventQrState> {
     return unwrap<EventQrState>(await apiClient.get(`/promo/events/${encodeURIComponent(eventId)}`))
+  },
+
+  /** Ein leerer Code entfernt den des Events; dann gilt wieder der aus dem Profil. */
+  async updateEventPromo(eventId: string, input: PromoCode): Promise<EventQrState> {
+    return unwrap<EventQrState>(await apiClient.put(`/promo/events/${encodeURIComponent(eventId)}`, input))
   },
 
   async getPosterLink(eventId: string): Promise<PromoPosterLink> {

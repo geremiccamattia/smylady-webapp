@@ -1,23 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import QRCode from 'react-qr-code'
 import { Check, Copy, Loader2, Printer, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
-import { useLocalePath } from '@/hooks/useLocalePath'
 import { isSafeBillingDownloadUrl } from '@/services/billing'
-import { eventQrKey, promoService, readPromoError, type EventQrState } from '@/services/promo'
+import {
+  eventQrKey,
+  PROMO_LIMITS,
+  promoService,
+  readPromoError,
+  type EventQrState,
+  type PromoCode,
+} from '@/services/promo'
 
 /**
  * QR-Code eines freigegebenen Events: Vorschau, Link kopieren und das
  * druckfertige PDF (A4) vom Backend. Der Tab wird noch im Klick geöffnet und
  * erst nach der Antwort auf das PDF gesetzt (Popup-Blocker, wie bei den
- * Belegen).
+ * Belegen). Darunter der Rabattcode dieses Events — auch schon vor der
+ * Freigabe, damit er beim ersten Aushang feststeht.
  */
 export function EventQrDialog({
   eventId,
@@ -32,7 +41,6 @@ export function EventQrDialog({
 }) {
   const { t } = useTranslation()
   const { toast } = useToast()
-  const localePath = useLocalePath()
   const [opening, setOpening] = useState(false)
   const [copied, setCopied] = useState(false)
   const query = useQuery<EventQrState>({
@@ -81,9 +89,14 @@ export function EventQrDialog({
     }
   }
 
+  // Neu aufsetzen, sobald der gespeicherte Stand sich ändert (nach dem Speichern).
+  const promoForm = qr && (
+    <EventPromoForm key={`${qr.promoSource}:${qr.promoCode}:${qr.promoText}`} eventId={eventId} qr={qr} />
+  )
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5 text-primary" />
@@ -109,11 +122,14 @@ export function EventQrDialog({
             </Button>
           </div>
         ) : !qr?.available || !qr.url ? (
-          <p className="text-sm text-muted-foreground">
-            {t('promo.notApproved', {
-              defaultValue: 'Den QR-Code gibt es, sobald dein Event freigegeben ist.',
-            })}
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('promo.notApproved', {
+                defaultValue: 'Den QR-Code gibt es, sobald dein Event freigegeben ist.',
+              })}
+            </p>
+            {promoForm}
+          </div>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -133,14 +149,6 @@ export function EventQrDialog({
               </div>
             </div>
             <p className="text-center text-xs text-muted-foreground break-all">{qr.url}</p>
-            {!qr.hasPromoCode && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
-                {t('promo.noCodeHint', { defaultValue: 'Du hast noch keinen Rabattcode hinterlegt.' })}{' '}
-                <Link href={localePath('/profile')} className="font-medium underline" onClick={onClose}>
-                  {t('promo.toProfile', { defaultValue: 'Rabattcode im Profil festlegen' })}
-                </Link>
-              </div>
-            )}
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button variant="gradient" className="flex-1 gap-2" onClick={openPdf} disabled={opening}>
                 {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
@@ -153,9 +161,118 @@ export function EventQrDialog({
                   : t('promo.copyLink', { defaultValue: 'Link kopieren' })}
               </Button>
             </div>
+            {promoForm}
           </div>
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Rabattcode und Hinweis dieses Events (PUT /promo/events/:eventId). Steht
+ * am Event keiner, zeigt das Formular den aus dem Profil; Speichern macht
+ * ihn zum eigenen Code des Events, leer Speichern entfernt den eigenen.
+ */
+function EventPromoForm({ eventId, qr }: { eventId: string; qr: EventQrState }) {
+  const { t } = useTranslation()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const [form, setForm] = useState<PromoCode>({ promoCode: qr.promoCode, promoText: qr.promoText })
+
+  const save = useMutation({
+    mutationFn: () => promoService.updateEventPromo(eventId, form),
+    onSuccess: (saved) => {
+      // Beschreibung und PDF lesen den neuen Stand sofort aus dem Cache bzw. beim nächsten Klick.
+      queryClient.setQueryData(eventQrKey(eventId), saved)
+      toast({
+        title:
+          saved.promoSource === 'event'
+            ? t('promo.eventSaved', { defaultValue: 'Der Rabattcode für dieses Event wurde gespeichert.' })
+            : saved.promoSource === 'profile'
+              ? t('promo.eventResetToProfile', {
+                  defaultValue: 'Eigener Rabattcode entfernt – es gilt wieder der aus deinem Profil.',
+                })
+              : t('promo.removed', { defaultValue: 'Dein Rabattcode wurde entfernt.' }),
+      })
+    },
+    onError: (error) =>
+      toast({
+        variant: 'destructive',
+        title: t('common.error', { defaultValue: 'Fehler' }),
+        description: readPromoError(
+          error,
+          t('promo.saveFailed', { defaultValue: 'Der Rabattcode konnte nicht gespeichert werden.' }),
+        ),
+      }),
+  })
+
+  const unchanged = form.promoCode.trim() === qr.promoCode && form.promoText.trim() === qr.promoText
+  const counter = (count: number, max: number) => (
+    <span className="text-xs text-muted-foreground tabular-nums">
+      {t('promo.charCount', { count, max, defaultValue: '{{count}}/{{max}}' })}
+    </span>
+  )
+
+  return (
+    <form
+      className="space-y-3 border-t pt-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        save.mutate()
+      }}
+    >
+      <div>
+        <h3 className="text-sm font-medium">
+          {t('promo.eventCodeTitle', { defaultValue: 'Rabattcode für dieses Event' })}
+        </h3>
+        {qr.promoSource === 'profile' && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('promo.fromProfile', { defaultValue: 'Aus deinem Profil übernommen – hier überschreiben' })}
+          </p>
+        )}
+        {qr.promoSource === 'event' && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('promo.ownCodeHint', {
+              defaultValue: 'Eigener Code für dieses Event. Leer speichern, um wieder den Code aus deinem Profil zu verwenden.',
+            })}
+          </p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor={`eventPromoCode-${eventId}`}>{t('promo.codeLabel', { defaultValue: 'Rabattcode' })}</Label>
+          {counter(form.promoCode.length, PROMO_LIMITS.promoCode)}
+        </div>
+        <Input
+          id={`eventPromoCode-${eventId}`}
+          value={form.promoCode}
+          maxLength={PROMO_LIMITS.promoCode}
+          autoComplete="off"
+          placeholder={t('promo.codePlaceholder', { defaultValue: 'z. B. PARTY10' })}
+          disabled={save.isPending}
+          onChange={(e) => setForm({ ...form, promoCode: e.target.value })}
+        />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor={`eventPromoText-${eventId}`}>{t('promo.textLabel', { defaultValue: 'Hinweis (optional)' })}</Label>
+          {counter(form.promoText.length, PROMO_LIMITS.promoText)}
+        </div>
+        <Textarea
+          id={`eventPromoText-${eventId}`}
+          rows={2}
+          value={form.promoText}
+          maxLength={PROMO_LIMITS.promoText}
+          placeholder={t('promo.textPlaceholder', { defaultValue: 'z. B. 10 % auf alle Getränke an der Bar' })}
+          disabled={save.isPending || !form.promoCode.trim()}
+          onChange={(e) => setForm({ ...form, promoText: e.target.value })}
+        />
+      </div>
+      <Button type="submit" className="w-full sm:w-auto" disabled={save.isPending || unchanged}>
+        {save.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+        {t('promo.saveEvent', { defaultValue: 'Speichern' })}
+      </Button>
+    </form>
   )
 }
