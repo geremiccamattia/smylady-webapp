@@ -76,6 +76,22 @@ smylady-web/
 ├── public/           # Statische Assets
 └── vite.config.ts    # Vite Konfiguration
 ```
+## 🚨 Arbeitsweise — gilt immer
+
+### Nichts veröffentlichen
+- **Nicht committen, nicht mergen, nicht pushen, nicht deployen.** Das macht Mattia selbst.
+- Keine `git add`/`commit`/`push`/`merge`-Befehle am Ende eines Berichts anhängen.
+- Änderungen im Arbeitsbaum stehen lassen und berichten, was geändert wurde.
+
+### Kein eigener Arbeitsbaum
+- Keine `git worktree`-Arbeitsbäume anlegen, auch nicht vorübergehend.
+- Ist im Hauptordner ein anderer Branch mit ungespeicherten Änderungen
+  ausgecheckt: nicht ausweichen, sondern melden und warten. Mattia committet
+  selbst und räumt dann auf.
+
+### Branch
+- **Je Vorhaben ein eigener Branch.** Den Branchnamen und den Commit, auf dem
+  aufgesetzt wird, im Bericht nennen.
 
 ## API Endpoints
 

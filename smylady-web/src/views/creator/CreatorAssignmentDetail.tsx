@@ -42,6 +42,7 @@ import {
   isPaidOut,
   readCreatorConflict,
   readCreatorError,
+  settledCancellationFee,
   type AssignmentBrand,
   type CreatorAssignment,
 } from '@/services/creator'
@@ -66,6 +67,7 @@ import {
   PayoutBadge,
   PhaseBadge,
   ResponseBadge,
+  SettledCancellationBadge,
   useCreatorLabels,
 } from '@/components/creator/creatorShared'
 import { CreatorPayoutStatementsSection } from '@/components/billing/BillingDocuments'
@@ -251,6 +253,8 @@ function AssignmentDetail() {
   const eventPast = isEventOver(assignment.eventEndDate || null, assignment.eventDate)
   // Zurückgezogen (nur diese Anfrage) oder der ganze Auftrag storniert.
   const withdrawn = Boolean(assignment.cancelledAt)
+  // Storno mit Abrechnung bei einer Zusage: die Ausfallentschädigung statt der Vergütung.
+  const settledFee = settledCancellationFee(assignment)
   const cancelled = assignment.orderStatus === 'cancelled' || withdrawn
   const pending = assignment.response === 'pending' && !cancelled
   const canAnswer = pending && !eventPast && !overdue
@@ -278,8 +282,14 @@ function AssignmentDetail() {
           <h1 className="text-3xl font-bold">
             {assignment.eventName || t('creatorDashboard.assignmentUnnamed', { defaultValue: 'Auftrag' })}
           </h1>
-          <PhaseBadge assignment={assignment} />
-          <ResponseBadge value={assignment.response} />
+          {settledFee !== null ? (
+            <SettledCancellationBadge />
+          ) : (
+            <>
+              <PhaseBadge assignment={assignment} />
+              <ResponseBadge value={assignment.response} />
+            </>
+          )}
           <PayoutBadge assignment={assignment} />
           {eventPast && <PastEventBadge />}
         </div>
@@ -288,7 +298,30 @@ function AssignmentDetail() {
       {/* Antwort bzw. Stand */}
       <Card className={canAnswer ? 'border-yellow-200 bg-yellow-50/40' : booked ? 'border-green-200 bg-green-50/40' : undefined}>
         <CardContent className="p-6 space-y-4">
-          {assignment.compensation !== null && (
+          {settledFee !== null ? (
+            <div className="flex items-baseline gap-x-2 gap-y-1 flex-wrap">
+              {settledFee > 0 ? (
+                <>
+                  <span className="text-3xl font-bold">{formatPrice(settledFee)}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('creatorDashboard.cancellationFee', { defaultValue: 'Ausfallentschädigung' })}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xl font-semibold">
+                  {t('creatorDashboard.noCancellationFee', { defaultValue: 'Keine Ausfallentschädigung' })}
+                </span>
+              )}
+              {assignment.compensation !== null && (
+                <span className="text-xs text-muted-foreground">
+                  {t('creatorDashboard.agreedCompensation', {
+                    amount: formatPrice(assignment.compensation),
+                    defaultValue: 'vereinbart {{amount}}',
+                  })}
+                </span>
+              )}
+            </div>
+          ) : assignment.compensation !== null && (
             <div className="flex items-baseline gap-2 flex-wrap">
               {decidedAmount !== null && decidedAmount !== assignment.compensation ? (
                 <>
@@ -311,7 +344,15 @@ function AssignmentDetail() {
 
           {cancelled ? (
             <p className="text-sm text-muted-foreground">
-              {withdrawn
+              {settledFee !== null
+                ? settledFee > 0
+                  ? t('creatorDashboard.cancelledWithSettlementHint', {
+                      defaultValue: 'Die Brand hat den Auftrag abgesagt. Statt der Vergütung bekommst du die Ausfallentschädigung oben.',
+                    })
+                  : t('creatorDashboard.cancelledWithSettlementNoFeeHint', {
+                      defaultValue: 'Die Brand hat den Auftrag abgesagt. Eine Ausfallentschädigung gibt es dafür nicht.',
+                    })
+                : withdrawn
                 ? t('creatorDashboard.assignmentWithdrawnHint', {
                     date: assignment.cancelledAt ? formatDate(assignment.cancelledAt) : '',
                     defaultValue: 'Diese Anfrage wurde am {{date}} zurückgezogen. Es gibt nichts mehr zu tun – danke fürs Mitmachen.',

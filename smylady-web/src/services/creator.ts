@@ -191,6 +191,11 @@ export interface CreatorAssignment {
   hasBriefingFiles: boolean
   /** Gesetzt, wenn die Anfrage an diesen Creator zurückgezogen wurde; leer sonst. */
   cancelledAt: string
+  /**
+   * Der Brand-Auftrag wurde mit Abrechnung storniert: Statt der Vergütung gibt
+   * es höchstens die Ausfallentschädigung (cancellationFee).
+   */
+  cancelledWithSettlement: boolean
   /** Die Brand hinter der Anfrage, soweit wir sie zeigen; null ohne Angaben. */
   brand: AssignmentBrand | null
   briefingText: string
@@ -207,6 +212,8 @@ export interface CreatorAssignment {
    * mit Begründung und Betrag. null vor der Buchung.
    */
   review: PerformanceReview | null
+  /** Ausfallentschädigung nach einem Storno mit Abrechnung (0 = keine); null, wenn keine festgelegt ist. */
+  cancellationFee: { amount: number } | null
 }
 
 const text = (value: unknown): string =>
@@ -280,6 +287,7 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
   const own = raw?.own ?? {}
   const compensation = Number(own.compensation)
   const payoutAmount = Number(own.payout?.amount)
+  const feeAmount = Number(own.cancellationFee?.amount)
   return {
     id: text(raw?._id || raw?.id),
     status: text(raw?.status) || 'draft',
@@ -296,6 +304,7 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
     publishDeadline: text(raw?.publishDeadline) || null,
     hasBriefingFiles: Boolean(raw?.hasBriefingFiles),
     cancelledAt: text(raw?.cancelledAt),
+    cancelledWithSettlement: raw?.cancelledWithSettlement === true,
     brand: mapAssignmentBrand(raw?.brand),
     briefingText: text(raw?.briefingText),
     deliverables: deliverables.map((entry) => ({
@@ -317,7 +326,24 @@ export function mapCreatorAssignment(raw: any): CreatorAssignment {
           }
         : null,
     review: mapPerformanceReview(own.review),
+    cancellationFee:
+      own.cancellationFee && typeof own.cancellationFee === 'object'
+        ? { amount: Number.isFinite(feeAmount) ? feeAmount : 0 }
+        : null,
   }
+}
+
+/**
+ * Die Ausfallentschädigung, wenn der Auftrag mit Abrechnung storniert wurde
+ * und dieser Creator zugesagt hatte; sonst null. Ohne festgelegtes Honorar 0:
+ * Mehr als die Ausfallentschädigung gibt es nach einem solchen Storno nicht.
+ * Wer abgesagt oder nie geantwortet hat, bekommt die bisherige Anzeige.
+ */
+export function settledCancellationFee(
+  assignment: Pick<CreatorAssignment, 'cancelledWithSettlement' | 'response' | 'cancellationFee'>,
+): number | null {
+  if (!assignment.cancelledWithSettlement || assignment.response !== 'accepted') return null
+  return assignment.cancellationFee?.amount ?? 0
 }
 
 /** Die Vergütung ist beim Creator angekommen (Stripe oder von Hand überwiesen). */

@@ -13,7 +13,14 @@ import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { CREATOR_PROFILE_QUERY_KEY, useCreatorProfile } from '@/hooks/useCreatorProfile'
 import { useGetConnectedAccount } from '@/hooks/useStripe'
-import { creatorAreaService, isPaidOut, isResponseOverdue, readCreatorError, type CreatorAssignment } from '@/services/creator'
+import {
+  creatorAreaService,
+  isPaidOut,
+  isResponseOverdue,
+  readCreatorError,
+  settledCancellationFee,
+  type CreatorAssignment,
+} from '@/services/creator'
 import { formatDate, formatDateTime, formatPrice, isEventOver } from '@/lib/utils'
 import { LoadingBars } from '@/components/brand/brandShared'
 import { CreatorEarningsCard } from '@/components/creator/CreatorEarningsCard'
@@ -25,6 +32,7 @@ import {
   PayoutBadge,
   PhaseBadge,
   ResponseBadge,
+  SettledCancellationBadge,
   useCreatorLabels,
 } from '@/components/creator/creatorShared'
 
@@ -284,8 +292,14 @@ function DashboardContent() {
                         <span className="font-medium truncate">
                           {entry.eventName || t('creatorDashboard.assignmentUnnamed', { defaultValue: 'Auftrag' })}
                         </span>
-                        <PhaseBadge assignment={entry} />
-                        <ResponseBadge value={entry.response} />
+                        {settledCancellationFee(entry) !== null ? (
+                          <SettledCancellationBadge />
+                        ) : (
+                          <>
+                            <PhaseBadge assignment={entry} />
+                            <ResponseBadge value={entry.response} />
+                          </>
+                        )}
                         <PayoutBadge assignment={entry} />
                         {eventOver(entry) && <PastEventBadge />}
                       </div>
@@ -312,7 +326,9 @@ function DashboardContent() {
                         </div>
                       )}
                     </div>
-                    {entry.compensation !== null && (
+                    {settledCancellationFee(entry) !== null ? (
+                      <SettledFeeSummary fee={settledCancellationFee(entry) ?? 0} compensation={entry.compensation} />
+                    ) : entry.compensation !== null && (
                       <div className="text-right text-sm shrink-0">
                         {/* Abgelehnt: Betrag bleibt sichtbar, zählt aber nicht zu den Einnahmen.
                             Nach einer Entscheidung der Leistungsprüfung: der entschiedene
@@ -345,5 +361,38 @@ function DashboardContent() {
         </CardContent>
       </Card>
     </>
+  )
+}
+
+/**
+ * Rechte Spalte der Liste bei Storno mit Abrechnung: die Ausfallentschädigung,
+ * darunter klein die vereinbarte Vergütung. Schmal gehalten, damit die Zeile
+ * auch auf dem Handy nicht umbricht.
+ */
+function SettledFeeSummary({ fee, compensation }: { fee: number; compensation: number | null }) {
+  const { t } = useTranslation()
+  return (
+    <div className="text-right text-sm shrink-0 max-w-[9rem]">
+      {fee > 0 ? (
+        <>
+          <div className="font-medium">{formatPrice(fee)}</div>
+          <div className="text-xs text-muted-foreground">
+            {t('creatorDashboard.cancellationFee', { defaultValue: 'Ausfallentschädigung' })}
+          </div>
+        </>
+      ) : (
+        <div className="font-medium leading-tight">
+          {t('creatorDashboard.noCancellationFee', { defaultValue: 'Keine Ausfallentschädigung' })}
+        </div>
+      )}
+      {compensation !== null && (
+        <div className="text-xs text-muted-foreground">
+          {t('creatorDashboard.agreedCompensation', {
+            amount: formatPrice(compensation),
+            defaultValue: 'vereinbart {{amount}}',
+          })}
+        </div>
+      )}
+    </div>
   )
 }

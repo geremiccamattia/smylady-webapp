@@ -104,6 +104,15 @@ export function ResponseBadge({ value }: { value: AssignmentResponse }) {
 }
 
 /**
+ * Storno mit Abrechnung bei einer Zusage: ersetzt „Zurückgezogen" und
+ * „Zugesagt" — beides zusammen las sich, als käme die volle Vergütung.
+ */
+export function SettledCancellationBadge() {
+  const { t } = useTranslation()
+  return <Badge variant="destructive">{t('creatorDashboard.cancelledWithSettlement', { defaultValue: 'Abgesagt' })}</Badge>
+}
+
+/**
  * In welcher Phase die Anfrage ist: Verfügbarkeit (noch nicht gebucht) oder
  * gebucht (die Brand hat bezahlt). Eine zurückgezogene Anfrage und ein
  * stornierter Brand-Auftrag schlagen beides.
