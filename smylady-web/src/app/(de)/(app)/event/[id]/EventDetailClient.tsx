@@ -30,6 +30,7 @@ import type { PurchaseAnswer } from '@/services/stripe'
 import { MemoryGallery, MemoryViewer } from '@/components/memories'
 import { getUserReaction, type Reaction } from '@/components/emojiReaction/EmojiReactionPicker'
 import BoostModal from '@/components/events/BoostModal'
+import { EventQrDialog } from '@/components/promo/EventQrDialog'
 import { OpeningHours } from '@/components/events/OpeningHours'
 import { SlotPicker } from '@/components/events/SlotPicker'
 import { normalizeSchedule } from '@/lib/eventSchedule'
@@ -79,6 +80,7 @@ import {
   PenSquare,
   Star,
   TrendingUp,
+  QrCode,
 } from 'lucide-react'
 
 interface Props { id: string }
@@ -112,6 +114,8 @@ export default function EventDetailClient({ id }: Props) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showBoostModal, setShowBoostModal] = useState(false)
+  // QR-Code zum Aufhängen; der Stand wird erst im Dialog geladen.
+  const [showQrDialog, setShowQrDialog] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false)
   const [pendingAnswers, setPendingAnswers] = useState<PurchaseAnswer[] | undefined>(undefined)
@@ -1935,6 +1939,14 @@ export default function EventDetailClient({ id }: Props) {
                         {t('tickets.scanAccess', { defaultValue: 'Scan-Berechtigungen' })}
                       </Link>
                     </Button>
+                    {/* Wie in MyEvents: nur der Eigentümer (nicht Admins, die
+                        Promo-Route lässt sie nicht zu) und nur freigegebene Events. */}
+                    {isOwner && event.status === 'Approved' && (
+                      <Button variant="outline" className="w-full gap-2" onClick={() => setShowQrDialog(true)}>
+                        <QrCode className="h-4 w-4" />
+                        {t('promo.qrButton', { defaultValue: 'QR-Code zum Aufhängen' })}
+                      </Button>
+                    )}
                     <Button variant="outline" className="w-full gap-2" asChild>
                       <Link href={`/event/${id}/guests`}>
                         <Users className="h-4 w-4" />
@@ -2144,6 +2156,15 @@ export default function EventDetailClient({ id }: Props) {
           boostImpressions={(event as any).boostImpressions}
           open={showBoostModal}
           onClose={() => setShowBoostModal(false)}
+        />
+      )}
+
+      {showQrDialog && event && (
+        <EventQrDialog
+          eventId={eventId!}
+          eventName={event.name}
+          open={showQrDialog}
+          onClose={() => setShowQrDialog(false)}
         />
       )}
 

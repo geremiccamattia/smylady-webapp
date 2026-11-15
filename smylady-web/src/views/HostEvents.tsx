@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bell, BellOff, Search, ChevronLeft, Calendar } from 'lucide-react'
+import { Bell, BellOff, Search, ChevronLeft, Calendar, QrCode } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import EventCard from '@/components/events/EventCard'
+import { EventQrDialog } from '@/components/promo/EventQrDialog'
 import { organizerSubscriptionService } from '@/services/organizerSubscription'
 import { userService } from '@/services/user'
 import { useAuth } from '@/contexts/AuthContext'
@@ -34,6 +35,36 @@ function HostEventsContent() {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
 
   const isSelf = currentUser?._id === userId || currentUser?.id === userId
+  const currentUserId = currentUser?._id || currentUser?.id
+
+  // QR-Code zum Aufhängen wie in MyEvents: nur eigene, freigegebene Events.
+  // Die Liste enthält auch Events, für die der Nutzer nur ein Ticket hat,
+  // deshalb pro Event gegen userId prüfen statt nur gegen isSelf. Der QR-Stand
+  // wird erst im Dialog geladen (GET /promo/events/:id), nie mit der Liste.
+  const [qrTarget, setQrTarget] = useState<{ id: string; name: string } | null>(null)
+  const canShowQr = (event: Event) => {
+    if (!currentUserId || event.status !== 'Approved') return false
+    const ownerId =
+      typeof event.userId === 'string' ? event.userId : event.userId?._id || event.userId?.id
+    return !!ownerId && String(ownerId) === currentUserId
+  }
+  const renderEvent = (event: Event) =>
+    canShowQr(event) ? (
+      <div key={event._id} className="flex flex-col gap-2">
+        <EventCard event={event} />
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => setQrTarget({ id: event._id || event.id!, name: event.name })}
+        >
+          <QrCode className="h-3.5 w-3.5" />
+          {t('promo.qrButton', { defaultValue: 'QR-Code zum Aufhängen' })}
+        </Button>
+      </div>
+    ) : (
+      <EventCard key={event._id} event={event} />
+    )
 
   // Fetch host profile (which includes upcomingEvents and pastEvents)
   const { data: hostProfile, isLoading: eventsLoading } = useQuery({
@@ -239,9 +270,7 @@ function HostEventsContent() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {filteredEvents.map((event) => (
-                <EventCard key={event._id} event={event} />
-              ))}
+              {filteredEvents.map(renderEvent)}
             </div>
           )}
         </TabsContent>
@@ -262,13 +291,20 @@ function HostEventsContent() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {filteredEvents.map((event) => (
-                <EventCard key={event._id} event={event} />
-              ))}
+              {filteredEvents.map(renderEvent)}
             </div>
           )}
         </TabsContent>
       </Tabs>
+
+      {qrTarget && (
+        <EventQrDialog
+          eventId={qrTarget.id}
+          eventName={qrTarget.name}
+          open={true}
+          onClose={() => setQrTarget(null)}
+        />
+      )}
     </div>
   )
 }
