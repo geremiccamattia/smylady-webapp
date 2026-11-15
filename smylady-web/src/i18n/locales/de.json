@@ -295,7 +295,7 @@
     "earningsTotal": "Verdient gesamt",
     "earningsThisMonth": "Dieser Monat",
     "earningsUpcoming": "Erwartet",
-    "earningsHint": "Gezählt werden gebuchte Aufträge (die Brand hat bezahlt), im Monat des Events. Ausgezahlt heisst: Die Vergütung ist bei dir. Offen heisst: Das Event liegt hinter dir, die Auszahlung folgt. Erwartet heisst: Das Event steht noch bevor.",
+    "earningsHint": "Gezählt werden gebuchte Aufträge (die Brand hat bezahlt) sowie ausgezahlte Ausfallentschädigungen bei abgesagten Aufträgen, im Monat des Events. Ausgezahlt heisst: Die Vergütung ist bei dir. Offen heisst: Das Event liegt hinter dir, die Auszahlung folgt. Erwartet heisst: Das Event steht noch bevor.",
     "earningsEmpty": "Noch keine Einnahmen. Sobald eine Brand dich gebucht hat, erscheint der Auftrag hier.",
     "earningsPaid": "Ausgezahlt",
     "earningsOpen": "Offen",
@@ -460,6 +460,7 @@
     "payoutBlockedHint": "Die Auszahlung wartet auf die Entscheidung zur Meldung der Brand (siehe Leistungsprüfung).",
     "payoutDecidedHint": "Nach der Entscheidung zahlen wir {{amount}} auf dein Stripe-Auszahlungskonto aus.",
     "compensationAfterReview": "nach Leistungsprüfung",
+    "earningsCancellationFee": "Ausfallentschädigung",
     "earningsWithheldBadge": "einbehalten",
     "payoutWithheld": "Einbehalten"
   },

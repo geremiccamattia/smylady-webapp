@@ -282,7 +282,7 @@
     "earningsTotal": "Earned in total",
     "earningsThisMonth": "This month",
     "earningsUpcoming": "Expected",
-    "earningsHint": "Booked orders (the brand has paid) are counted, in the month of the event. Paid out means the fee is with you. Open means the event is behind you and the payout follows. Expected means the event is still ahead.",
+    "earningsHint": "Booked orders (the brand has paid) and paid-out cancellation fees for cancelled orders are counted, in the month of the event. Paid out means the fee is with you. Open means the event is behind you and the payout follows. Expected means the event is still ahead.",
     "earningsEmpty": "No earnings yet. As soon as a brand has booked you, the order appears here.",
     "earningsPaid": "Paid out",
     "earningsOpen": "Open",
@@ -447,6 +447,7 @@
     "payoutBlockedHint": "The payout waits for the decision on the brand's report (see performance review).",
     "payoutDecidedHint": "After the decision we pay {{amount}} to your Stripe payout account.",
     "compensationAfterReview": "after performance review",
+    "earningsCancellationFee": "Cancellation fee",
     "earningsWithheldBadge": "withheld",
     "payoutWithheld": "Withheld"
   },

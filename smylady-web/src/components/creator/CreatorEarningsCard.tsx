@@ -56,7 +56,7 @@ export function CreatorEarningsCard({ assignments }: { assignments: CreatorAssig
         <p className="text-xs text-muted-foreground">
           {t('creatorDashboard.earningsHint', {
             defaultValue:
-              'Gezählt werden gebuchte Aufträge (die Brand hat bezahlt), im Monat des Events. Ausgezahlt heisst: Die Vergütung ist bei dir. Offen heisst: Das Event liegt hinter dir, die Auszahlung folgt. Erwartet heisst: Das Event steht noch bevor.',
+              'Gezählt werden gebuchte Aufträge (die Brand hat bezahlt) sowie ausgezahlte Ausfallentschädigungen bei abgesagten Aufträgen, im Monat des Events. Ausgezahlt heisst: Die Vergütung ist bei dir. Offen heisst: Das Event liegt hinter dir, die Auszahlung folgt. Erwartet heisst: Das Event steht noch bevor.',
           })}
         </p>
 
@@ -125,8 +125,13 @@ export function CreatorEarningsCard({ assignments }: { assignments: CreatorAssig
                                 {entry.assignment.eventName ||
                                   t('creatorDashboard.assignmentUnnamed', { defaultValue: 'Auftrag' })}
                               </div>
-                              {entry.date && (
-                                <div className="text-xs text-muted-foreground">{formatDate(entry.date)}</div>
+                              {(entry.date || entry.cancellationFee) && (
+                                <div className="text-xs text-muted-foreground">
+                                  {entry.date && formatDate(entry.date)}
+                                  {entry.date && entry.cancellationFee && ' · '}
+                                  {entry.cancellationFee &&
+                                    t('creatorDashboard.earningsCancellationFee', { defaultValue: 'Ausfallentschädigung' })}
+                                </div>
                               )}
                             </div>
                             {entry.paid ? (

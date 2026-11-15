@@ -13,6 +13,10 @@ import { VIENNA_TIME_ZONE } from '@/lib/eventSchedule'
  * Zugeordnet wird nach dem Eventdatum, denn dann erbringt der Creator die
  * Leistung. Fehlt es, greift das Datum der Buchung, der Zusage, des Versands.
  *
+ * Ausnahme Storno: Was bei einem stornierten Auftrag tatsächlich ausgezahlt
+ * wurde (bei Storno mit Abrechnung die Ausfallentschädigung), zählt mit dem
+ * ausgezahlten Betrag. Offene Beträge eines stornierten Auftrags zählen nicht.
+ *
  * Drei Töpfe: "ausgezahlt" (wir haben die Vergütung überwiesen), "offen"
  * (Event vorbei, Auszahlung steht aus) und "erwartet" (Event steht bevor).
  */
@@ -29,6 +33,8 @@ export interface EarningEntry {
   paid: boolean
   /** Nach der Leistungsprüfung einbehalten — es kommt nichts mehr. */
   withheld: boolean
+  /** Ausgezahlte Ausfallentschädigung nach einem Storno mit Abrechnung. */
+  cancellationFee: boolean
 }
 
 export interface EarningsMonth {
@@ -75,13 +81,20 @@ const monthStartOf = (key: string): Date => {
   return new Date(year, month - 1, 1, 12)
 }
 
+const isCancelled = (assignment: Pick<CreatorAssignment, 'orderStatus' | 'cancelledAt'>): boolean =>
+  assignment.orderStatus === 'cancelled' || Boolean(assignment.cancelledAt)
+
+/** Stornierter Auftrag, an dem trotzdem etwas ausgezahlt wurde (Ausfallentschädigung). */
+const isPaidAfterCancellation = (assignment: CreatorAssignment): boolean =>
+  isCancelled(assignment) && isPaidOut(assignment)
+
 /** Zählt dieser Auftrag als Einnahme? */
 export function countsAsEarning(assignment: CreatorAssignment): boolean {
+  if (isPaidAfterCancellation(assignment)) return true
   return (
     assignment.response === 'accepted' &&
     assignment.phase === 'booked' &&
-    assignment.orderStatus !== 'cancelled' &&
-    !assignment.cancelledAt &&
+    !isCancelled(assignment) &&
     assignment.compensation !== null &&
     assignment.compensation >= 0
   )
@@ -108,7 +121,7 @@ export function isWithheld(assignment: Pick<CreatorAssignment, 'compensation' | 
 }
 
 /** Was tatsächlich beim Creator angekommen ist — der vermerkte Betrag, sonst der zustehende. */
-const paidAmount = (assignment: CreatorAssignment): number => assignment.payout?.amount ?? earningAmount(assignment)
+const paidAmount = (assignment: CreatorAssignment, owed: number): number => assignment.payout?.amount ?? owed
 
 export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Date = new Date()): CreatorEarnings {
   const byMonth = new Map<string, EarningsMonth>()
@@ -127,8 +140,13 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
     // Vorbei ist das Event mit seinem Ende, sonst mit seinem Beginn.
     const earned =
       paid || (assignment.eventDate ? isEventOver(assignment.eventEndDate || null, assignment.eventDate) : false)
-    const amount = earningAmount(assignment)
-    const withheld = isWithheld(assignment)
+    // Nach einem Storno zählt nur, was ausgezahlt wurde — nie die Vergütung.
+    const cancelledPayout = isPaidAfterCancellation(assignment)
+    const amount = cancelledPayout
+      ? (assignment.payout?.amount ?? assignment.cancellationFee?.amount ?? 0)
+      : earningAmount(assignment)
+    const withheld = !cancelledPayout && isWithheld(assignment)
+    const cancellationFee = cancelledPayout && assignment.cancelledWithSettlement
     const key = date ? monthKey(date) : ''
 
     let month = byMonth.get(key)
@@ -145,12 +163,12 @@ export function computeCreatorEarnings(assignments: CreatorAssignment[], now: Da
       byMonth.set(key, month)
     }
 
-    month.entries.push({ assignment, amount, date, earned, paid, withheld })
+    month.entries.push({ assignment, amount, date, earned, paid, withheld, cancellationFee })
     month.total += amount
     if (earned) month.earned += amount
     else month.upcoming += amount
     // Ausgezahlt zählt, was überwiesen wurde — kann von der Vergütung abweichen.
-    if (paid) month.paid += paidAmount(assignment)
+    if (paid) month.paid += paidAmount(assignment, amount)
   }
 
   const months = [...byMonth.values()].sort((a, b) => {
