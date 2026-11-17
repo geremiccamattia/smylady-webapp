@@ -1899,6 +1899,7 @@
     "submitting": "Submitting...",
     "successTitle": "Application submitted successfully!",
     "successDesc": "Thanks for applying. We'll get back to you soon.",
+    "successAccountHint": "Don't have a Share Your Party account yet? Sign up with the same email address you entered here and verify it, so we can create your creator profile after approval.",
     "errorGeneric": "Application could not be sent. Please try again.",
     "closingLine": "Be part of something real.",
     "platformYoutube": "YouTube",

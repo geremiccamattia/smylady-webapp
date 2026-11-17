@@ -436,6 +436,12 @@ export default function CreatorClubPage() {
               <p className="text-muted-foreground text-sm">
                 {t('influencer.successDesc', { defaultValue: 'Danke für deine Bewerbung. Wir melden uns bald bei dir.' })}
               </p>
+              <p className="text-muted-foreground text-sm mt-3 max-w-md mx-auto">
+                {t('influencer.successAccountHint', {
+                  defaultValue:
+                    'Noch kein Konto bei Share Your Party? Registriere dich mit derselben E-Mail-Adresse, die du hier angegeben hast, und bestätige sie. So können wir nach deiner Freigabe dein Creator-Profil anlegen.',
+                })}
+              </p>
             </div>
           ) : (
             <>
