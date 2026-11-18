@@ -17,12 +17,17 @@ import { SITE_URL } from '@/lib/seo'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import {
   formatPartnerPriceFrom,
+  formatPartnerSlotDay,
+  groupPartnerSlotsByDay,
   isPartnerEvent,
   partnerBookingUrl,
   partnerDurationLabel,
   partnerLanguageNames,
   partnerName,
   partnerPlacesLabel,
+  partnerSlotCountLabel,
+  partnerSlotPlacesLabel,
+  partnerSlots,
   partnerWebsiteUrl,
 } from '@/lib/partnerEvent'
 import { isRaffleDrawn } from '@/lib/raffle'
@@ -232,7 +237,17 @@ export default function EventDetailClient({ id }: Props) {
   const partnerDuration = isPartner ? partnerDurationLabel(event?.partnerInfo, t) : null
   const partnerLanguages = isPartner ? partnerLanguageNames(event?.partnerInfo, t) : null
   const partnerPlaces = isPartner ? partnerPlacesLabel(event?.partnerInfo, t) : null
+  // Ein Partner-Event steht für das Angebot; die Termine wählt man hier. Jeder
+  // Termin hat seinen eigenen Buchungslink beim Partner.
+  const partnerSlotList = isPartner ? partnerSlots(event) : []
+  const partnerSlotDays = groupPartnerSlotsByDay(partnerSlotList)
+  const hasPartnerSlots = partnerSlotList.length > 0
   const openBooking = () => {
+    // Mit Terminliste führt der Hauptbutton zur Auswahl statt direkt zum Partner.
+    if (hasPartnerSlots) {
+      document.getElementById('partner-slots')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
     if (bookingUrl) window.open(bookingUrl, '_blank', 'noopener,noreferrer')
   }
 
@@ -852,7 +867,7 @@ export default function EventDetailClient({ id }: Props) {
   // dieser App, sie leiten direkt auf den Anbieter weiter. Partner-Events bekommen
   // unten eine eigene Leiste mit dem Buchungsbutton.
   const showStickyCta = !isExternalEvent && !isPartner
-  const showPartnerStickyCta = isPartner && !!bookingUrl
+  const showPartnerStickyCta = isPartner && (hasPartnerSlots || !!bookingUrl)
 
   return (
     // Bottom-Padding für die fixierten Leisten. Layout gibt bereits pb-20 (Bottombar) mit,
@@ -1039,6 +1054,77 @@ export default function EventDetailClient({ id }: Props) {
                   </a>
                 </Button>
               )}
+            </div>
+          )}
+
+          {/* Partner-Event: Terminauswahl. Jeder Termin öffnet die Buchung beim
+              Partner mit genau diesem Termin vorausgewählt. */}
+          {isPartner && hasPartnerSlots && (
+            <div id="partner-slots" className="bg-card rounded-xl border p-6 scroll-mt-24">
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-xl font-semibold">
+                  {t('event.partnerSlotsTitle', { defaultValue: 'Termin wählen' })}
+                </h2>
+                <span className="text-sm text-muted-foreground">({partnerSlotList.length})</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('event.partnerSlotsHint', {
+                  defaultValue: 'Wähle einen Termin – die Buchung öffnet sich bei {{partner}} mit diesem Termin.',
+                  partner: partnerLabel,
+                })}
+              </p>
+              <div className="space-y-4">
+                {partnerSlotDays.map((day) => (
+                  <div key={day.dayKey}>
+                    <p className="text-sm font-semibold mb-2">{formatPartnerSlotDay(day.date, lang)}</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {day.slots.map((slot) => {
+                        const places = partnerSlotPlacesLabel(slot, t)
+                        const slotLanguages = partnerLanguageNames({ languages: slot.languages }, t)
+                        const slotPrice = formatPartnerPriceFrom({ partnerInfo: { priceFrom: slot.priceFrom, currency: event.partnerInfo?.currency } }, t)
+                        const content = (
+                          <>
+                            <div className="min-w-0">
+                              <p className="font-semibold">
+                                {formatEventTime(slot.start)}
+                                {slot.end ? ` – ${formatEventTime(slot.end)}` : ''}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {[places, slotLanguages, slotPrice].filter(Boolean).join(' · ')}
+                              </p>
+                            </div>
+                            {!slot.isFull && (
+                              <span className="shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-violet-400">
+                                {t('event.partnerBook', { defaultValue: 'Buchen' })}
+                                <ExternalLink className="h-4 w-4" />
+                              </span>
+                            )}
+                          </>
+                        )
+                        return slot.isFull ? (
+                          <div
+                            key={slot.externalId}
+                            className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 opacity-50"
+                          >
+                            {content}
+                          </div>
+                        ) : (
+                          <a
+                            key={slot.externalId}
+                            href={slot.safeBookingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+                          >
+                            {content}
+                          </a>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -1689,7 +1775,19 @@ export default function EventDetailClient({ id }: Props) {
                     „10:00 - 16:00" über drei Tage wäre schlicht falsch. */}
                 {/* Normalisiert geprüft: Bestünde der schedule nur aus kaputten
                     Einträgen, stünde sonst eine leere Überschrift da. */}
-                {normalizeSchedule(event.schedule).length > 0 ? (
+                {hasPartnerSlots ? (
+                  /* Partner-Angebot mit Terminliste: keine einzelne Uhrzeit,
+                     sondern wie viele Termine zur Wahl stehen. */
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">{t('event.partnerSlotsLabel', { defaultValue: 'Termine' })}</p>
+                    <p className="font-semibold">
+                      {t('event.partnerSlotsToChoose', {
+                        defaultValue: '{{slots}} zur Auswahl',
+                        slots: partnerSlotCountLabel(partnerSlotList.length, t),
+                      })}
+                    </p>
+                  </div>
+                ) : normalizeSchedule(event.schedule).length > 0 ? (
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-muted-foreground">
                       {t('dailyHours.openingHours', { defaultValue: 'Öffnungszeiten' })}
@@ -1829,6 +1927,23 @@ export default function EventDetailClient({ id }: Props) {
                       </div>
                     </div>
                   )}
+                  {/* Mit Terminliste stehen die freien Plätze je Termin; hier die Gruppengröße. */}
+                  {!partnerPlaces && !!event.partnerInfo?.maxPlaces && event.partnerInfo.maxPlaces > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('event.partnerGroupSizeLabel', { defaultValue: 'Gruppengröße' })}</p>
+                        <p className="font-semibold">
+                          {t('event.partnerGroupSize', {
+                            defaultValue: 'bis zu {{count}} Personen je Termin',
+                            count: event.partnerInfo.maxPlaces,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -1853,7 +1968,17 @@ export default function EventDetailClient({ id }: Props) {
                   </p>
                 </div>
 
-                {bookingUrl ? (
+                {hasPartnerSlots ? (
+                  <Button
+                    variant="gradient"
+                    size="lg"
+                    className="w-full gap-2"
+                    onClick={openBooking}
+                  >
+                    <Calendar className="h-5 w-5" />
+                    {t('event.partnerSlotsTitle', { defaultValue: 'Termin wählen' })}
+                  </Button>
+                ) : bookingUrl ? (
                   <Button
                     variant="gradient"
                     size="lg"
@@ -2258,8 +2383,10 @@ export default function EventDetailClient({ id }: Props) {
               className="shrink-0 gap-1.5 font-bold"
               onClick={openBooking}
             >
-              <ExternalLink className="h-4 w-4" />
-              {t('event.partnerBook', { defaultValue: 'Buchen' })}
+              {hasPartnerSlots ? <Calendar className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+              {hasPartnerSlots
+                ? t('event.partnerSlotsTitle', { defaultValue: 'Termin wählen' })
+                : t('event.partnerBook', { defaultValue: 'Buchen' })}
             </Button>
           </div>
         </div>

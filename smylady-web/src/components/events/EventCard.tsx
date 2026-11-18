@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
 import { formatDate, formatEventDateRange, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
-import { formatPartnerPriceFrom, isPartnerEvent, partnerName, partnerPlacesLabel } from '@/lib/partnerEvent'
+import { formatPartnerPriceFrom, isPartnerEvent, partnerName, partnerPlacesLabel, partnerSlotCountLabel, partnerSlots } from '@/lib/partnerEvent'
 import { isRaffleDrawn } from '@/lib/raffle'
 import { categoryLabel, formatMusicTypes } from '@/lib/eventFields'
 import { useState } from 'react'
@@ -124,6 +124,9 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
   const isPartner = isPartnerEvent(event)
   const partnerLabel = partnerName(event)
   const partnerPlaces = isPartner ? partnerPlacesLabel(event.partnerInfo, t) : null
+  // Ein Partner-Event steht für das Angebot; die Karte zeigt den nächsten
+  // Termin und wie viele es gibt, statt einen Zeitraum „21.11. – 05.12.".
+  const partnerSlotCount = isPartner ? partnerSlots(event).length : 0
 
   // Quelle ist hier das Event aus dem Listen-Endpoint — der liefert raffleStatus und
   // raffleWinners mit (anders als auf der Detailseite, wo die Status-Route zuständig ist).
@@ -327,7 +330,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
                 */}
               {popupDateRange ??
                 (event.eventDate
-                  ? isMultiDayEvent(event.eventDate, event.eventEndTime)
+                  ? !isPartner && isMultiDayEvent(event.eventDate, event.eventEndTime)
                     ? `${formatDateShort(event.eventDate)} – ${formatDate(event.eventEndTime)}`
                     : formatDate(event.eventDate)
                   : '-')}
@@ -382,7 +385,12 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           <div className="flex items-center gap-1 text-sm text-violet-600 dark:text-violet-400">
             <ExternalLink className="h-4 w-4" />
             <span>
-              {partnerPlaces ?? t('event.partnerBookingNotice', { defaultValue: 'Buchung bei {{partner}}', partner: partnerLabel })}
+              {partnerSlotCount > 1
+                ? t('event.partnerSlotsToChoose', {
+                    defaultValue: '{{slots}} zur Auswahl',
+                    slots: partnerSlotCountLabel(partnerSlotCount, t),
+                  })
+                : (partnerPlaces ?? t('event.partnerBookingNotice', { defaultValue: 'Buchung bei {{partner}}', partner: partnerLabel }))}
             </span>
           </div>
         )}

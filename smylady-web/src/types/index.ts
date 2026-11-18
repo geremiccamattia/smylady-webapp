@@ -301,10 +301,27 @@ export interface PartnerInfo {
   languages?: string[]
   durationMinutes?: number | null
   durationText?: string
+  /** Nur bei Events mit genau einem Termin; sonst stehen die Plätze je Termin in slots. */
   freePlaces?: number | null
+  /** Größte Gruppe je Termin. */
   maxPlaces?: number | null
   offerSlug?: string
   syncedAt?: string | null
+  /** Buchbare Termine des Angebots, nach Beginn sortiert. */
+  slots?: PartnerSlot[]
+}
+
+/** Ein buchbarer Termin eines Partner-Angebots (Backend: PartnerSlot). */
+export interface PartnerSlot {
+  externalId: string
+  start: string
+  end?: string | null
+  freePlaces?: number | null
+  maxPlaces?: number | null
+  priceFrom?: number | null
+  languages?: string[]
+  /** Buchungsseite beim Partner mit diesem Termin vorausgewählt. */
+  bookingUrl: string
 }
 
 export interface EventFilters {

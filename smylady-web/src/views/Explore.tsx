@@ -45,6 +45,7 @@ import { EVENT_CATEGORIES } from '@/lib/constants'
 import { categoryLabel } from '@/lib/eventFields'
 import { resolveImageUrl } from '@/lib/utils'
 import { isRaffleOpen } from '@/lib/raffle'
+import { partnerEventInRange } from '@/lib/partnerEvent'
 import { postsService } from '@/services/posts'
 import { Event } from '@/types'
 
@@ -438,6 +439,10 @@ function ExploreContent() {
       }
       if (from && to) {
         result = result.filter((e: any) => {
+          // Partner-Angebot mit Terminliste: Es zählt, ob EIN Termin in den
+          // Zeitraum fällt — nicht der Beginn des ersten.
+          const slotMatch = partnerEventInRange(e, from!, to!)
+          if (slotMatch !== null) return slotMatch
           const eventDate = new Date(e.eventStartTime || e.eventDate)
           return eventDate >= from! && eventDate <= to!
         })
