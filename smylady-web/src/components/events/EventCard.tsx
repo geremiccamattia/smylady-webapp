@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Event } from '@/types'
 import { formatDate, formatEventDateRange, formatEventTime, formatPrice, cn, resolveImageUrl, resolveThumbnailUrl, generateEventSlug, generateCommunitySlug, shortenAddress, isMultiDayEvent } from '@/lib/utils'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import { formatPartnerPriceFrom, isPartnerEvent, partnerName, partnerPlacesLabel } from '@/lib/partnerEvent'
 import { isRaffleDrawn } from '@/lib/raffle'
 import { categoryLabel, formatMusicTypes } from '@/lib/eventFields'
 import { useState } from 'react'
@@ -118,6 +119,11 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
   const isExternalEvent = event.isTicketmaster || event.isExternalEvent || event.source === 'ticketmaster'
   // Ohne brauchbare externe URL fällt die Karte unten auf den internen Link zurück.
   const externalUrl = safeExternalUrl(event.ticketmasterUrl || event.externalUrl)
+  // Partner-Event (z.B. Secret Mission): eigene SYP-Detailseite, Buchung beim
+  // Partner. Die Karte verlinkt deshalb intern — anders als bei Ticketmaster.
+  const isPartner = isPartnerEvent(event)
+  const partnerLabel = partnerName(event)
+  const partnerPlaces = isPartner ? partnerPlacesLabel(event.partnerInfo, t) : null
 
   // Quelle ist hier das Event aus dem Listen-Endpoint — der liefert raffleStatus und
   // raffleWinners mit (anders als auf der Detailseite, wo die Status-Route zuständig ist).
@@ -197,6 +203,9 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
     if (isExternalEvent) {
       return t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
     }
+    if (isPartner) {
+      return formatPartnerPriceFrom(event, t) ?? t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
+    }
     if ((event as any).paymentType === 'door') {
       return t('event.doorPayment', { defaultValue: 'Abendkasse' })
     }
@@ -229,6 +238,13 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           <div className="absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white rounded-md text-xs font-semibold flex items-center gap-1">
             <ExternalLink className="h-3 w-3" />
             Ticketmaster
+          </div>
+        )}
+        {/* Partner-Event: Veranstalter nennen (Auflage des Feeds) */}
+        {isPartner && (
+          <div className="absolute top-2 left-2 px-2 py-1 bg-violet-600 text-white rounded-md text-xs font-semibold flex items-center gap-1">
+            <ExternalLink className="h-3 w-3" />
+            {t('event.partnerBadge', { defaultValue: 'Partner' })} · {partnerLabel}
           </div>
         )}
         {/* Kennzeichnung bezahlter Platzierung (H6): Das Backend entscheidet
@@ -273,6 +289,7 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           <div className={cn(
             "absolute bottom-2 left-2 px-3 py-1 rounded-full text-white text-sm font-semibold",
             isExternalEvent ? "bg-blue-600" :
+            isPartner ? "bg-violet-600" :
             event.paymentType === 'door' ? "bg-orange-500" :
             "gradient-bg"
           )}>
@@ -344,8 +361,8 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           )}
         </div>
 
-        {/* Tickets - hide for external/Ticketmaster events */}
-        {!isExternalEvent && !isSoldOut && (
+        {/* Tickets - hide for external/Ticketmaster and partner events */}
+        {!isExternalEvent && !isPartner && !isSoldOut && (
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Users className="h-4 w-4" />
             <span>{availableTickets} {t('event.ticketsAvailable', { defaultValue: 'Tickets verfügbar' })}</span>
@@ -357,6 +374,16 @@ export default function EventCard({ event, onFavoriteChange, priority = false, a
           <div className="flex items-center gap-1 text-sm text-blue-600">
             <ExternalLink className="h-4 w-4" />
             <span>{t('event.externalEventInfo', { defaultValue: 'Tickets auf Ticketmaster.de' })}</span>
+          </div>
+        )}
+
+        {/* Partner-Event: freie Plätze laut Feed, sonst Hinweis auf die Buchung beim Partner */}
+        {isPartner && (
+          <div className="flex items-center gap-1 text-sm text-violet-600 dark:text-violet-400">
+            <ExternalLink className="h-4 w-4" />
+            <span>
+              {partnerPlaces ?? t('event.partnerBookingNotice', { defaultValue: 'Buchung bei {{partner}}', partner: partnerLabel })}
+            </span>
           </div>
         )}
 

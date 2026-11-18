@@ -15,6 +15,16 @@ import { useAuth } from '@/contexts/AuthContext'
 import { formatDate, formatPrice, formatEventTime, getInitials, cn, resolveImageUrl, shortenAddress, getMapsSearchUrl, isMultiDayEvent, isEventOver, generateEventSlug } from '@/lib/utils'
 import { SITE_URL } from '@/lib/seo'
 import { safeExternalUrl } from '@/lib/safeUrl'
+import {
+  formatPartnerPriceFrom,
+  isPartnerEvent,
+  partnerBookingUrl,
+  partnerDurationLabel,
+  partnerLanguageNames,
+  partnerName,
+  partnerPlacesLabel,
+  partnerWebsiteUrl,
+} from '@/lib/partnerEvent'
 import { isRaffleDrawn } from '@/lib/raffle'
 import { categoryLabel, formatMusicTypes, toStringArray } from '@/lib/eventFields'
 import { useState } from 'react'
@@ -81,6 +91,9 @@ import {
   Star,
   TrendingUp,
   QrCode,
+  Languages,
+  Timer,
+  Globe,
 } from 'lucide-react'
 
 interface Props { id: string }
@@ -209,6 +222,20 @@ export default function EventDetailClient({ id }: Props) {
   // Zutun des Besuchers, ein javascript:-Wert liefe also allein beim Seitenaufruf.
   const externalUrl = safeExternalUrl(event?.ticketmasterUrl || event?.externalUrl)
 
+  // Partner-Event (z.B. Secret Mission): bleibt auf dieser Seite, kein Auto-Redirect
+  // wie bei Ticketmaster. Statt Ticketkauf ein Buchungsbutton zum Partner.
+  const isPartner = isPartnerEvent(event)
+  const partnerLabel = partnerName(event)
+  const bookingUrl = isPartner ? partnerBookingUrl(event) : null
+  const partnerWebsite = isPartner ? partnerWebsiteUrl(event) : null
+  const partnerPrice = isPartner ? formatPartnerPriceFrom(event, t) : null
+  const partnerDuration = isPartner ? partnerDurationLabel(event?.partnerInfo, t) : null
+  const partnerLanguages = isPartner ? partnerLanguageNames(event?.partnerInfo, t) : null
+  const partnerPlaces = isPartner ? partnerPlacesLabel(event?.partnerInfo, t) : null
+  const openBooking = () => {
+    if (bookingUrl) window.open(bookingUrl, '_blank', 'noopener,noreferrer')
+  }
+
   // Redirect to external URL if this is a Ticketmaster/external event
   useEffect(() => {
     window.dataLayer = window.dataLayer || []
@@ -226,12 +253,12 @@ export default function EventDetailClient({ id }: Props) {
   }, [isLoading])
 
   useEffect(() => {
-    if (isExternalEvent && externalUrl) {
+    if (isExternalEvent && !isPartner && externalUrl) {
       window.open(externalUrl, '_blank', 'noopener,noreferrer')
       // Navigate back to explore page after opening external link
       router.replace('/explore')
     }
-  }, [isExternalEvent, externalUrl, router])
+  }, [isExternalEvent, isPartner, externalUrl, router])
 
   /*
    * Erste verfügbare Ticketkategorie vorbelegen — aber eine getroffene Auswahl
@@ -822,8 +849,10 @@ export default function EventDetailClient({ id }: Props) {
     : (typeof event?.price === 'string' ? parseFloat(event.price) || 0 : (event?.price || 0))
 
   // Sticky-CTA nur für eigene Events: externe (Ticketmaster) haben keinen Kauf-Flow in
-  // dieser App, sie leiten direkt auf den Anbieter weiter.
-  const showStickyCta = !isExternalEvent
+  // dieser App, sie leiten direkt auf den Anbieter weiter. Partner-Events bekommen
+  // unten eine eigene Leiste mit dem Buchungsbutton.
+  const showStickyCta = !isExternalEvent && !isPartner
+  const showPartnerStickyCta = isPartner && !!bookingUrl
 
   return (
     // Bottom-Padding für die fixierten Leisten. Layout gibt bereits pb-20 (Bottombar) mit,
@@ -832,7 +861,7 @@ export default function EventDetailClient({ id }: Props) {
     // Banner-Variante, wenn beide Leisten stehen.
     <div className={cn(
       "max-w-4xl mx-auto",
-      showStickyCta && "pb-20",
+      (showStickyCta || showPartnerStickyCta) && "pb-20",
       showStickyRaffleBar && "pb-32 md:pb-24",
     )}>
       {/* Back Button */}
@@ -895,15 +924,24 @@ export default function EventDetailClient({ id }: Props) {
             Ticketmaster
           </div>
         )}
+        {isPartner && (
+          <div className="absolute top-4 left-4 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm font-semibold flex items-center gap-2">
+            <ExternalLink className="h-4 w-4" />
+            {t('event.partnerBadge', { defaultValue: 'Partner' })} · {partnerLabel}
+          </div>
+        )}
         {/* Price Badge */}
         <div className={cn(
           "absolute bottom-4 left-4 px-4 py-2 rounded-lg text-white font-bold text-lg",
           isExternalEvent ? "bg-blue-600" :
+          isPartner ? "bg-violet-600" :
           isDoorPayment ? "bg-orange-500" :
           "gradient-bg"
         )}>
           {isExternalEvent
             ? t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })
+            : isPartner
+            ? (partnerPrice ?? t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' }))
             : isDoorPayment
             ? (() => {
                 const price = Number(event.price) > 0 ? ` · ${formatPrice(event.price)}` : ''
@@ -941,6 +979,12 @@ export default function EventDetailClient({ id }: Props) {
                   Ticketmaster
                 </span>
               )}
+              {isPartner && (
+                <span className="px-3 py-1 bg-violet-600 text-white rounded-full text-sm font-medium flex items-center gap-1">
+                  <ExternalLink className="h-3 w-3" />
+                  {t('event.partnerEventTitle', { defaultValue: 'Partner-Event' })}
+                </span>
+              )}
               {/* Bezahlte Platzierung kennzeichnen (H6, § 6 ECG / UWG) */}
               {event.sponsored && (
                 <span className="px-2 py-0.5 border border-muted-foreground/40 text-muted-foreground rounded-md text-xs font-medium uppercase tracking-wide">
@@ -970,8 +1014,36 @@ export default function EventDetailClient({ id }: Props) {
             <h1 className="text-3xl md:text-4xl font-bold">{tr?.name || event.name}</h1>
           </div>
 
-          {/* Organizer - hide for external events */}
-          {creator && !isExternalEvent && (
+          {/* Partner-Veranstalter: Name und Website statt SYP-Profil und Chat —
+              der Eigentümer ist ein Systemkonto ohne Profil. */}
+          {isPartner && (
+            <div className="flex items-center gap-4 p-4 bg-card rounded-xl border">
+              <div className="h-12 w-12 rounded-full bg-violet-600/10 text-violet-600 flex items-center justify-center shrink-0">
+                <Globe className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('events.organizer')}</p>
+                <p className="font-semibold">{partnerLabel}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('event.partnerOrganizerNotice', {
+                    defaultValue: 'Externer Partner – Buchung und Durchführung über {{partner}}',
+                    partner: partnerLabel,
+                  })}
+                </p>
+              </div>
+              {partnerWebsite && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={partnerWebsite} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    {t('event.partnerWebsite', { defaultValue: 'Website' })}
+                  </a>
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Organizer - hide for external and partner events */}
+          {creator && !isExternalEvent && !isPartner && (
             <div className="flex items-center gap-4 p-4 bg-card rounded-xl border">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={resolveImageUrl(creator.profileImage)} alt={creator.name} />
@@ -1248,8 +1320,8 @@ export default function EventDetailClient({ id }: Props) {
             )
           })()}
 
-          {/* Memories Section - Only for internal events */}
-          {eventHasStarted && !isExternalEvent && (
+          {/* Memories Section - Only for internal events (Partner-Events haben keine SYP-Tickets) */}
+          {eventHasStarted && !isExternalEvent && !isPartner && (
             <div ref={memoriesRef} id="memories" className="bg-card rounded-xl border p-6">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                 <div className="flex items-center gap-2">
@@ -1671,8 +1743,8 @@ export default function EventDetailClient({ id }: Props) {
                   )}
                 </div>
               </div>
-              {/* Tickets available - hide for external events */}
-              {!isExternalEvent && (
+              {/* Tickets available - hide for external and partner events */}
+              {!isExternalEvent && !isPartner && (
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <Users className="h-5 w-5 text-primary" />
@@ -1685,12 +1757,137 @@ export default function EventDetailClient({ id }: Props) {
                   </div>
                 </div>
               )}
+              {/* Partner-Event: Angaben aus dem Feed (Preis, Dauer, Sprache, Alter, Plätze) */}
+              {isPartner && (
+                <>
+                  {partnerPrice && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                        <Ticket className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">
+                          {t('event.partnerPriceLabel', { defaultValue: 'Preis pro Person' })}
+                        </p>
+                        <p className="font-semibold">
+                          {partnerPrice}
+                          {event.partnerInfo?.priceIncludesVat !== false && (
+                            <span className="text-sm font-normal text-muted-foreground">
+                              {' '}{t('event.partnerPriceInclVat', { defaultValue: 'inkl. USt.' })}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('event.partnerPriceGroupHint', { defaultValue: 'Der Preis richtet sich nach der Gruppengröße.' })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {partnerDuration && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                        <Timer className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('event.partnerDuration', { defaultValue: 'Dauer' })}</p>
+                        <p className="font-semibold">{partnerDuration}</p>
+                      </div>
+                    </div>
+                  )}
+                  {partnerLanguages && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                        <Languages className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('event.partnerLanguage', { defaultValue: 'Sprache' })}</p>
+                        <p className="font-semibold">{partnerLanguages}</p>
+                      </div>
+                    </div>
+                  )}
+                  {!!event.minimumAge && event.minimumAge > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('events.minimumAge')}</p>
+                        <p className="font-semibold">
+                          {t('event.partnerMinAge', { defaultValue: 'ab {{age}} Jahren', age: event.minimumAge })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {partnerPlaces && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('event.partnerPlaces', { defaultValue: 'Freie Plätze' })}</p>
+                        <p className="font-semibold">{partnerPlaces}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <hr />
 
-            {/* External Event Info */}
-            {isExternalEvent ? (
+            {/* Partner-Event: Buchung beim Partner statt SYP-Ticketkauf */}
+            {isPartner ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ExternalLink className="h-5 w-5 text-violet-600" />
+                    <span className="font-semibold text-violet-700 dark:text-violet-300">
+                      {t('event.partnerEventTitle', { defaultValue: 'Partner-Event' })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-violet-700/90 dark:text-violet-300/90">
+                    {t('event.partnerBookingInfo', {
+                      defaultValue: 'Dieses Event wird von {{partner}} veranstaltet. Die Buchung erfolgt direkt bei {{partner}}, nicht über Share Your Party.',
+                      partner: partnerLabel,
+                    })}
+                  </p>
+                </div>
+
+                {bookingUrl ? (
+                  <Button
+                    variant="gradient"
+                    size="lg"
+                    className="w-full gap-2"
+                    onClick={openBooking}
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                    {t('event.partnerBookAt', { defaultValue: 'Bei {{partner}} buchen', partner: partnerLabel })}
+                  </Button>
+                ) : (
+                  <p className="text-sm text-center text-muted-foreground">
+                    {t('event.partnerNoBookingLink', { defaultValue: 'Buchung derzeit nur direkt beim Veranstalter möglich.' })}
+                  </p>
+                )}
+
+                {/* Nur Admins: Partner-Events pflegt der Feed-Sync, der Eigentümer
+                    (Systemkonto) darf weder bearbeiten noch löschen. */}
+                {isAdmin && (
+                  <div className="space-y-2 pt-4 border-t">
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href={`/edit-event/${id}`}>{t('events.editEvent')}</Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950/30"
+                      onClick={() => setShowDeleteDialog(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {t('events.deleteEvent', { defaultValue: 'Event löschen' })}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : isExternalEvent ? (
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                   <div className="flex items-center gap-2 mb-2">
@@ -1997,7 +2194,8 @@ export default function EventDetailClient({ id }: Props) {
               </>
             )}
 
-            {event.minimumAge && event.minimumAge > 0 && (
+            {/* Partner-Events zeigen das Mindestalter oben in den Infozeilen. */}
+            {!isPartner && event.minimumAge && event.minimumAge > 0 && (
               <p className="text-sm text-center text-muted-foreground">
                 {t('events.minimumAge')}: {event.minimumAge} {t('events.years')}
               </p>
@@ -2040,6 +2238,29 @@ export default function EventDetailClient({ id }: Props) {
             >
               ✕
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky CTA für Partner-Events — nur Mobile: Preis ab und Buchungsbutton zum Partner. */}
+      {showPartnerStickyCta && (
+        <div className="fixed bottom-16 left-0 right-0 z-30 md:hidden bg-background/95 backdrop-blur border-t px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground leading-none truncate">{partnerLabel}</p>
+              <p className="font-bold text-sm truncate">
+                {partnerPrice ?? t('event.priceOnWebsite', { defaultValue: 'Preis auf Website' })}
+              </p>
+            </div>
+            <Button
+              variant="gradient"
+              size="sm"
+              className="shrink-0 gap-1.5 font-bold"
+              onClick={openBooking}
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t('event.partnerBook', { defaultValue: 'Buchen' })}
+            </Button>
           </div>
         </div>
       )}

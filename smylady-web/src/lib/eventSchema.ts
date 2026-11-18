@@ -37,7 +37,19 @@ export interface EventForSchema {
   ticketTiers?: { _id?: string; name?: string; price?: number; quantity?: number | null; soldCount?: number }[]
   userId?: { _id?: string; name?: string } | string | null
   creator?: { _id?: string; name?: string } | string | null
+  /** Partner-Event aus einem Feed: Veranstalter und Buchung liegen beim Partner. */
+  externalSource?: string | null
+  externalBookingUrl?: string | null
+  partnerInfo?: {
+    organizerName?: string
+    organizerUrl?: string
+    priceFrom?: number | null
+    currency?: string
+  } | null
 }
+
+const isPartnerEvent = (event: EventForSchema): boolean =>
+  typeof event.externalSource === 'string' && event.externalSource !== ''
 
 const HOUSE_NUMBER_PATTERN = /^\d{1,4}\s*[a-zA-Z]?(?:\s*[-/]\s*\d{1,4}\s*[a-zA-Z]?)?$/
 const POSTAL_CODE_PATTERN = /^\d{4,5}$/
@@ -259,11 +271,15 @@ function buildOffers(
       ? { '@type': 'Place', name: location.name }
       : null
 
+  // Partner-Event: Das Angebot gibt es beim Partner, also zeigt die Offer-URL
+  // auf dessen Buchungsseite (geprüft wie jeder externe Link).
+  const partnerBooking = isPartnerEvent(event) ? safeExternalUrl(event.externalBookingUrl ?? undefined) : null
+
   const base = (): JsonLdObject => {
     const offer: JsonLdObject = {
       '@type': 'Offer',
-      priceCurrency: 'EUR',
-      url: eventUrl,
+      priceCurrency: event.partnerInfo?.currency || 'EUR',
+      url: partnerBooking || eventUrl,
     }
     if (validFrom) offer.validFrom = validFrom
     if (atDoor) offer.availableAtOrFrom = atDoor
@@ -289,7 +305,9 @@ function buildOffers(
   }
 
   const offer = base()
-  offer.price = event.price ?? 0
+  // Partner: der echte "ab"-Preis aus dem Feed; event.price ist dort nur eine
+  // am Schema-Maximum gekappte Kopie.
+  offer.price = (isPartnerEvent(event) ? event.partnerInfo?.priceFrom : null) ?? event.price ?? 0
   offer.availability = event.soldOut === true ? soldOutUrl : inStockUrl
   return [offer]
 }
@@ -350,7 +368,14 @@ export function buildEventJsonLd(
   if (image) schema.image = [image]
 
   const organizer = organizerOf(event)
-  if (organizer) {
+  if (isPartnerEvent(event) && event.partnerInfo?.organizerName) {
+    // Der Partner ist der Veranstalter (Auflage des Feeds), nicht das
+    // SYP-Systemkonto, dem das Dokument technisch gehört.
+    const organizerSchema: JsonLdObject = { '@type': 'Organization', name: event.partnerInfo.organizerName }
+    const site = safeExternalUrl(event.partnerInfo.organizerUrl)
+    if (site) organizerSchema.url = site
+    schema.organizer = organizerSchema
+  } else if (organizer) {
     /*
      * Organization, nicht Person: Die Daten liefern nur einen Namen, eine
      * Unterscheidung ist nicht möglich — und Veranstalter verkaufen hier

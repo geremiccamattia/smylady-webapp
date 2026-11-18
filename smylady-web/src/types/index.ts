@@ -278,6 +278,33 @@ export interface Event {
   /** Bezahlte Platzierung (Boost/Spotlight/Partner) → Badge „Anzeige". */
   sponsored?: boolean
   sponsoredReason?: 'boost' | 'spotlight' | 'partner' | null
+  /**
+   * Partner-Event aus einem externen Feed (z.B. 'secretmission'). Vom Backend-
+   * Sync gesetzt. Anders als Ticketmaster-Events liegen diese Events in der
+   * Datenbank, haben eine SYP-Detailseite und werden über externalBookingUrl
+   * beim Partner gebucht — kein SYP-Ticketkauf. Siehe lib/partnerEvent.ts.
+   */
+  externalId?: string | null
+  externalBookingUrl?: string | null
+  partnerInfo?: PartnerInfo | null
+}
+
+/** Anzeigedaten eines Partner-Events, 1:1 aus dem Backend-Schema (PartnerInfo). */
+export interface PartnerInfo {
+  organizerName?: string
+  organizerUrl?: string
+  /** Preis "ab … pro Person", unverändert aus dem Feed. */
+  priceFrom?: number | null
+  currency?: string
+  priceIncludesVat?: boolean
+  /** Sprachcodes, z.B. ['de', 'en']. */
+  languages?: string[]
+  durationMinutes?: number | null
+  durationText?: string
+  freePlaces?: number | null
+  maxPlaces?: number | null
+  offerSlug?: string
+  syncedAt?: string | null
 }
 
 export interface EventFilters {
