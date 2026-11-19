@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -44,15 +44,23 @@ export function PaymentModal({
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const { mutate: confirmPayment } = useConfirmPaymentIntent()
+  const { mutate: confirmPayment, isPending: isConfirming } = useConfirmPaymentIntent()
+  // Gesperrt, solange Stripe bestätigt ODER confirm-payment (samt
+  // Wiederholungen) läuft. isPending meldet React Query erst asynchron —
+  // submitLock schließt die Lücke dazwischen, damit ein zweiter Klick nie
+  // einen zweiten Bezahlversuch startet.
+  const busy = isProcessing || isConfirming
+  const submitLock = useRef(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || submitLock.current) {
       return
     }
 
+    submitLock.current = true
+    let confirmStarted = false
     setIsProcessing(true)
     setPaymentStatus('processing')
     setErrorMessage(null)
@@ -76,8 +84,14 @@ export function PaymentModal({
       }
 
       if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded - confirm with backend to create ticket
+        // Payment succeeded - confirm with backend to create ticket.
+        // Bei Fehlern wiederholt useConfirmPaymentIntent bis zu dreimal
+        // (nach 1, 2 und 4 s); onError und die Weiterleitung kommen erst danach.
+        confirmStarted = true
         confirmPayment(paymentIntentId, {
+          onSettled: () => {
+            submitLock.current = false
+          },
           onSuccess: (ticket) => {
             setPaymentStatus('success')
             toast({
@@ -114,11 +128,13 @@ export function PaymentModal({
       setErrorMessage(t('payment.failed'))
     } finally {
       setIsProcessing(false)
+      // Läuft confirm-payment noch, gibt erst dessen onSettled frei.
+      if (!confirmStarted) submitLock.current = false
     }
   }
 
   const handleClose = () => {
-    if (!isProcessing) {
+    if (!busy) {
       setPaymentStatus('idle')
       setErrorMessage(null)
       onClose()
@@ -160,6 +176,7 @@ export function PaymentModal({
             <div className="p-4 bg-muted/50 rounded-lg">
               <PaymentElement
                 options={{
+                  readOnly: busy,
                   layout: 'tabs',
                   wallets: {
                     applePay: 'auto',
@@ -184,7 +201,7 @@ export function PaymentModal({
                 variant="outline"
                 className="flex-1"
                 onClick={handleClose}
-                disabled={isProcessing}
+                disabled={busy}
               >
                 {t('common.cancel')}
               </Button>
@@ -192,9 +209,9 @@ export function PaymentModal({
                 type="submit"
                 variant="gradient"
                 className="flex-1"
-                disabled={!stripe || !elements || isProcessing}
+                disabled={!stripe || !elements || busy}
               >
-                {isProcessing ? (
+                {busy ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     {t('payment.processing', { defaultValue: 'Verarbeite...' })}

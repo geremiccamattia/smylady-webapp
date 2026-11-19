@@ -21,6 +21,11 @@ export const useConfirmPaymentIntent = () => {
 
   return useMutation({
     mutationFn: (paymentIntentId: string) => stripeService.confirmPaymentIntent(paymentIntentId),
+    // Schlägt die Bestätigung fehl (Netz, Backend), bis zu dreimal
+    // wiederholen — nach 1, 2 und 4 Sekunden. confirm-payment ist im Backend
+    // idempotent; erst danach greift onError des Aufrufers.
+    retry: 3,
+    retryDelay: (attempt) => 1000 * 2 ** attempt,
     onSuccess: () => {
       // Invalidate all ticket-related queries to reflect new purchase
       queryClient.invalidateQueries({

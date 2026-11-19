@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { eventsService } from '@/services/events'
 import { ticketsService } from '@/services/tickets'
+import { useConfirmPaymentIntent } from '@/hooks/useStripe'
 import { useToast } from '@/hooks/use-toast'
 
 function PaymentCompleteContent() {
@@ -18,9 +19,25 @@ function PaymentCompleteContent() {
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const ticketId = searchParams.get('ticketId')
+  const urlTicketId = searchParams.get('ticketId')
   const eventId = searchParams.get('eventId')
   const type = searchParams.get('type')
+
+  /*
+   * Rückkehr von Stripe über die return_url aus PaymentModal (nur wenn die
+   * Zahlart weiterleitet, z. B. 3-D Secure): Stripe hängt payment_intent,
+   * payment_intent_client_secret und redirect_status an — ohne ticketId.
+   * Beim ersten Rendern festhalten; der Effekt unten nimmt die Parameter
+   * gleich danach aus der Adresse.
+   */
+  const [stripeReturn] = useState(() => ({
+    paymentIntent: searchParams.get('payment_intent'),
+    redirectStatus: searchParams.get('redirect_status'),
+  }))
+  // Ticket aus confirm-payment, wenn die Adresse keine ticketId trägt.
+  const [confirmedTicketId, setConfirmedTicketId] = useState<string | null>(null)
+  const ticketId = urlTicketId || confirmedTicketId
+  const { mutate: confirmPayment } = useConfirmPaymentIntent()
 
   const [values, setValues] = useState<Record<string, string | string[]>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -49,32 +66,58 @@ function PaymentCompleteContent() {
     : t('paymentComplete.description', { defaultValue: 'Dein Ticket wurde erfolgreich gekauft.' })
 
   /*
-   * Rückkehr von Stripe über die return_url aus PaymentModal (nur wenn die
-   * Zahlart weiterleitet, z. B. 3-D Secure): Stripe hängt payment_intent und
-   * payment_intent_client_secret an. Das Client-Secret gehört nicht in die
-   * Adresse (Verlauf, Weitergabe, Tracking) — beide sofort entfernen. Dieser
-   * Effekt steht vor dem Tracking-Effekt und läuft damit zuerst. Die Seite
-   * braucht die Werte derzeit nicht; ticketId, eventId und type bleiben.
+   * Die Stripe-Parameter sofort aus der Adresse nehmen: Das Client-Secret
+   * gehört nicht in Verlauf, Weitergabe oder Tracking. Die Werte sind oben in
+   * stripeReturn festgehalten. Dieser Effekt steht vor den übrigen und läuft
+   * damit zuerst; ticketId, eventId und type bleiben.
    */
   useEffect(() => {
     try {
       const url = new URL(window.location.href)
-      if (!url.searchParams.has('payment_intent') && !url.searchParams.has('payment_intent_client_secret')) return
-      url.searchParams.delete('payment_intent')
-      url.searchParams.delete('payment_intent_client_secret')
+      const stripeParams = ['payment_intent', 'payment_intent_client_secret', 'redirect_status']
+      if (!stripeParams.some((name) => url.searchParams.has(name))) return
+      stripeParams.forEach((name) => url.searchParams.delete(name))
       window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
     } catch {
       // Ohne History-API bleibt die Adresse, wie sie ist.
     }
   }, [])
 
+  /*
+   * Nach der Weiterleitung hat niemand das Ticket bestätigt (PaymentModal tut
+   * das nur ohne Weiterleitung). Bei redirect_status 'succeeded' und ohne
+   * ticketId deshalb hier confirm-payment mit dem Payment Intent — das
+   * Backend prüft ihn bei Stripe, ist idempotent und liefert das Ticket.
+   * Fehler: keine eigene Behandlung, die Seite bleibt wie bisher.
+   */
+  const confirmStarted = useRef(false)
+  useEffect(() => {
+    if (confirmStarted.current || urlTicketId) return
+    if (stripeReturn.redirectStatus !== 'succeeded' || !stripeReturn.paymentIntent) return
+    confirmStarted.current = true
+    confirmPayment(stripeReturn.paymentIntent, {
+      onSuccess: (ticket) => {
+        const id = ticket?._id || ticket?.id
+        if (id) setConfirmedTicketId(String(id))
+      },
+    })
+    // Läuft genau einmal: Die Werte stammen aus dem ersten Rendern.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Der Kauf wird genau einmal gemeldet — auch wenn der Betrag nachgeladen wird.
   const purchaseReported = useRef(false)
+  const purchaseStarted = useRef(false)
 
   useEffect(() => {
     // Zahlart aus der URL (type): 'free' kostenlos, 'door' Abendkasse (vor Ort
     // bezahlt, hier also 0 €), 'balance' Guthaben, ohne type Stripe.
     const knownZero = type === 'free' || type === 'door'
+
+    // Ohne Ticket-ID kein Ereignis (außer kostenlos/Abendkasse wie bisher).
+    // Kommt die ID erst aus confirm-payment, läuft der Effekt dann erneut.
+    if (purchaseStarted.current || (!knownZero && !ticketId)) return
+    purchaseStarted.current = true
 
     const report = (value: number | null) => {
       if (purchaseReported.current) return
@@ -84,6 +127,8 @@ function PaymentCompleteContent() {
         event: 'ticket_purchased',
         ticket_id: ticketId,
         is_free: type === 'free',
+        // Zahlart aus type in der Adresse; ohne type war es eine Stripe-Zahlung.
+        payment_type: type === 'free' || type === 'door' || type === 'balance' ? type : 'stripe',
         // Ohne sicheren Betrag kein value — lieber weglassen als erfinden.
         ...(value !== null ? { value, currency: 'EUR' } : {}),
       })
@@ -108,11 +153,10 @@ function PaymentCompleteContent() {
       .finally(() => clearTimeout(fallback))
     // Kein Cleanup, das den Timer löscht: Verlässt jemand die Seite vor der
     // Antwort, soll der Kauf trotzdem gemeldet werden.
-    // ticketId und type fehlen bewusst: Der Kauf soll genau einmal gemeldet
-    // werden. Aufgenommen feuerte das Tracking-Event erneut, sobald sich die
-    // ID ändert, und ein Kauf stünde doppelt in der Auswertung.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // ticketId als Abhängigkeit, damit eine ID aus confirm-payment noch
+    // gemeldet wird; purchaseStarted/purchaseReported halten es bei genau
+    // einem Ereignis pro Seitenaufruf.
+  }, [ticketId, type])
 
   const setValue = (id: string, v: string | string[]) =>
     setValues((prev) => ({ ...prev, [id]: v }))
@@ -168,6 +212,11 @@ function PaymentCompleteContent() {
         <CheckCircle className="h-24 w-24 mx-auto text-green-500 mb-6" />
         <h1 className="text-2xl font-bold mb-2">{heading}</h1>
         <p className="text-muted-foreground">{description}</p>
+        {stripeReturn.redirectStatus === 'processing' && (
+          <p className="text-muted-foreground mt-2">
+            {t('paymentComplete.processing', { defaultValue: 'Zahlung wird bearbeitet.' })}
+          </p>
+        )}
       </div>
 
       {/* Optional Questions */}

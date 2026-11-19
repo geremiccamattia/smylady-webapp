@@ -1246,6 +1246,7 @@
     "secureNote": "Your payment is processed securely via Stripe"
   },
   "paymentComplete": {
+    "processing": "Your payment is being processed.",
     "headingDoor": "You're in!",
     "headingFree": "You're in!",
     "heading": "Payment successful!",
