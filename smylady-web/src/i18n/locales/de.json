@@ -1971,6 +1971,7 @@
     "secureNote": "Deine Zahlung wird sicher über Stripe verarbeitet"
   },
   "paymentComplete": {
+    "processing": "Zahlung wird bearbeitet.",
     "headingFree": "Du bist dabei!",
     "heading": "Zahlung abgeschlossen",
     "descriptionFree": "Dein Ticket ist bestätigt.",
