@@ -75,9 +75,14 @@ export const authService = {
   },
 
   // Google OAuth login - like mobile app
-  async verifyGoogleLogin(idToken: string): Promise<AuthResponse> {
+  // Das Backend antwortet bei einem neu angelegten Konto mit 201
+  // (GOOGLE_ACCOUNT_CREATION), bei einem bestehenden mit 200.
+  async verifyGoogleLogin(idToken: string): Promise<{ auth: AuthResponse; isNewAccount: boolean }> {
     const response = await apiClient.post('/auth/google/callback', { token: idToken })
-    return response.data.data
+    return {
+      auth: response.data.data,
+      isNewAccount: response.status === 201 || response.data?.status === 201,
+    }
   },
 
   // Facebook OAuth login - like mobile app

@@ -507,9 +507,15 @@ export default function BrandRegister() {
                     * Markenflow genau hier ab.
                     */}
                   <GoogleLoginButton
-                    onSuccess={async () => {
+                    onSuccess={async ({ isNewAccount }) => {
+                      // Neues Konto (Backend 201) ist eine Registrierung; ein
+                      // bestehendes Konto meldet sich hier nur an.
                       window.dataLayer = window.dataLayer || []
-                      window.dataLayer.push({ event: 'sign_up', method: 'google', account_type: 'brand' })
+                      window.dataLayer.push(
+                        isNewAccount
+                          ? { event: 'sign_up', method: 'google', account_type: 'brand' }
+                          : { event: 'sign_in', method: 'google' },
+                      )
                       const fingerprint = await getFingerprint()
                       if (fingerprint) {
                         try {

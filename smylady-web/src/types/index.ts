@@ -356,6 +356,12 @@ export interface Ticket {
   price: number
   quantity?: number
   totalAmount?: number
+  /**
+   * Nur für den Käufer (GET /tickets/ticket/:id): bezahlter Betrag in Euro
+   * laut Zahlung zum Payment Intent; null, wenn nicht sicher zuzuordnen
+   * (kostenlos, Abendkasse, ganz mit Guthaben bezahlt).
+   */
+  amountPaid?: number | null
   isScanned?: boolean
   scannedAt?: string
   scannedBy?: string

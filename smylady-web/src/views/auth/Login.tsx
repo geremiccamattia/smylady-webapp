@@ -645,9 +645,15 @@ export default function Login() {
                     </div>
 
                     <GoogleLoginButton
-                      onSuccess={async () => {
+                      onSuccess={async ({ isNewAccount }) => {
+                        // Entsteht über Google hier ein neues Konto (Backend 201),
+                        // ist das eine Registrierung — wie in Register.tsx.
                         window.dataLayer = window.dataLayer || []
-                        window.dataLayer.push({ event: 'sign_in', method: 'google' })
+                        window.dataLayer.push(
+                          isNewAccount
+                            ? { event: 'sign_up', method: 'google', account_type: 'user' }
+                            : { event: 'sign_in', method: 'google' },
+                        )
 
                         // Kein Geräte-Fingerprint beim Login (M4) — nur bei der Registrierung.
 

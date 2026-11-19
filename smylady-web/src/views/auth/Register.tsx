@@ -413,13 +413,15 @@ export default function Register() {
 
             <div className="mt-6">
               <GoogleLoginButton
-                onSuccess={async () => {
+                onSuccess={async ({ isNewAccount }) => {
+                  // Neues Konto (Backend 201) ist eine Registrierung; ein
+                  // bestehendes Konto, das hier auf Google klickt, meldet sich nur an.
                   window.dataLayer = window.dataLayer || []
-                  window.dataLayer.push({
-                    event: 'sign_up',
-                    method: 'google',
-                    account_type: wantsCreator ? 'creator' : 'user',
-                  })
+                  window.dataLayer.push(
+                    isNewAccount
+                      ? { event: 'sign_up', method: 'google', account_type: wantsCreator ? 'creator' : 'user' }
+                      : { event: 'sign_in', method: 'google' },
+                  )
 
                   // Fingerprint nachreichen — erst jetzt erhoben (M4)
                   const fingerprint = await getFingerprint()

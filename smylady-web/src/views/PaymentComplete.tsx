@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
@@ -48,12 +48,69 @@ function PaymentCompleteContent() {
     ? t('paymentComplete.descriptionFree', { defaultValue: 'Dein Ticket ist bestätigt.' })
     : t('paymentComplete.description', { defaultValue: 'Dein Ticket wurde erfolgreich gekauft.' })
 
+  /*
+   * Rückkehr von Stripe über die return_url aus PaymentModal (nur wenn die
+   * Zahlart weiterleitet, z. B. 3-D Secure): Stripe hängt payment_intent und
+   * payment_intent_client_secret an. Das Client-Secret gehört nicht in die
+   * Adresse (Verlauf, Weitergabe, Tracking) — beide sofort entfernen. Dieser
+   * Effekt steht vor dem Tracking-Effekt und läuft damit zuerst. Die Seite
+   * braucht die Werte derzeit nicht; ticketId, eventId und type bleiben.
+   */
   useEffect(() => {
-    window.dataLayer = window.dataLayer || []
-    window.dataLayer.push({ event: 'ticket_purchased', ticket_id: ticketId })
-    // ticketId fehlt bewusst: Der Kauf soll genau einmal gemeldet werden.
-    // Aufgenommen feuerte das Tracking-Event erneut, sobald sich die ID ändert,
-    // und ein Kauf stünde doppelt in der Auswertung.
+    try {
+      const url = new URL(window.location.href)
+      if (!url.searchParams.has('payment_intent') && !url.searchParams.has('payment_intent_client_secret')) return
+      url.searchParams.delete('payment_intent')
+      url.searchParams.delete('payment_intent_client_secret')
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+    } catch {
+      // Ohne History-API bleibt die Adresse, wie sie ist.
+    }
+  }, [])
+
+  // Der Kauf wird genau einmal gemeldet — auch wenn der Betrag nachgeladen wird.
+  const purchaseReported = useRef(false)
+
+  useEffect(() => {
+    // Zahlart aus der URL (type): 'free' kostenlos, 'door' Abendkasse (vor Ort
+    // bezahlt, hier also 0 €), 'balance' Guthaben, ohne type Stripe.
+    const knownZero = type === 'free' || type === 'door'
+
+    const report = (value: number | null) => {
+      if (purchaseReported.current) return
+      purchaseReported.current = true
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({
+        event: 'ticket_purchased',
+        ticket_id: ticketId,
+        is_free: type === 'free',
+        // Ohne sicheren Betrag kein value — lieber weglassen als erfinden.
+        ...(value !== null ? { value, currency: 'EUR' } : {}),
+      })
+    }
+
+    if (knownZero || !ticketId) {
+      report(knownZero ? 0 : null)
+      return
+    }
+
+    // Bezahlt: Betrag laut Backend (amountPaid, Euro; null, wenn nicht
+    // zuzuordnen, etwa ganz mit Guthaben bezahlt). Antwortet es nicht
+    // rechtzeitig oder gar nicht, geht der Kauf ohne Betrag raus.
+    const fallback = setTimeout(() => report(null), 3000)
+    ticketsService
+      .getTicketById(ticketId)
+      .then((ticket) => {
+        const amount = ticket?.amountPaid
+        report(typeof amount === 'number' && Number.isFinite(amount) ? amount : null)
+      })
+      .catch(() => report(null))
+      .finally(() => clearTimeout(fallback))
+    // Kein Cleanup, das den Timer löscht: Verlässt jemand die Seite vor der
+    // Antwort, soll der Kauf trotzdem gemeldet werden.
+    // ticketId und type fehlen bewusst: Der Kauf soll genau einmal gemeldet
+    // werden. Aufgenommen feuerte das Tracking-Event erneut, sobald sich die
+    // ID ändert, und ein Kauf stünde doppelt in der Auswertung.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
