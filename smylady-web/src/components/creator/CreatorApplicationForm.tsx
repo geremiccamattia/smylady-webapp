@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { apiClient } from '@/services/api'
-import { readConsent } from '@/components/CookieConsent'
+import { getMarketingConsent, readConsent } from '@/components/CookieConsent'
 import { authService } from '@/services/auth'
 import { cn, isValidEmail } from '@/lib/utils'
 import {
@@ -396,6 +396,7 @@ export default function CreatorApplicationForm({
         billing: toBillingPayload(billing),
         // Meta Conversions API nur mit Marketing-Einwilligung im Cookie-Banner (K5)
         marketingConsent: readConsent()?.marketing === true,
+        trackingConsent: getMarketingConsent(),
       })
       onSubmitted()
     } catch (err: unknown) {

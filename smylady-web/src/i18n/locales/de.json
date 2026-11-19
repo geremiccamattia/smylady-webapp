@@ -2567,6 +2567,7 @@
     "submitting": "Wird gesendet...",
     "successTitle": "Bewerbung erfolgreich eingereicht!",
     "successDesc": "Danke für deine Bewerbung. Wir melden uns bald bei dir.",
+    "successAccountHint": "Noch kein Konto bei Share Your Party? Registriere dich mit derselben E-Mail-Adresse, die du hier angegeben hast, und bestätige sie. So können wir nach deiner Freigabe dein Creator-Profil anlegen.",
     "errorGeneric": "Bewerbung konnte nicht gesendet werden. Bitte versuche es erneut.",
     "brandHint": "Du bist eine Marke statt Creator?",
     "brandHintLink": "Hier geht es zur Markenregistrierung",

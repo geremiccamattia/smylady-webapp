@@ -121,6 +121,16 @@ function applyConsent(settings: CookieSettings): void {
   }
 }
 
+/**
+ * Marketing-Einwilligung aus dem Cookie-Banner (syp_consent): true genau
+ * dann, wenn applyConsent() marketing_granted bzw. ad_storage 'granted'
+ * setzt — beide lesen dieselbe Entscheidung über readConsent().
+ * Ohne Cookie, bei kaputtem Cookie oder auf dem Server: false.
+ */
+export function getMarketingConsent(): boolean {
+  return readConsent()?.marketing === true
+}
+
 export default function CookieConsent() {
   const { t } = useTranslation()
   const localePath = useLocalePath()
