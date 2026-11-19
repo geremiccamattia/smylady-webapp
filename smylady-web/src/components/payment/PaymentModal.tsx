@@ -16,6 +16,21 @@ import { useToast } from '@/hooks/use-toast'
 import { useConfirmPaymentIntent } from '@/hooks/useStripe'
 import { formatPrice } from '@/lib/utils'
 import { Loader2, CreditCard, CheckCircle, AlertCircle } from 'lucide-react'
+import type { StripePaymentElementOptions } from '@stripe/stripe-js'
+
+/*
+ * Feste Optionen für das Payment Element — bewusst außerhalb der Komponente
+ * und ohne State. Jede Änderung löst in react-stripe-js element.update() aus;
+ * fällt das in confirmPayment, wirft Stripe „This Element has already been
+ * destroyed". Gesperrt wird die Eingabe deshalb nur über das umgebende div.
+ */
+const PAYMENT_ELEMENT_OPTIONS: StripePaymentElementOptions = {
+  layout: 'tabs',
+  wallets: {
+    applePay: 'auto',
+    googlePay: 'auto',
+  },
+}
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -173,17 +188,8 @@ export function PaymentModal({
               </div>
             )}
 
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <PaymentElement
-                options={{
-                  readOnly: busy,
-                  layout: 'tabs',
-                  wallets: {
-                    applePay: 'auto',
-                    googlePay: 'auto',
-                  },
-                }}
-              />
+            <div className={`p-4 bg-muted/50 rounded-lg${busy ? ' pointer-events-none opacity-60' : ''}`}>
+              <PaymentElement options={PAYMENT_ELEMENT_OPTIONS} />
             </div>
 
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
