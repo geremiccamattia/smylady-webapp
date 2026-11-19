@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/services/api'
+import { getMarketingConsent } from '@/components/CookieConsent'
 
 const GRADIENT = 'bg-gradient-to-r from-[#ff720e] via-[#ff4d3c] to-[#e9548c]'
 
@@ -119,6 +120,7 @@ export default function CreatorEventsPage({ cases = [] }: CreatorEventsPageProps
         company: form.company,
         promotion: form.promotion,
         message: form.message,
+        trackingConsent: getMarketingConsent(),
       })
       setSubmitted(true)
     } catch (error: any) {

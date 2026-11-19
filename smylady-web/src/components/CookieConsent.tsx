@@ -43,6 +43,24 @@ function readConsentCookie(): boolean {
   return document.cookie.split('; ').some(row => row.startsWith('syp_consent='))
 }
 
+/**
+ * Marketing-Einwilligung aus dem Cookie-Banner (syp_consent): true nur, wenn
+ * Marketing ausdrücklich erlaubt ist — gleiche Prüfung wie marketing_granted.
+ * Ohne Cookie, bei kaputtem Cookie oder auf dem Server: false.
+ */
+export function getMarketingConsent(): boolean {
+  if (typeof document === 'undefined') return false
+  const raw = document.cookie.split('; ').find(row => row.startsWith('syp_consent='))
+  if (!raw) return false
+  try {
+    const payload = JSON.parse(decodeURIComponent(raw.split('=').slice(1).join('=')))
+    const marketing: unknown = payload?.consents?.marketing
+    return Array.isArray(marketing) && marketing.includes('google-ads')
+  } catch {
+    return false
+  }
+}
+
 export default function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false)
   const [showSettings, setShowSettings] = useState(false)

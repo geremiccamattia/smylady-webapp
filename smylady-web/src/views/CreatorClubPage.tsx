@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { apiClient } from '@/services/api'
+import { getMarketingConsent } from '@/components/CookieConsent'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { cn } from '@/lib/utils'
 
@@ -247,6 +248,7 @@ export default function CreatorClubPage() {
           .map((c) => ({ platform: c.platform, username: c.username.trim() })),
         followerRange: form.followerRange,
         categories: form.categories,
+        trackingConsent: getMarketingConsent(),
       })
       setSubmitted(true)
     } catch (err: unknown) {
