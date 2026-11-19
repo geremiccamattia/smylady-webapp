@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/services/api'
-import { getMarketingConsent, readConsent } from '@/components/CookieConsent'
+import { getMarketingConsent } from '@/components/CookieConsent'
 
 const GRADIENT = 'bg-gradient-to-r from-[#ff720e] via-[#ff4d3c] to-[#e9548c]'
 
@@ -121,7 +121,6 @@ export default function CreatorEventsPage({ cases = [] }: CreatorEventsPageProps
         promotion: form.promotion,
         message: form.message,
         // Meta Conversions API nur mit Marketing-Einwilligung im Cookie-Banner (K5)
-        marketingConsent: readConsent()?.marketing === true,
         trackingConsent: getMarketingConsent(),
       })
       setSubmitted(true)

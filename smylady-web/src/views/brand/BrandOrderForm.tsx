@@ -523,6 +523,11 @@ function OrderForm() {
           }),
         )
       } else {
+        if (variables.submit) {
+          // Auftrag erfolgreich eingereicht (nicht beim reinen Entwurf).
+          window.dataLayer = window.dataLayer || []
+          window.dataLayer.push({ event: 'brand_order_create', order_id: order.id })
+        }
         toast({
           title: t('common.success', { defaultValue: 'Erfolg' }),
           description: variables.submit

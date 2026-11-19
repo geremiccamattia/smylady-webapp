@@ -124,7 +124,7 @@ export default function Register() {
       })
       localStorage.removeItem('referral_code')
       window.dataLayer = window.dataLayer || []
-      window.dataLayer.push({ event: 'sign_up', method: 'email' })
+      window.dataLayer.push({ event: 'sign_up', method: 'email', account_type: wantsCreator ? 'creator' : 'user' })
       setRegisteredEmail(email)
       setStep('verify')
       toast({
@@ -415,7 +415,11 @@ export default function Register() {
               <GoogleLoginButton
                 onSuccess={async () => {
                   window.dataLayer = window.dataLayer || []
-                  window.dataLayer.push({ event: 'sign_up', method: 'google' })
+                  window.dataLayer.push({
+                    event: 'sign_up',
+                    method: 'google',
+                    account_type: wantsCreator ? 'creator' : 'user',
+                  })
 
                   // Fingerprint nachreichen — erst jetzt erhoben (M4)
                   const fingerprint = await getFingerprint()

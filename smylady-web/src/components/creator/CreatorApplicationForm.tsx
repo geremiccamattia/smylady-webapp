@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { Check, Ghost, Globe, Instagram, Music2, Plus, Receipt, Sparkles, User, X } from 'lucide-react'
@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import { apiClient } from '@/services/api'
-import { getMarketingConsent, readConsent } from '@/components/CookieConsent'
+import { getMarketingConsent } from '@/components/CookieConsent'
 import { authService } from '@/services/auth'
 import { cn, isValidEmail } from '@/lib/utils'
 import {
@@ -102,6 +102,12 @@ const STEP_KEYS = [
 /** Die Schritte mit eigener Prüfung: Abrechnungsdaten und Abschluss. */
 const BILLING_STEP = 3
 const FINISH_STEP = 4
+
+/** Trichter-Ereignis für den erreichten Schritt (dataLayer, wie sign_up). */
+function pushApplyStep(step: number) {
+  window.dataLayer = window.dataLayer || []
+  window.dataLayer.push({ event: 'creator_apply_step', step })
+}
 
 /**
  * Alter aus dem Geburtsdatum des Kontos.
@@ -300,6 +306,18 @@ export default function CreatorApplicationForm({
     return ''
   }
 
+  /*
+   * Trichter-Ereignis creator_apply_step: step = erreichter Schritt (1–4),
+   * je Schritt nur einmal pro Formularaufruf — Zurück und wieder Vor zählt
+   * nicht doppelt. Nur die Schrittnummer, keine Formularinhalte.
+   */
+  const trackedSteps = useRef(new Set<number>())
+  const trackStep = (step: number) => {
+    if (step < 1 || trackedSteps.current.has(step)) return
+    trackedSteps.current.add(step)
+    pushApplyStep(step)
+  }
+
   const goToStep = (index: number) => {
     if (index <= currentStep) {
       setStepError('')
@@ -314,6 +332,7 @@ export default function CreatorApplicationForm({
     setStepError('')
     prefillBilling(index)
     setCurrentStep(index)
+    trackStep(index)
   }
 
   const handleNext = () => {
@@ -326,6 +345,7 @@ export default function CreatorApplicationForm({
     const next = Math.min(currentStep + 1, STEP_KEYS.length - 1)
     prefillBilling(next)
     setCurrentStep(next)
+    if (next > currentStep) trackStep(next)
   }
 
   const handleBack = () => {
@@ -395,7 +415,6 @@ export default function CreatorApplicationForm({
         // Im Formular Pflicht; das Backend nimmt die Bewerbung auch ohne an (alte App-Versionen).
         billing: toBillingPayload(billing),
         // Meta Conversions API nur mit Marketing-Einwilligung im Cookie-Banner (K5)
-        marketingConsent: readConsent()?.marketing === true,
         trackingConsent: getMarketingConsent(),
       })
       onSubmitted()

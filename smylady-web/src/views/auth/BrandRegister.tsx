@@ -206,7 +206,7 @@ export default function BrandRegister() {
         termsAccepted: acceptedTerms,
       })
       window.dataLayer = window.dataLayer || []
-      window.dataLayer.push({ event: 'sign_up', method: 'email' })
+      window.dataLayer.push({ event: 'sign_up', method: 'email', account_type: 'brand' })
       setRegisteredEmail(email)
       // Die Kontakt-E-Mail ist meistens dieselbe — vorbelegen, überschreibbar.
       setContactEmail(prev => prev || email)
@@ -509,7 +509,7 @@ export default function BrandRegister() {
                   <GoogleLoginButton
                     onSuccess={async () => {
                       window.dataLayer = window.dataLayer || []
-                      window.dataLayer.push({ event: 'sign_up', method: 'google' })
+                      window.dataLayer.push({ event: 'sign_up', method: 'google', account_type: 'brand' })
                       const fingerprint = await getFingerprint()
                       if (fingerprint) {
                         try {

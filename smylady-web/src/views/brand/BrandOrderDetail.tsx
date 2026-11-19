@@ -144,6 +144,23 @@ const PAYMENT_POLL_MS = 3000
  * mit 403 ab, die Meldung zeigt fail().
  */
 export default function BrandOrderDetail() {
+  // Stripe hängt bei der Rückkehr ?session_id=… an. Das Frontend braucht es
+  // nicht (der Abgleich läuft über die Auftrags-ID), es soll aber nicht in
+  // der Adresse stehen bleiben, während BrandGate noch Konto und Profil lädt
+  // — und nicht über ?next= in die Login-Adresse wandern. Deshalb hier, vor
+  // dem Gate, nur session_id entfernen; payment=… wertet OrderDetail aus und
+  // nimmt es danach selbst aus der Adresse.
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href)
+      if (!url.searchParams.has('session_id')) return
+      url.searchParams.delete('session_id')
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+    } catch {
+      // Ohne History-API bleibt es beim Aufräumen in OrderDetail.
+    }
+  }, [])
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <BrandGate>
@@ -361,10 +378,54 @@ function OrderDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, id])
 
+  /*
+   * Tracking per dataLayer (Einwilligung regelt GTM). Nur Auftrags-ID und
+   * Gesamtbeträge in Euro — offerPrice und payment.amount liefert das
+   * Backend bereits in Euro —, keine Inhalte, Namen oder Beträge je Creator.
+   */
+  const quoteViewTracked = useRef(false)
+  const purchaseTracked = useRef(false)
+
+  // Angebot geöffnet: einmal pro Seitenaufruf, sobald der Auftrag mit
+  // offenem Angebot geladen ist.
+  useEffect(() => {
+    if (!order || order.status !== 'offer_sent' || quoteViewTracked.current) return
+    quoteViewTracked.current = true
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({ event: 'brand_quote_view', order_id: order.id })
+  }, [order])
+
+  // Kauf: erst, wenn der Server die Zahlung als bezahlt meldet — nicht schon
+  // beim Rücksprung von Stripe (?payment=success). Nur nach einem Rücksprung
+  // in diesem Seitenaufruf, damit ein später erneut geöffneter, längst
+  // bezahlter Auftrag nicht noch einmal zählt; je Auftrag nur einmal
+  // (Merkmal in sessionStorage, zusätzlich pro Seitenaufruf).
+  useEffect(() => {
+    if (returnState !== 'success' || !order || order.payment?.status !== 'paid' || purchaseTracked.current) return
+    purchaseTracked.current = true
+    const key = `syp_brand_purchase_${order.id}`
+    try {
+      if (sessionStorage.getItem(key)) return
+      sessionStorage.setItem(key, '1')
+    } catch {
+      // Ohne sessionStorage: einmal pro Seitenaufruf (purchaseTracked).
+    }
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({
+      event: 'brand_purchase',
+      transaction_id: order.id,
+      value: order.payment.amount > 0 ? order.payment.amount : (order.offerPrice ?? 0),
+      currency: 'EUR',
+    })
+  }, [returnState, order])
+
   const submit = useMutation({
     mutationFn: () => brandService.submitOrder(id),
     onSuccess: (updated) => {
       applyUpdate(updated)
+      // Entwurf eingereicht — dieselbe Stelle im Trichter wie im Formular.
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ event: 'brand_order_create', order_id: updated.id })
       toast({
         title: t('common.success', { defaultValue: 'Erfolg' }),
         description: t('brandDashboard.orderSubmitted', { defaultValue: 'Dein Auftrag ist eingereicht. Wir melden uns mit einem Angebot.' }),
@@ -415,7 +476,16 @@ function OrderDetail() {
           title: t('common.error', { defaultValue: 'Fehler' }),
           description: t('brandDashboard.checkoutFailed', { defaultValue: 'Die Bezahlseite konnte nicht geöffnet werden.' }),
         })
+        return
       }
+      // Die Weiterleitung ist gesetzt; der push läuft synchron noch davor.
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({
+        event: 'brand_checkout_start',
+        order_id: id,
+        value: order?.offerPrice ?? 0,
+        currency: 'EUR',
+      })
     },
     onError: (error: unknown) => {
       // 409: Der Stand hat sich geändert (bezahlt, abgelaufen, storniert).
