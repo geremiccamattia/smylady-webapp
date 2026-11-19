@@ -619,9 +619,11 @@ export default function Login() {
                     </div>
 
                     <GoogleLoginButton
-                      onSuccess={async () => {
+                      onSuccess={async ({ isNewAccount }) => {
+                        // Entsteht über Google hier ein neues Konto (Backend 201),
+                        // ist das eine Registrierung — wie in Register.tsx.
                         window.dataLayer = window.dataLayer || []
-                        window.dataLayer.push({ event: 'sign_in', method: 'google' })
+                        window.dataLayer.push({ event: isNewAccount ? 'sign_up' : 'sign_in', method: 'google' })
 
                         // Fingerprint nachreichen
                         if (fingerprint) {

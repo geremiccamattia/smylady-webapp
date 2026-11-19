@@ -13,7 +13,8 @@ import { Loader2 } from 'lucide-react'
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '878037089362-gg85vmgb1ejt539u8rhlf37ie48sicqv.apps.googleusercontent.com'
 
 interface GoogleLoginButtonProps {
-  onSuccess?: () => void
+  /** isNewAccount: Das Backend hat das Konto eben angelegt (201), statt ein bestehendes anzumelden. */
+  onSuccess?: (result: { isNewAccount: boolean }) => void
   className?: string
 }
 
@@ -57,7 +58,7 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
     async (response: { credential: string }) => {
       setIsLoading(true)
       try {
-        const authResponse = await authService.verifyGoogleLogin(response.credential)
+        const { auth: authResponse, isNewAccount } = await authService.verifyGoogleLogin(response.credential)
         await login(authResponse)
         // Invalidate all cached queries so they refetch with auth token
         await queryClient.invalidateQueries()
@@ -65,7 +66,7 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
           title: 'Erfolgreich angemeldet!',
           description: 'Willkommen bei Share Your Party!',
         })
-        onSuccess?.()
+        onSuccess?.({ isNewAccount })
       } catch (error: unknown) {
         console.error('Google login error:', error)
         const errorMessage = error instanceof Error ? error.message : 'Google-Anmeldung fehlgeschlagen'
