@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { Check, Ghost, Globe, Instagram, Music2, Plus, Receipt, Sparkles, User, X } from 'lucide-react'
+import { Check, Ghost, Globe, Instagram, Music2, Plus, Sparkles, User, X } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
@@ -13,13 +13,6 @@ import { apiClient } from '@/services/api'
 import { getMarketingConsent } from '@/components/CookieConsent'
 import { authService } from '@/services/auth'
 import { cn, isValidEmail } from '@/lib/utils'
-import {
-  CreatorBillingFields,
-  emptyBillingForm,
-  toBillingPayload,
-  useBillingValidation,
-  type BillingFormValues,
-} from '@/components/billing/CreatorBillingFields'
 
 /*
  * Creator-Bewerbung als eigenständige Komponente.
@@ -94,14 +87,11 @@ const STEP_KEYS = [
   'influencer.step0Label',
   'influencer.step1Label',
   'influencer.step2Label',
-  // Abrechnungsdaten für den Auszahlungsbeleg; bei Annahme übernimmt das Backend sie ins Profil.
-  'billing.applicationStepLabel',
   'influencer.step3Label',
 ]
 
-/** Die Schritte mit eigener Prüfung: Abrechnungsdaten und Abschluss. */
-const BILLING_STEP = 3
-const FINISH_STEP = 4
+/** Der Abschluss mit der Datenschutz-Zustimmung. */
+const FINISH_STEP = 3
 
 /** Trichter-Ereignis für den erreichten Schritt (dataLayer, wie sign_up). */
 function pushApplyStep(step: number) {
@@ -218,21 +208,6 @@ export default function CreatorApplicationForm({
     categories: [],
   })
   const [consent, setConsent] = useState(false)
-  const [billing, setBilling] = useState<BillingFormValues>(() => emptyBillingForm())
-  const validateBilling = useBillingValidation()
-
-  /*
-   * Name und Wohnort aus dem ersten Schritt als Vorschlag für die
-   * Rechnungsanschrift — nur in leere Felder, Eingaben bleiben stehen.
-   */
-  const prefillBilling = (target: number) => {
-    if (target !== BILLING_STEP) return
-    setBilling(prev => ({
-      ...prev,
-      legalName: prev.legalName || `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
-      city: prev.city || form.city.trim(),
-    }))
-  }
   const [stepError, setStepError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -294,9 +269,6 @@ export default function CreatorApplicationForm({
       }
       return ''
     }
-    if (step === BILLING_STEP) {
-      return validateBilling(billing)
-    }
     if (step === FINISH_STEP) {
       if (!consent) {
         return t('influencer.consentRequired', { defaultValue: 'Bitte akzeptiere die Datenschutzerklärung.' })
@@ -307,7 +279,7 @@ export default function CreatorApplicationForm({
   }
 
   /*
-   * Trichter-Ereignis creator_apply_step: step = erreichter Schritt (1–4),
+   * Trichter-Ereignis creator_apply_step: step = erreichter Schritt (1–3),
    * je Schritt nur einmal pro Formularaufruf — Zurück und wieder Vor zählt
    * nicht doppelt. Nur die Schrittnummer, keine Formularinhalte.
    */
@@ -330,7 +302,6 @@ export default function CreatorApplicationForm({
       return
     }
     setStepError('')
-    prefillBilling(index)
     setCurrentStep(index)
     trackStep(index)
   }
@@ -343,7 +314,6 @@ export default function CreatorApplicationForm({
     }
     setStepError('')
     const next = Math.min(currentStep + 1, STEP_KEYS.length - 1)
-    prefillBilling(next)
     setCurrentStep(next)
     if (next > currentStep) trackStep(next)
   }
@@ -412,8 +382,6 @@ export default function CreatorApplicationForm({
           .map(c => ({ platform: c.platform, username: c.username.trim() })),
         followerRange: form.followerRange,
         categories: form.categories,
-        // Im Formular Pflicht; das Backend nimmt die Bewerbung auch ohne an (alte App-Versionen).
-        billing: toBillingPayload(billing),
         // Meta Conversions API nur mit Marketing-Einwilligung im Cookie-Banner (K5)
         trackingConsent: getMarketingConsent(),
       })
@@ -479,7 +447,7 @@ export default function CreatorApplicationForm({
     }
   }
 
-  const stepIcons = [User, Instagram, Sparkles, Receipt, Check]
+  const stepIcons = [User, Instagram, Sparkles, Check]
 
   /*
    * Unter 18: gar kein Formular.
@@ -769,28 +737,6 @@ export default function CreatorApplicationForm({
                 )
               })}
             </div>
-          </div>
-        )}
-
-        {currentStep === BILLING_STEP && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-bold mb-1">
-                {t('billing.sectionTitle', { defaultValue: 'Abrechnungsdaten' })}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t('billing.applicationDesc', {
-                  defaultValue:
-                    'Mit jeder Auszahlung schicken wir dir einen Auszahlungsbeleg. Dafür brauchen wir deinen Namen und deine Anschrift. Ändern kannst du die Angaben später im Creator-Profil.',
-                })}
-              </p>
-            </div>
-            <CreatorBillingFields
-              value={billing}
-              onChange={setBilling}
-              idPrefix="application-billing"
-              disabled={isSubmitting}
-            />
           </div>
         )}
 

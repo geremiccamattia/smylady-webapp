@@ -3109,8 +3109,6 @@
     "balanceHint": "Redeemable on your next ticket purchase."
   },
   "billing": {
-    "applicationStepLabel": "Billing",
-    "applicationDesc": "With every payout we send you a payout statement. For that we need your name and address. You can change these details later in your creator profile.",
     "sectionTitle": "Billing details",
     "sectionDesc": "With every payout we send you a payout statement for the amount paid out. For that we need your name and address. Only you and we can see these details.",
     "selfResponsibilityHint": "These details appear on your payout statement. You are responsible for your own taxes.",

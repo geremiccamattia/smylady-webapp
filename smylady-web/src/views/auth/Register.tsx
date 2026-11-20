@@ -32,6 +32,9 @@ export default function Register() {
   const [otp, setOtp] = useState('')
   const [referralInput, setReferralInput] = useState('')
   const [wantsCreator, setWantsCreator] = useState(false)
+  // Kam der Besucher über „Jetzt bewerben“ (?creator=1)? Unabhängig von der
+  // Checkbox, die sich abwählen lässt — maßgeblich ist der Einstieg.
+  const [cameFromCreatorLink, setCameFromCreatorLink] = useState(false)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
@@ -55,6 +58,7 @@ export default function Register() {
      */
     if (new URLSearchParams(window.location.search).get('creator') === '1') {
       setWantsCreator(true)
+      setCameFromCreatorLink(true)
     }
   }, [])
 
@@ -467,7 +471,18 @@ export default function Register() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t('auth.hasAccount', { defaultValue: 'Already have an account?' })}{' '}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            {/*
+              * Über „Jetzt bewerben“ gekommen, aber schon ein Konto: nach der
+              * Anmeldung zurück ins Bewerbungsformular statt auf die Startseite.
+              */}
+            <Link
+              href={
+                cameFromCreatorLink
+                  ? localePath(`/login?next=${encodeURIComponent('/creator/apply')}`)
+                  : '/login'
+              }
+              className="text-primary hover:underline font-medium"
+            >
               {t('auth.loginNow', { defaultValue: 'Sign in now' })}
             </Link>
           </p>

@@ -2932,8 +2932,6 @@
     "balanceHint": "Einlösbar beim nächsten Ticketkauf."
   },
   "billing": {
-    "applicationStepLabel": "Abrechnung",
-    "applicationDesc": "Mit jeder Auszahlung schicken wir dir einen Auszahlungsbeleg. Dafür brauchen wir deinen Namen und deine Anschrift. Ändern kannst du die Angaben später im Creator-Profil.",
     "sectionTitle": "Abrechnungsdaten",
     "sectionDesc": "Mit jeder Auszahlung schicken wir dir einen Auszahlungsbeleg über den ausgezahlten Betrag. Dafür brauchen wir deinen Namen und deine Anschrift. Diese Angaben sehen nur du und wir.",
     "selfResponsibilityHint": "Diese Angaben stehen auf deinem Auszahlungsbeleg. Für deine Steuern bist du selbst verantwortlich.",
