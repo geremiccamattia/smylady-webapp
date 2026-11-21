@@ -32,11 +32,27 @@ export default function CreatorApply() {
   // Effekt mit `user` in den Abhängigkeiten sonst erneut auslösen.
   const hasLoaded = useRef(false)
 
+  /*
+   * Ob die Komponente noch eingehängt ist. Bewusst ein eigener Effekt ohne
+   * Abhängigkeiten statt eines active-Flags im Abruf-Effekt: Dessen
+   * Aufräumfunktion läuft schon, wenn sich eine Abhängigkeit ändert — und
+   * refreshUser() ändert user?.dateOfBirth während des Abrufs. Der neu
+   * gestartete Effekt kehrt wegen hasLoaded sofort zurück, der erste hätte
+   * sein Ergebnis verworfen, und die Seite bliebe für immer auf 'loading'.
+   * Im StrictMode (Entwicklung) setzt das erneute Einhängen den Wert wieder
+   * auf true.
+   */
+  const isMounted = useRef(false)
+  useEffect(() => {
+    isMounted.current = true
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
   useEffect(() => {
     if (authLoading || hasLoaded.current) return
     hasLoaded.current = true
-
-    let active = true
 
     const load = async () => {
       /*
@@ -58,7 +74,7 @@ export default function CreatorApply() {
 
       try {
         const [payload] = await Promise.all([creatorService.getMyApplication(), refresh])
-        if (!active) return
+        if (!isMounted.current) return
 
         /*
          * Die Zuordnung Stand → Ansicht liegt im Service (resolveCreatorStanding),
@@ -72,7 +88,7 @@ export default function CreatorApply() {
           setView(standing === 'none' ? 'form' : standing)
         }
       } catch {
-        if (!active) return
+        if (!isMounted.current) return
         /*
          * Ein 401 landet hier nicht: Der Interceptor in services/api.ts leitet
          * vorher auf /login um, weil diese Route nicht öffentlich ist. Bleibt
@@ -82,10 +98,13 @@ export default function CreatorApply() {
       }
     }
 
-    load()
-    return () => {
-      active = false
-    }
+    // Auch ein unerwarteter Fehler außerhalb des try (etwa beim Anstoßen von
+    // refreshUser) darf die Seite nicht im Ladezustand lassen.
+    load().catch(() => {
+      if (isMounted.current) setView('error')
+    })
+    // Kein Aufräumen hier: Verworfen wird nur, wenn die Komponente wirklich
+    // entfernt ist (isMounted), nicht bei jeder Änderung der Abhängigkeiten.
   }, [authLoading, refreshUser, user?.dateOfBirth])
 
   return (
