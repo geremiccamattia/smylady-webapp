@@ -79,10 +79,14 @@ function splitIso(iso: string): { date: string; time: string } {
   }
 }
 
-/** Datum und Uhrzeit aus den Eingabefeldern als ISO-String (lokale Zeit). */
+/**
+ * Datum und Uhrzeit aus den Eingabefeldern als ISO-String (lokale Zeit).
+ * Ohne Uhrzeit kein Zeitpunkt: Ein stilles 00:00 stünde später als „00:00 Uhr"
+ * in der Mail an die Creator.
+ */
 function joinIso(date: string, time: string): string | undefined {
-  if (!date) return undefined
-  const value = new Date(`${date}T${time || '00:00'}`)
+  if (!date || !time) return undefined
+  const value = new Date(`${date}T${time}`)
   return Number.isNaN(value.getTime()) ? undefined : value.toISOString()
 }
 
@@ -355,6 +359,12 @@ function OrderForm() {
       return problem(t('brandDashboard.validateEventName', { defaultValue: 'Bitte gib den Namen des Events an.' }))
     }
 
+    // Eine Uhrzeit gehört zu jedem Datum, auch im Entwurf: Sonst ginge das
+    // eingetragene Datum beim Speichern verloren.
+    if ((eventDate && !eventTime) || (eventEndDate && !eventEndTime)) {
+      return problem(t('brandDashboard.validateEventTime', { defaultValue: 'Bitte gib auch die Uhrzeit an.' }))
+    }
+
     const startIso = joinIso(eventDate, eventTime)
     const endIso = joinIso(eventEndDate, eventEndTime)
     // Ein eingetragener Beginn muss gültig sein, und ein Ende braucht einen
@@ -364,7 +374,6 @@ function OrderForm() {
     }
     // Gleich ist genauso ungültig wie davor: Das Backend lehnt es ab, und ein
     // Event ohne Dauer liesse sich beim Annehmen des Angebots nicht anlegen.
-    // Typischer Fall: Beginn und Ende am selben Tag, beide ohne Uhrzeit.
     if (startIso && endIso && endIso <= startIso) {
       return problem(
         t('brandDashboard.validateEventEnd', { defaultValue: 'Das Ende muss nach dem Beginn liegen.' }),
@@ -750,14 +759,14 @@ function OrderForm() {
                 <Label htmlFor="eventDate">{t('brandDashboard.fieldEventDate', { defaultValue: 'Beginn' })} *</Label>
                 <div className="flex gap-2">
                   <Input id="eventDate" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required />
-                  <Input type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="w-32" />
+                  <Input aria-label={t('brandDashboard.fieldEventTime', { defaultValue: 'Uhrzeit' })} type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="w-32" required />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="eventEndDate">{t('brandDashboard.fieldEventEnd', { defaultValue: 'Ende (optional)' })}</Label>
                 <div className="flex gap-2">
                   <Input id="eventEndDate" type="date" value={eventEndDate} onChange={(e) => setEventEndDate(e.target.value)} />
-                  <Input type="time" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="w-32" />
+                  <Input aria-label={t('brandDashboard.fieldEventTime', { defaultValue: 'Uhrzeit' })} type="time" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="w-32" required={Boolean(eventEndDate)} />
                 </div>
               </div>
             </div>

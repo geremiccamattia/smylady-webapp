@@ -1,5 +1,5 @@
 'use client'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useLocalePath } from '@/hooks/useLocalePath'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -31,6 +31,7 @@ import {
   partnerWebsiteUrl,
 } from '@/lib/partnerEvent'
 import { isRaffleDrawn } from '@/lib/raffle'
+import { safeNextPath } from '@/lib/postLogin'
 import { categoryLabel, formatMusicTypes, toStringArray } from '@/lib/eventFields'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
@@ -109,7 +110,11 @@ export default function EventDetailClient({ id }: Props) {
   const localePath = useLocalePath()
   const { t, i18n } = useTranslation()
   const { toast } = useToast()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, isLoading: authLoading } = useAuth()
+  const pathname = usePathname()
+  // Rücksprungziel für den Login-Hinweis bei nicht öffentlichen Events — nur
+  // über den geprüften Helfer aus lib/postLogin.ts.
+  const loginNext = safeNextPath(pathname)
   const { requireAuth } = useRequireAuth()
   const [isFavorite, setIsFavorite] = useState(false)
   const [isPurchasing, setIsPurchasing] = useState(false)
@@ -799,7 +804,9 @@ export default function EventDetailClient({ id }: Props) {
     }
   }
 
-  if (isLoading) {
+  // Die Anmeldung wird noch geprüft: Ein angemeldeter Gast sähe sonst kurz die
+  // Anmelde-Aufforderung, bevor der Abruf mit Token nachläuft.
+  if (isLoading || (isAccessDenied && authLoading)) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="animate-pulse">
@@ -809,6 +816,30 @@ export default function EventDetailClient({ id }: Props) {
           <div className="h-8 bg-muted rounded mt-4 w-3/4" />
           <div className="h-4 bg-muted rounded mt-4 w-1/2" />
         </div>
+      </div>
+    )
+  }
+
+  // Nicht öffentlich und nicht angemeldet, etwa über den Link aus einer
+  // Creator-Mail: Erst die Anmeldung kann zeigen, ob die Person eingeladen ist.
+  if (isAccessDenied && !isAuthenticated) {
+    return (
+      <div className="text-center py-16 max-w-md mx-auto">
+        <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+          <ShieldCheck className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">{t('event.loginRequiredTitle', { defaultValue: 'Bitte melde dich an' })}</h2>
+        <p className="text-muted-foreground mb-8">
+          {t('event.loginRequiredDescription', { defaultValue: 'Dieses Event ist nicht öffentlich. Melde dich an, um es zu sehen.' })}
+        </p>
+        {/*
+          * Rücksprung nur über safeNextPath (lib/postLogin.ts) — derselbe
+          * Prüfer, mit dem Login.tsx den Wert wieder liest. Besteht der Pfad
+          * die Prüfung nicht, geht es ohne Rücksprung zur Anmeldung.
+          */}
+        <Link href={loginNext ? `${localePath('/login')}?next=${encodeURIComponent(loginNext)}` : localePath('/login')}>
+          <Button>{t('event.loginRequiredButton', { defaultValue: 'Anmelden' })}</Button>
+        </Link>
       </div>
     )
   }
