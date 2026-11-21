@@ -2524,6 +2524,20 @@ function ProfileMemoryViewer({
       : { _id: activeUploadedBy, name: 'User' })
     : null
 
+  /*
+   * Melden wie auf der Eventseite: nur angemeldet und nur fremde Erinnerungen.
+   * Eigen heißt: Der Uploader ist der angemeldete Nutzer. Ist der Uploader
+   * nicht bekannt, gilt das eigene Profil als Maßstab (Erinnerungen hängen
+   * an den Tickets des Profilinhabers). ticketId, eventId und memoryId liefert
+   * GET /users/:id/profile an jeder Erinnerung.
+   */
+  const [reportOpen, setReportOpen] = useState(false)
+  const uploaderId = uploaderInfo?._id ? String(uploaderInfo._id) : ''
+  const isOwnMemory = uploaderId
+    ? !!currentUserId && uploaderId === String(currentUserId)
+    : isOwnProfile
+  const canReport = !!currentUserId && !isOwnMemory && hasApiIds && !!memory.eventId
+
   // Reset comment state AND live data when navigating to a different memory
   useEffect(() => {
     setComment('')
@@ -2976,8 +2990,35 @@ function ProfileMemoryViewer({
                 <Share2 className="w-5 h-5" />
               </Button>
             )}
+            {/* Report (fremde Erinnerung, angemeldet) */}
+            {canReport && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setReportOpen(true)}
+                title={t('common.report')}
+              >
+                <Flag className="w-5 h-5 text-muted-foreground" />
+              </Button>
+            )}
           </div>
         </div>
+
+        {/*
+          * Innerhalb der Seitenleiste: Sie stoppt Klicks (stopPropagation),
+          * sonst schlösse ein Klick in den Dialog über das onClose der Wurzel
+          * den ganzen Viewer.
+          */}
+        {canReport && reportOpen && (
+          <ReportModal
+            open={reportOpen}
+            onClose={() => setReportOpen(false)}
+            contentType="memory"
+            ticketId={memory.ticketId}
+            eventId={memory.eventId}
+            memoryId={memory.memoryId}
+          />
+        )}
 
         {/* Caption & Event Info */}
         {(memory.caption || memory.eventTitle) && (
