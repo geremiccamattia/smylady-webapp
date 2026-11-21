@@ -33,6 +33,7 @@ interface ReportModalProps {
   // Required context based on content type
   ticketId?: string
   eventId?: string
+  memoryId?: string
   memoryIndex?: number
   commentId?: string
   postId?: string
@@ -80,6 +81,7 @@ export default function ReportModal({
   contentType,
   ticketId,
   eventId,
+  memoryId,
   memoryIndex,
   commentId,
   postId,
@@ -172,7 +174,14 @@ export default function ReportModal({
     switch (contentType) {
       case 'memory':
       case 'comment':
-        payload = { ...base, ticketId, eventId, memoryIndex, commentId }
+        payload = {
+          ...base,
+          ticketId,
+          eventId,
+          // Mit memoryId (stabil) kein memoryIndex — der Index kann veraltet sein.
+          ...(memoryId ? { memoryId } : { memoryIndex }),
+          commentId,
+        }
         break
       case 'user':
         payload = { ...base, reportedUserId }

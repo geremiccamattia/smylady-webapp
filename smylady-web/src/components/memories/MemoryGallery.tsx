@@ -508,6 +508,9 @@ export default function MemoryGallery({
           contentType="memory"
           ticketId={ticketId}
           eventId={eventId}
+          // GET /tickets/:ticketId/memories liefert memoryId an jeder
+          // Erinnerung; dann sendet ReportModal keinen memoryIndex mehr.
+          memoryId={reportingMemory.memoryId || undefined}
           memoryIndex={memories.findIndex(m => getMemoryId(m) === getMemoryId(reportingMemory))}
         />
       )}
