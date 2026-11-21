@@ -19,6 +19,7 @@ import { isRaffleDrawn } from '@/lib/raffle'
 import { categoryLabel, formatMusicTypes, toStringArray } from '@/lib/eventFields'
 import { useState } from 'react'
 import EventReviews from '@/components/reviews/EventReviews'
+import ReportModal from '@/components/ReportModal'
 import { ImageViewer } from '@/components/ImageViewer'
 import { PaymentWrapper, usePaymentModal } from '@/components/payment'
 import { useCreatePaymentIntent, useBuyFreeEvent } from '@/hooks/useStripe'
@@ -94,6 +95,8 @@ export default function EventDetailClient({ id }: Props) {
   const [imageViewerOpen, setImageViewerOpen] = useState(false)
   const [imageViewerIndex, setImageViewerIndex] = useState(0)
   const [fullscreenMemoryIndex, setFullscreenMemoryIndex] = useState<number | null>(null)
+  // Gemeldete Erinnerung aus dem Vollbild (Melde-Dialog).
+  const [reportingMemory, setReportingMemory] = useState<Memory | null>(null)
   // 'react' = Einstieg über die Reaktionszeile der Kachel, Picker sofort offen.
   const [fullscreenMemoryAction, setFullscreenMemoryAction] = useState<'react' | undefined>(undefined)
   const [memorySort, setMemorySort] = useState<'newest' | 'popular'>('newest')
@@ -2302,6 +2305,10 @@ export default function EventDetailClient({ id }: Props) {
             onAddTag={(taggedUserId, x, y) =>
               tagMemoryMutation.mutate({ memory, userId: taggedUserId, x, y })
             }
+            // Melden wie in EventMemories: nur fremde Erinnerungen und nur
+            // angemeldet (POST /reports verlangt ein Konto; Gäste sehen den
+            // Knopf an keiner Stelle).
+            onReport={currentUserId && !isOwn ? () => setReportingMemory(memory) : undefined}
             onMemoryUpdate={(updated) => {
               // Optimistisch auch in der Kachel-Liste nachziehen, damit Zahl und
               // eigene Reaktion dort sofort stimmen und nicht erst nach dem Refetch.
@@ -2315,6 +2322,22 @@ export default function EventDetailClient({ id }: Props) {
           />
         )
       })()}
+
+      {/*
+        * ticketId und memoryId kommen aus der gemeldeten Erinnerung selbst
+        * (GET /events/:id/memories liefert beide an jeder Erinnerung) — nicht
+        * aus dem Ticket des Meldenden.
+        */}
+      {reportingMemory && (
+        <ReportModal
+          open={!!reportingMemory}
+          onClose={() => setReportingMemory(null)}
+          contentType="memory"
+          ticketId={reportingMemory.ticketId}
+          eventId={eventId!}
+          memoryId={getMemoryId(reportingMemory)}
+        />
+      )}
 
     </div>
   )

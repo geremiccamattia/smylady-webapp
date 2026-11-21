@@ -27,6 +27,9 @@ export interface CreateReportPayload {
   // For memory/comment reports
   ticketId?: string
   eventId?: string
+  // Stabile ID der Erinnerung (ticket.memories[].memoryId). Hat im Backend
+  // Vorrang vor memoryIndex, der sich verschiebt, sobald davor etwas gelöscht wird.
+  memoryId?: string
   memoryIndex?: number
   commentId?: string
   // For post reports

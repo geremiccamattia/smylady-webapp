@@ -28,6 +28,7 @@ interface ReportModalProps {
   // Required context based on content type
   ticketId?: string
   eventId?: string
+  memoryId?: string
   memoryIndex?: number
   commentId?: string
   postId?: string
@@ -58,6 +59,7 @@ export default function ReportModal({
   contentType,
   ticketId,
   eventId,
+  memoryId,
   memoryIndex,
   commentId,
   postId,
@@ -111,7 +113,8 @@ export default function ReportModal({
       details: details.trim() || undefined,
       ticketId,
       eventId,
-      memoryIndex,
+      // Mit memoryId (stabil) kein memoryIndex — der Index kann veraltet sein.
+      ...(memoryId ? { memoryId } : { memoryIndex }),
       commentId,
       postId,
       reportedUserId,

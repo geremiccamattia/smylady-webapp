@@ -702,13 +702,21 @@ export default function EventMemories() {
       )}
 
       {/* Report Modal */}
+      {/*
+        * ticketId und memoryId der GEMELDETEN Erinnerung (GET
+        * /tickets/event/:eventId/memories liefert beide) — nicht das Ticket
+        * des Meldenden. Fehlt die ticketId ausnahmsweise, bleibt es beim
+        * bisherigen Stand (eigenes Ticket + Index), statt ein falsches Paar
+        * aus fremder memoryId und eigenem Ticket zu senden.
+        */}
       {reportingMemory && userTicket?.ticketId && (
         <ReportModal
           open={!!reportingMemory}
           onClose={() => setReportingMemory(null)}
           contentType="memory"
-          ticketId={userTicket.ticketId}
+          ticketId={reportingMemory.ticketId || userTicket.ticketId}
           eventId={eventId!}
+          memoryId={reportingMemory.ticketId ? getMemoryId(reportingMemory) : undefined}
           memoryIndex={memories.findIndex(m => getMemoryId(m) === getMemoryId(reportingMemory))}
         />
       )}
