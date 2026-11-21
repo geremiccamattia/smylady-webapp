@@ -2,16 +2,59 @@
 
 import { authService } from '@/services/auth'
 import { creatorAreaService, isCreatorNotFound } from '@/services/creator'
+import { isSafeInternalPath } from '@/lib/navigation'
+
+/** Basis zum Auflösen relativer Pfade; nur der Vergleich des Origins zählt. */
+const RESOLVE_BASE = 'http://localhost'
 
 /**
- * Ein Rücksprungziel aus `?next=…`, aber nur, wenn es eine eigene Seite ist:
- * absoluter Pfad, keine Protokoll-relative URL (`//fremd.example`), nicht
- * wieder die Login-Seite. Alles andere wird ignoriert.
+ * Der Wert roh sowie ein- und zweimal dekodiert. Ein %-Fehler (z. B. ein
+ * einzelnes `%` in einer Suchanfrage) beendet nur das weitere Dekodieren —
+ * die bis dahin erhaltenen Fassungen werden trotzdem geprüft.
  */
-export function safeNextPath(raw: string | null | undefined): string | undefined {
-  if (!raw) return undefined
-  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return undefined
+function decodedVariants(raw: string): string[] {
+  const variants = [raw]
+  let current = raw
+  for (let i = 0; i < 2; i++) {
+    try {
+      const decoded = decodeURIComponent(current)
+      if (decoded === current) break
+      variants.push(decoded)
+      current = decoded
+    } catch {
+      break
+    }
+  }
+  return variants
+}
+
+/**
+ * Ein Rücksprungziel aus `?next=…`, aber nur, wenn es eine eigene Seite ist.
+ * Alles andere wird ignoriert (der Aufrufer fällt auf sein Standardziel zurück).
+ *
+ * - Roh und dekodiert: ein absoluter Pfad mit genau einem führenden `/`,
+ *   ohne Backslash und ohne Steuerzeichen (U+0000–U+001F, U+007F). Browser
+ *   entfernen Tab, Zeilenumbruch und Wagenrücklauf aus URLs — aus
+ *   `/%09/fremd.example` würde sonst `//fremd.example` (isSafeInternalPath).
+ * - Aufgelöst gegen eine feste Basis: Der Origin bleibt derselbe, und der
+ *   Pfad beginnt mit genau einem `/`.
+ * - Nicht wieder die Login- oder Registrierseite.
+ *
+ * Zurück kommt der ursprüngliche relative Pfad.
+ */
+export function safeNextPath(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || !raw) return undefined
+  if (!decodedVariants(raw).every(isSafeInternalPath)) return undefined
   if (/^\/(en\/)?(login|register)(\/|\?|$)/.test(raw)) return undefined
+
+  try {
+    const resolved = new URL(raw, RESOLVE_BASE)
+    if (resolved.origin !== RESOLVE_BASE) return undefined
+    if (!resolved.pathname.startsWith('/') || resolved.pathname.startsWith('//')) return undefined
+  } catch {
+    return undefined
+  }
+
   return raw
 }
 
